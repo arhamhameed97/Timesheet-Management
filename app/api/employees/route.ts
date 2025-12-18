@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('companyId');
     const role = searchParams.get('role') as UserRole | null;
+    const attendanceDate = searchParams.get('attendanceDate'); // Date for filtering attendance
 
     // Super admin can see all employees or filter by company
     if (context.role === UserRole.SUPER_ADMIN) {
@@ -132,7 +133,10 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Get today's date for attendance stats
+    // Get date for attendance stats - use provided date or default to today
+    const attendanceDateObj = attendanceDate ? new Date(attendanceDate) : new Date();
+    attendanceDateObj.setHours(0, 0, 0, 0);
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -141,7 +145,7 @@ export async function GET(request: NextRequest) {
     // Get employee IDs for attendance and timesheet queries
     const employeeIds = employees.map(e => e.id);
 
-    // Fetch attendance stats for all employees
+    // Fetch attendance stats for all employees (monthly stats)
     const attendanceStats = await prisma.attendance.groupBy({
       by: ['userId'],
       where: {
@@ -156,11 +160,11 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Fetch today's attendance status with detailed times
-    const todayAttendance = await prisma.attendance.findMany({
+    // Fetch attendance status for the specified date (or today if not specified)
+    const dateAttendance = await prisma.attendance.findMany({
       where: {
         userId: { in: employeeIds },
-        date: today,
+        date: attendanceDateObj,
       },
       select: {
         userId: true,
@@ -185,8 +189,8 @@ export async function GET(request: NextRequest) {
 
     // Create maps for quick lookup
     const attendanceMap = new Map(attendanceStats.map(s => [s.userId, s._count.id]));
-    const todayAttendanceMap = new Map(
-      todayAttendance.map(a => [
+    const dateAttendanceMap = new Map(
+      dateAttendance.map(a => [
         a.userId,
         {
           checkedIn: !!a.checkInTime,
@@ -205,7 +209,7 @@ export async function GET(request: NextRequest) {
       ...rest,
       attendanceStats: {
         daysWorkedThisMonth: attendanceMap.get(rest.id) || 0,
-        todayStatus: todayAttendanceMap.get(rest.id) || { 
+        todayStatus: dateAttendanceMap.get(rest.id) || { 
           checkedIn: false, 
           checkedOut: false, 
           status: null,

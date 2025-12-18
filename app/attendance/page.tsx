@@ -470,6 +470,58 @@ export default function AttendancePage() {
     return format(new Date(dateString), 'MMM dd');
   };
 
+  const formatNotes = (notes: string | null) => {
+    if (!notes) return '-';
+    
+    try {
+      const notesData = JSON.parse(notes);
+      
+      // If it's not the expected structure, return as-is
+      if (!notesData.checkInOutHistory && !notesData.userNotes && !notesData.firstCheckIn) {
+        return <span className="text-gray-600">{notes}</span>;
+      }
+
+      const parts: JSX.Element[] = [];
+      
+      // Format check-in/out history
+      if (notesData.checkInOutHistory && Array.isArray(notesData.checkInOutHistory) && notesData.checkInOutHistory.length > 0) {
+        parts.push(
+          <div key="history" className="space-y-1">
+            {notesData.checkInOutHistory.map((event: CheckInOutEvent, index: number) => (
+              <div key={index} className="flex items-center gap-2 text-xs">
+                <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-medium ${
+                  event.type === 'in' 
+                    ? 'bg-green-100 text-green-700' 
+                    : 'bg-red-100 text-red-700'
+                }`}>
+                  {event.type === 'in' ? 'IN' : 'OUT'}
+                </span>
+                <span className="text-gray-600">
+                  {format(new Date(event.time), 'HH:mm:ss')}
+                </span>
+              </div>
+            ))}
+          </div>
+        );
+      }
+      
+      // Add user notes if available
+      if (notesData.userNotes) {
+        parts.push(
+          <div key="userNotes" className="mt-2 pt-2 border-t border-gray-200">
+            <div className="text-xs font-medium text-gray-700 mb-1">User Notes:</div>
+            <div className="text-xs text-gray-600">{notesData.userNotes}</div>
+          </div>
+        );
+      }
+      
+      return <div className="max-w-md">{parts}</div>;
+    } catch {
+      // If parsing fails, treat as plain text
+      return <span className="text-gray-600">{notes}</span>;
+    }
+  };
+
   const getWeekDays = () => {
     const start = startOfWeek(new Date(), { weekStartsOn: 1 });
     const end = endOfWeek(new Date(), { weekStartsOn: 1 });
@@ -898,7 +950,7 @@ export default function AttendancePage() {
                               {record.status}
                             </span>
                           </TableCell>
-                          <TableCell className="text-gray-600">{record.notes || '-'}</TableCell>
+                          <TableCell className="text-gray-600">{formatNotes(record.notes)}</TableCell>
                         </TableRow>
                       );
                     })}

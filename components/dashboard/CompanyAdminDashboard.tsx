@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Clock, FileText, DollarSign, Building2, CheckCircle, XCircle, Eye } from 'lucide-react';
+import { Users, Clock, FileText, DollarSign, Building2, CheckCircle, XCircle, Eye, Search } from 'lucide-react';
 import { DesignationBadge } from '@/components/common/DesignationBadge';
 import { RoleBadge } from '@/components/common/RoleBadge';
 import { UserRole } from '@prisma/client';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import {
   Table,
@@ -39,6 +40,7 @@ interface EmployeeAttendance {
   id: string;
   name: string;
   email: string;
+  role: UserRole;
   attendanceStats?: {
     todayStatus: {
       checkedIn: boolean;
@@ -51,16 +53,33 @@ interface EmployeeAttendance {
 
 export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProps) {
   const [recentAttendance, setRecentAttendance] = useState<EmployeeAttendance[]>([]);
+  const [allEmployees, setAllEmployees] = useState<EmployeeAttendance[]>([]);
   const [loadingAttendance, setLoadingAttendance] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [employeeSearch, setEmployeeSearch] = useState<string>('');
 
   useEffect(() => {
     fetchRecentAttendance();
-  }, []);
+  }, [selectedDate]);
+
+  useEffect(() => {
+    // Filter employees based on search term
+    if (employeeSearch.trim() === '') {
+      setRecentAttendance(allEmployees);
+    } else {
+      const filtered = allEmployees.filter(emp =>
+        emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) ||
+        emp.email.toLowerCase().includes(employeeSearch.toLowerCase())
+      );
+      setRecentAttendance(filtered);
+    }
+  }, [employeeSearch, allEmployees]);
 
   const fetchRecentAttendance = async () => {
     try {
+      setLoadingAttendance(true);
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/employees', {
+      const response = await fetch(`/api/employees?attendanceDate=${selectedDate}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -68,11 +87,11 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
 
       if (response.ok) {
         const data = await response.json();
-        // Get employees who checked in today
-        const checkedInToday = (data.employees || [])
-          .filter((emp: EmployeeAttendance) => emp.attendanceStats?.todayStatus?.checkedIn)
-          .slice(0, 5); // Show top 5
-        setRecentAttendance(checkedInToday);
+        // Show ALL employees with their attendance status for the selected date
+        // Don't filter by checkedIn status - show everyone
+        const allEmployeesData = (data.employees || []) as EmployeeAttendance[];
+        setAllEmployees(allEmployeesData);
+        setRecentAttendance(allEmployeesData);
       }
     } catch (error) {
       console.error('Failed to fetch recent attendance:', error);
@@ -147,7 +166,7 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Today&apos;s Company Attendance</CardTitle>
+            <CardTitle>Company Attendance</CardTitle>
             <Link href="/employees">
               <Button variant="outline" size="sm">
                 View All
@@ -156,11 +175,36 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
           </div>
         </CardHeader>
         <CardContent>
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Date</label>
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Search Employee</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={employeeSearch}
+                  onChange={(e) => setEmployeeSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+          </div>
           {loadingAttendance ? (
             <div className="text-center py-4 text-gray-500">Loading...</div>
           ) : recentAttendance.length === 0 ? (
             <div className="text-center py-4 text-gray-500">
-              No employees have checked in today yet.
+              {employeeSearch ? 'No employees found matching your search.' : `No employees found for ${format(new Date(selectedDate), 'MMM dd, yyyy')}.`}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -168,6 +212,7 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
                 <TableHeader>
                   <TableRow>
                     <TableHead>Employee</TableHead>
+                    <TableHead>Role</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Check-In Time</TableHead>
                     <TableHead>Check-Out Time</TableHead>
@@ -178,6 +223,9 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
                   {recentAttendance.map((employee) => (
                     <TableRow key={employee.id}>
                       <TableCell className="font-medium">{employee.name}</TableCell>
+                      <TableCell>
+                        <RoleBadge role={employee.role} />
+                      </TableCell>
                       <TableCell>
                         {employee.attendanceStats?.todayStatus?.checkedOut ? (
                           <div className="flex items-center gap-1 text-green-600">
