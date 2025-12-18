@@ -39,10 +39,11 @@ export async function POST(request: NextRequest) {
     // Parse existing notes to get check-in/check-out history
     let checkInOutHistory: Array<{ type: 'in' | 'out'; time: string }> = [];
     let firstCheckIn: Date | null = null;
+    let notesData: any = null;
 
     if (existing) {
       try {
-        const notesData = existing.notes ? JSON.parse(existing.notes) : null;
+        notesData = existing.notes ? JSON.parse(existing.notes) : null;
         if (notesData?.checkInOutHistory) {
           checkInOutHistory = notesData.checkInOutHistory;
         }
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
         }
       } catch (e) {
         // If notes is not JSON, treat as regular notes
+        notesData = null;
       }
 
       // If user is already checked in (has checkInTime but no checkOutTime), don't allow another check-in

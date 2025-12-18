@@ -83,17 +83,14 @@ export async function middleware(request: NextRequest) {
           { status: 403 }
         );
       }
-      // Redirect to appropriate dashboard
-      const dashboardRoute: string = userRole === UserRole.SUPER_ADMIN 
-        ? '/super-admin/dashboard' 
-        : '/dashboard';
-      return NextResponse.redirect(new URL(dashboardRoute, request.url));
+      // Redirect to appropriate dashboard (user is not SUPER_ADMIN at this point)
+      return NextResponse.redirect(new URL('/dashboard', request.url));
     }
   }
 
   // Designations route - only COMPANY_ADMIN and SUPER_ADMIN
   if (pathname.startsWith('/designations')) {
-    if (![UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN].includes(userRole)) {
+    if (!([UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN] as UserRole[]).includes(userRole)) {
       if (pathname.startsWith('/api')) {
         return NextResponse.json(
           { error: 'Forbidden: Admin access required' },
@@ -106,7 +103,7 @@ export async function middleware(request: NextRequest) {
 
   // Payroll route - COMPANY_ADMIN, MANAGER, SUPER_ADMIN (no EMPLOYEE, TEAM_LEAD)
   if (pathname.startsWith('/payroll')) {
-    if (![UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN, UserRole.MANAGER].includes(userRole)) {
+    if (!([UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN, UserRole.MANAGER] as UserRole[]).includes(userRole)) {
       if (pathname.startsWith('/api')) {
         return NextResponse.json(
           { error: 'Forbidden: Insufficient permissions' },
