@@ -1,0 +1,255 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  COMPANY_ADMIN
+  MANAGER
+  TEAM_LEAD
+  EMPLOYEE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LATE
+}
+
+enum TimesheetStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum PayrollStatus {
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum TeamMemberRole {
+  LEAD
+  MEMBER
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  address   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       User[]
+  designations Designation[]
+  teams       Team[]
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  password     String
+  name         String
+  companyId    String?
+  designationId String?
+  role         UserRole  @default(EMPLOYEE)
+  managerId    String?   // For hierarchy - who manages this user
+  phone        String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  company      Company?      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  designation  Designation?  @relation(fields: [designationId], references: [id], onDelete: SetNull)
+  manager      User?         @relation("UserHierarchy", fields: [managerId], references: [id], onDelete: SetNull)
+  subordinates User[]        @relation("UserHierarchy")
+  
+  attendance   Attendance[]
+  timesheets  Timesheet[]
+  approvedTimesheets Timesheet[] @relation("TimesheetApprover")
+  taskLogs    TaskLog[]
+  teams       TeamMember[]
+  teamProgress TeamProgress[]
+  payroll     Payroll[]
+  leaves      Leave[]
+  managedTeams Team[]        @relation("TeamManager")
+}
+
+model Designation {
+  id        String   @id @default(cuid())
+  name      String
+  companyId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  users    User[]
+}
+
+model Attendance {
+  id          String          @id @default(cuid())
+  userId      String
+  date        DateTime        @db.Date
+  checkInTime DateTime?
+  checkOutTime DateTime?
+  status      AttendanceStatus @default(PRESENT)
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model Timesheet {
+  id          String          @id @default(cuid())
+  userId      String
+  date        DateTime        @db.Date
+  hours       Float
+  status      TimesheetStatus @default(DRAFT)
+  approvedBy  String?
+  approvedAt  DateTime?
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskLogs    TaskLog[]
+  approver    User?           @relation("TimesheetApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@index([status])
+}
+
+model TaskLog {
+  id          String   @id @default(cuid())
+  timesheetId String
+  userId      String
+  description String
+  hours       Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  timesheet  Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([timesheetId])
+  @@index([userId])
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  companyId String
+  managerId String?
+  description String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  manager     User?        @relation("TeamManager", fields: [managerId], references: [id], onDelete: SetNull)
+  members     TeamMember[]
+  progress    TeamProgress[]
+
+  @@index([companyId])
+}
+
+model TeamMember {
+  id        String         @id @default(cuid())
+  teamId    String
+  userId    String
+  role      TeamMemberRole @default(MEMBER)
+  joinedAt  DateTime       @default(now())
+  leftAt    DateTime?
+
+  team      Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+model TeamProgress {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  update    String
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([userId])
+  @@index([date])
+}
+
+model Payroll {
+  id          String        @id @default(cuid())
+  userId      String
+  month       Int
+  year        Int
+  baseSalary  Float
+  allowances  Float         @default(0)
+  deductions  Float         @default(0)
+  netSalary   Float
+  status      PayrollStatus @default(PENDING)
+  approvedBy  String?
+  approvedAt  DateTime?
+  paidAt      DateTime?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month, year])
+  @@index([userId, month, year])
+  @@index([status])
+}
+
+model Leave {
+  id          String      @id @default(cuid())
+  userId      String
+  startDate   DateTime    @db.Date
+  endDate     DateTime    @db.Date
+  type        String      // e.g., "Sick Leave", "Vacation", "Personal"
+  reason      String?
+  status      LeaveStatus @default(PENDING)
+  approvedBy  String?
+  approvedAt  DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([startDate, endDate])
+}
