@@ -3,6 +3,7 @@ import { getAuthContext, unauthorizedResponse } from '@/lib/middleware-helpers';
 import { prisma } from '@/lib/db';
 import { checkInSchema } from '@/lib/validations';
 import { AttendanceStatus } from '@prisma/client';
+import { autoCheckoutPreviousDays } from '@/lib/attendance-helpers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +11,9 @@ export async function POST(request: NextRequest) {
     if (!context) {
       return unauthorizedResponse();
     }
+
+    // Auto-checkout any open check-ins from previous days
+    await autoCheckoutPreviousDays(context.userId);
 
     const body = await request.json();
     const validatedData = checkInSchema.parse(body);

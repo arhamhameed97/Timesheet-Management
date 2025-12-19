@@ -1,24 +1,23 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  const router = useRouter();
-
   useEffect(() => {
     // Check if user has a token
     const token = localStorage.getItem('token');
     
+    // Use window.location.href for a full page redirect
+    // This ensures middleware runs and can verify the token from cookies
     if (token) {
       // If token exists, redirect to dashboard
       // The middleware will verify the token and redirect to login if invalid
-      router.push('/dashboard');
+      window.location.href = '/dashboard';
     } else {
       // If no token, redirect to login
-      router.push('/login');
+      window.location.href = '/login';
     }
-  }, [router]);
+  }, []);
 
   // Show loading state while redirecting
   return (

@@ -3,6 +3,7 @@ import { getAuthContext, unauthorizedResponse, forbiddenResponse } from '@/lib/m
 import { prisma } from '@/lib/db';
 import { UserRole } from '@prisma/client';
 import { canManageUser } from '@/lib/permissions';
+import { autoCheckoutPreviousDays } from '@/lib/attendance-helpers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,6 +27,9 @@ export async function GET(request: NextRequest) {
       }
       targetUserId = userId;
     }
+
+    // Auto-checkout any open check-ins from previous days for the target user
+    await autoCheckoutPreviousDays(targetUserId);
 
     const where: any = { userId: targetUserId };
 

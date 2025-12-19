@@ -5,9 +5,10 @@ import { UserRole } from '@prisma/client';
 
 export async function middleware(request: NextRequest) {
   // Public routes that don't require authentication
+  const pathname = request.nextUrl.pathname;
   const publicRoutes = ['/login', '/register', '/api/auth/login', '/api/auth/register'];
-  const isPublicRoute = publicRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
+  const isPublicRoute = pathname === '/' || publicRoutes.some(route => 
+    pathname.startsWith(route)
   );
 
   if (isPublicRoute) {
@@ -71,7 +72,6 @@ export async function middleware(request: NextRequest) {
   }
 
   // Role-based route protection
-  const pathname = request.nextUrl.pathname;
   const userRole = payload.role;
 
   // Super admin routes - only SUPER_ADMIN can access
