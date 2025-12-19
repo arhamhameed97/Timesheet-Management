@@ -27,6 +27,15 @@ const nextConfig = {
     }
     config.resolve.modules = ['node_modules', ...config.resolve.modules];
     
+    // Ensure jose is properly resolved (ESM-only package)
+    // Don't externalize it - we want it bundled, but webpack needs to find it
+    if (isServer) {
+      config.resolve.extensionAlias = {
+        '.js': ['.js', '.ts', '.tsx'],
+        '.jsx': ['.jsx', '.tsx'],
+      };
+    }
+    
     return config;
   },
 }

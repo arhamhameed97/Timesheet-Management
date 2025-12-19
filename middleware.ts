@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { verifyTokenEdge, getTokenFromRequest } from './lib/auth';
+import { verifyTokenEdge } from './lib/auth-edge';
+import { getTokenFromRequest } from './lib/auth';
 import { UserRole } from '@prisma/client';
 
 export async function middleware(request: NextRequest) {
