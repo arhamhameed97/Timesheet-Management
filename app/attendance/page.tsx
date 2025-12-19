@@ -5,6 +5,13 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Table,
   TableBody,
   TableCell,
@@ -23,9 +30,12 @@ import {
   Filter,
   Search,
   Award,
-  Activity
+  Activity,
+  ChevronLeft,
+  ChevronRight,
+  Users
 } from 'lucide-react';
-import { format, differenceInSeconds, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, startOfMonth, endOfMonth, subDays, addDays } from 'date-fns';
+import { format, differenceInSeconds, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, startOfMonth, endOfMonth, subDays, addDays, getDaysInMonth, getDay, subMonths, addMonths } from 'date-fns';
 
 interface Attendance {
   id: string;
@@ -59,6 +69,21 @@ interface AttendanceStats {
   averageHoursPerDay: number;
 }
 
+interface Employee {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+interface UserInfo {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  companyId: string | null;
+}
+
 export default function AttendancePage() {
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +102,12 @@ export default function AttendancePage() {
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showDateDetails, setShowDateDetails] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -84,6 +115,7 @@ export default function AttendancePage() {
     const loadData = async () => {
       try {
         await Promise.all([
+          fetchUserInfo(),
           fetchTodayAttendance(),
           fetchAttendance()
         ]);
@@ -101,6 +133,20 @@ export default function AttendancePage() {
       mounted = false;
     };
   }, []);
+
+  // Fetch employees when user info is loaded (for managers/admins)
+  useEffect(() => {
+    if (userInfo && (userInfo.role === 'MANAGER' || userInfo.role === 'COMPANY_ADMIN' || userInfo.role === 'SUPER_ADMIN' || userInfo.role === 'TEAM_LEAD')) {
+      fetchEmployees();
+    }
+  }, [userInfo]);
+
+  // Fetch attendance when selected employee or month changes
+  useEffect(() => {
+    if (userInfo) {
+      fetchAttendance();
+    }
+  }, [selectedEmployeeId, currentMonth]);
 
   // Calculate stats when attendance changes
   useEffect(() => {
@@ -356,6 +402,46 @@ export default function AttendancePage() {
     }
   };
 
+  const fetchUserInfo = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUserInfo(data.user);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user info:', error);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const response = await fetch('/api/employees', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data.employees || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch employees:', error);
+    }
+  };
+
   const fetchAttendance = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -364,7 +450,19 @@ export default function AttendancePage() {
         return;
       }
       
-      const response = await fetch('/api/attendance', {
+      // Calculate date range for current month
+      const start = startOfMonth(currentMonth);
+      const end = endOfMonth(currentMonth);
+      const startDate = format(start, 'yyyy-MM-dd');
+      const endDate = format(end, 'yyyy-MM-dd');
+      
+      // Build URL with optional userId parameter
+      let url = `/api/attendance?startDate=${startDate}&endDate=${endDate}`;
+      if (selectedEmployeeId) {
+        url += `&userId=${selectedEmployeeId}`;
+      }
+      
+      const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -535,6 +633,69 @@ export default function AttendancePage() {
     });
   };
 
+  const getHoursWorked = (attendanceRecord: Attendance | undefined): string => {
+    if (!attendanceRecord || !attendanceRecord.checkInTime || !attendanceRecord.checkOutTime) {
+      return '-';
+    }
+    
+    const checkIn = new Date(attendanceRecord.checkInTime);
+    const checkOut = new Date(attendanceRecord.checkOutTime);
+    const totalSeconds = differenceInSeconds(checkOut, checkIn);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  };
+
+  const getMonthlyCalendarDays = () => {
+    const monthStart = startOfMonth(currentMonth);
+    const monthEnd = endOfMonth(currentMonth);
+    const daysInMonth = getDaysInMonth(currentMonth);
+    const startDay = getDay(monthStart); // 0 = Sunday, 1 = Monday, etc.
+    
+    // Adjust for Monday as first day (0 = Monday)
+    const adjustedStartDay = startDay === 0 ? 6 : startDay - 1;
+    
+    const days: (Date | null)[] = [];
+    
+    // Add empty cells for days before month starts
+    for (let i = 0; i < adjustedStartDay; i++) {
+      days.push(null);
+    }
+    
+    // Add all days of the month
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i));
+    }
+    
+    return days;
+  };
+
+  const handleDateClick = (date: Date) => {
+    setSelectedDate(date);
+    setShowDateDetails(true);
+  };
+
+  const handlePrevMonth = () => {
+    setCurrentMonth(subMonths(currentMonth, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(addMonths(currentMonth, 1));
+  };
+
+  const handleEmployeeChange = (employeeId: string) => {
+    setSelectedEmployeeId(employeeId || null);
+  };
+
+  const getSelectedDateAttendance = () => {
+    if (!selectedDate) return null;
+    return getAttendanceForDate(selectedDate);
+  };
+
   const filteredAttendance = attendance.filter((record) => {
     const matchesSearch = searchTerm === '' || 
       formatDate(record.date).toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -585,14 +746,38 @@ export default function AttendancePage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Attendance</h1>
-            <p className="text-gray-600 mt-1">Track your daily attendance and work hours</p>
+            <p className="text-gray-600 mt-1">
+              {selectedEmployeeId && employees.find(e => e.id === selectedEmployeeId)
+                ? `Viewing attendance for ${employees.find(e => e.id === selectedEmployeeId)?.name}`
+                : 'Track your daily attendance and work hours'}
+            </p>
           </div>
-          {filteredAttendance.length > 0 && (
-            <Button onClick={exportAttendance} variant="outline" className="gap-2">
-              <Download className="h-4 w-4" />
-              Export CSV
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Employee Selector for Managers/Admins */}
+            {userInfo && (userInfo.role === 'MANAGER' || userInfo.role === 'COMPANY_ADMIN' || userInfo.role === 'SUPER_ADMIN' || userInfo.role === 'TEAM_LEAD') && employees.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-gray-500" />
+                <select
+                  value={selectedEmployeeId || ''}
+                  onChange={(e) => handleEmployeeChange(e.target.value)}
+                  className="px-3 py-2 border rounded-md text-sm min-w-[200px]"
+                >
+                  <option value="">My Attendance</option>
+                  {employees.map((employee) => (
+                    <option key={employee.id} value={employee.id}>
+                      {employee.name} ({employee.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {filteredAttendance.length > 0 && (
+              <Button onClick={exportAttendance} variant="outline" className="gap-2">
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Statistics Cards */}
@@ -814,11 +999,125 @@ export default function AttendancePage() {
           </CardContent>
         </Card>
 
+        {/* Monthly Calendar View */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Attendance Calendar
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePrevMonth}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm font-medium min-w-[150px] text-center">
+                  {format(currentMonth, 'MMMM yyyy')}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextMonth}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentMonth(new Date())}
+                  className="text-xs"
+                >
+                  Today
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Calendar Grid */}
+            <div className="space-y-2">
+              {/* Day Headers */}
+              <div className="grid grid-cols-7 gap-2 mb-2">
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+                  <div key={day} className="text-center text-xs font-semibold text-gray-600 py-2">
+                    {day}
+                  </div>
+                ))}
+              </div>
+              
+              {/* Calendar Days */}
+              <div className="grid grid-cols-7 gap-2">
+                {getMonthlyCalendarDays().map((day, index) => {
+                  if (!day) {
+                    return <div key={`empty-${index}`} className="p-2" />;
+                  }
+                  
+                  const dayAttendance = getAttendanceForDate(day);
+                  const isToday = isSameDay(day, new Date());
+                  const isPast = day < new Date() && !isToday;
+                  const isFuture = day > new Date() && !isToday;
+                  const hoursWorked = getHoursWorked(dayAttendance);
+                  
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      onClick={() => handleDateClick(day)}
+                      className={`p-2 rounded-lg border-2 cursor-pointer transition-all hover:shadow-md min-h-[100px] ${
+                        isToday
+                          ? 'border-primary bg-primary/10'
+                          : dayAttendance
+                          ? 'border-green-200 bg-green-50 hover:bg-green-100'
+                          : isPast
+                          ? 'border-gray-200 bg-gray-50 hover:bg-gray-100'
+                          : isFuture
+                          ? 'border-gray-100 bg-white opacity-50'
+                          : 'border-gray-100 bg-white'
+                      }`}
+                    >
+                      <div className={`text-sm font-bold mb-1 ${isToday ? 'text-primary' : 'text-gray-900'}`}>
+                        {format(day, 'd')}
+                      </div>
+                      {dayAttendance?.checkInTime && (
+                        <div className="space-y-1">
+                          <div className="text-xs text-gray-600">
+                            <span className="font-medium">In:</span> {formatTime(dayAttendance.checkInTime)}
+                          </div>
+                          {dayAttendance.checkOutTime && (
+                            <div className="text-xs text-gray-600">
+                              <span className="font-medium">Out:</span> {formatTime(dayAttendance.checkOutTime)}
+                            </div>
+                          )}
+                          {hoursWorked !== '-' && (
+                            <div className="text-xs font-semibold text-green-700 mt-1">
+                              {hoursWorked}
+                            </div>
+                          )}
+                          {!dayAttendance.checkOutTime && (
+                            <div className="text-xs text-green-600 font-medium mt-1">Active</div>
+                          )}
+                        </div>
+                      )}
+                      {!dayAttendance && isPast && (
+                        <div className="text-xs text-gray-400 mt-1">No record</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Weekly Calendar View */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
+              <CalendarDays className="h-5 w-5" />
               This Week
             </CardTitle>
           </CardHeader>
@@ -832,13 +1131,14 @@ export default function AttendancePage() {
                 return (
                   <div
                     key={index}
-                    className={`p-3 rounded-lg border-2 text-center ${
+                    onClick={() => handleDateClick(day)}
+                    className={`p-3 rounded-lg border-2 text-center cursor-pointer transition-all hover:shadow-md ${
                       isToday
                         ? 'border-primary bg-primary/10'
                         : dayAttendance
-                        ? 'border-green-200 bg-green-50'
+                        ? 'border-green-200 bg-green-50 hover:bg-green-100'
                         : isPast
-                        ? 'border-gray-200 bg-gray-50'
+                        ? 'border-gray-200 bg-gray-50 hover:bg-gray-100'
                         : 'border-gray-100 bg-white'
                     }`}
                   >
@@ -855,6 +1155,11 @@ export default function AttendancePage() {
                     )}
                     {dayAttendance?.checkOutTime && (
                       <div className="text-xs text-green-600 font-medium">✓</div>
+                    )}
+                    {dayAttendance && (
+                      <div className="text-xs font-semibold text-green-700 mt-1">
+                        {getHoursWorked(dayAttendance)}
+                      </div>
                     )}
                   </div>
                 );
@@ -960,6 +1265,134 @@ export default function AttendancePage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Date Details Dialog */}
+        <Dialog open={showDateDetails} onOpenChange={setShowDateDetails}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedDate ? format(selectedDate, 'EEEE, MMMM dd, yyyy') : 'Attendance Details'}
+              </DialogTitle>
+              <DialogDescription>
+                Detailed attendance information for this date
+              </DialogDescription>
+            </DialogHeader>
+            {(() => {
+              const dateAttendance = getSelectedDateAttendance();
+              const dateDetails = dateAttendance ? parseAttendanceDetails(dateAttendance) : null;
+              
+              if (!dateAttendance) {
+                return (
+                  <div className="py-8 text-center">
+                    <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">No attendance record for this date</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  {/* Basic Info */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-500">Check-in Time</label>
+                      <p className="text-base font-semibold">
+                        {formatTime(dateAttendance.checkInTime) || 'Not checked in'}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-500">Check-out Time</label>
+                      <p className="text-base font-semibold">
+                        {formatTime(dateAttendance.checkOutTime) || 'Not checked out'}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-500">Total Hours</label>
+                      <p className="text-base font-semibold text-green-700">
+                        {getHoursWorked(dateAttendance)}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-500">Status</label>
+                      <p className="text-base font-semibold">
+                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                          dateAttendance.status === 'PRESENT' ? 'bg-green-100 text-green-800' :
+                          dateAttendance.status === 'ABSENT' ? 'bg-red-100 text-red-800' :
+                          dateAttendance.status === 'LATE' ? 'bg-yellow-100 text-yellow-800' :
+                          dateAttendance.status === 'HALF_DAY' ? 'bg-orange-100 text-orange-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {dateAttendance.status}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Check-in/Check-out History */}
+                  {dateDetails && dateDetails.checkInOutHistory.length > 0 && (
+                    <div className="space-y-2 pt-4 border-t">
+                      <h4 className="text-sm font-semibold text-gray-700">Check-in/Check-out Timeline</h4>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {dateDetails.checkInOutHistory.map((event, index) => (
+                          <div key={index} className="flex items-center gap-3 text-sm p-2 rounded bg-gray-50">
+                            <div className={`w-3 h-3 rounded-full ${event.type === 'in' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                            <span className="text-gray-600 font-medium">
+                              {event.type === 'in' ? 'Checked In' : 'Checked Out'}
+                            </span>
+                            <span className="text-gray-900 font-semibold">
+                              {format(new Date(event.time), 'HH:mm:ss')}
+                            </span>
+                            <span className="text-gray-500 text-xs ml-auto">
+                              {format(new Date(event.time), 'MMM dd, yyyy')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Break Time and Total Shift Time */}
+                  {dateDetails && (dateDetails.totalBreakTime > 0 || dateDetails.totalShiftTime > 0) && (
+                    <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+                        <div className="text-xs uppercase tracking-wider text-purple-700 mb-1">Total Shift Time</div>
+                        <div className="text-xl font-bold text-purple-900">
+                          {(() => {
+                            const seconds = dateDetails.totalShiftTime;
+                            const hours = Math.floor(seconds / 3600);
+                            const minutes = Math.floor((seconds % 3600) / 60);
+                            return `${hours}h ${minutes}m`;
+                          })()}
+                        </div>
+                      </div>
+                      <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
+                        <div className="text-xs uppercase tracking-wider text-orange-700 mb-1">Break Time</div>
+                        <div className="text-xl font-bold text-orange-900">
+                          {(() => {
+                            const seconds = dateDetails.totalBreakTime;
+                            const hours = Math.floor(seconds / 3600);
+                            const minutes = Math.floor((seconds % 3600) / 60);
+                            return `${hours}h ${minutes}m`;
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {dateAttendance.notes && (
+                    <div className="pt-4 border-t">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Notes</h4>
+                      <div className="text-sm text-gray-600">
+                        {formatNotes(dateAttendance.notes)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
