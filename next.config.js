@@ -10,11 +10,23 @@ const nextConfig = {
   },
   
   // Improve file watching on Windows
-  webpackDevMiddleware: (config) => {
-    config.watchOptions = {
-      poll: 1000, // Check for changes every second
-      aggregateTimeout: 300, // Delay before rebuilding
-    };
+  webpack: (config, { dev, isServer }) => {
+    if (dev) {
+      config.watchOptions = {
+        poll: 1000, // Check for changes every second
+        aggregateTimeout: 300, // Delay before rebuilding
+      };
+    }
+    
+    // Ensure node_modules resolution works correctly for ESM packages like jose
+    if (!config.resolve) {
+      config.resolve = {};
+    }
+    if (!config.resolve.modules) {
+      config.resolve.modules = [];
+    }
+    config.resolve.modules = ['node_modules', ...config.resolve.modules];
+    
     return config;
   },
 }

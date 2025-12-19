@@ -1,5 +1,4 @@
 import jwt from 'jsonwebtoken';
-import { jwtVerify } from 'jose';
 import { UserRole } from '@prisma/client';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -92,6 +91,8 @@ export async function verifyTokenEdge(token: string): Promise<JWTPayload | null>
   }
 
   try {
+    // Dynamic import for jose to ensure proper webpack resolution
+    const { jwtVerify } = await import('jose');
     const secret = new TextEncoder().encode(JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
     
