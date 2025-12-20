@@ -51,6 +51,11 @@ enum TeamMemberRole {
   MEMBER
 }
 
+enum PaymentType {
+  HOURLY
+  SALARY
+}
+
 model Company {
   id        String   @id @default(cuid())
   name      String
@@ -75,6 +80,9 @@ model User {
   role         UserRole  @default(EMPLOYEE)
   managerId    String?   // For hierarchy - who manages this user
   phone        String?
+  paymentType  PaymentType?
+  hourlyRate   Float?
+  monthlySalary Float?
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -211,23 +219,28 @@ model TeamProgress {
 }
 
 model Payroll {
-  id          String        @id @default(cuid())
-  userId      String
-  month       Int
-  year        Int
-  baseSalary  Float
-  allowances  Float         @default(0)
-  deductions  Float         @default(0)
-  netSalary   Float
-  status      PayrollStatus @default(PENDING)
-  approvedBy  String?
-  approvedAt  DateTime?
-  paidAt      DateTime?
-  notes       String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id            String        @id @default(cuid())
+  userId        String
+  month         Int
+  year          Int
+  paymentType   PaymentType?
+  hoursWorked   Float?
+  hourlyRate    Float?
+  baseSalary    Float
+  bonuses       Json?          // Array of { name: string, amount: number }
+  deductions    Json?          // Array of { name: string, amount: number }
+  totalBonuses  Float          @default(0)
+  totalDeductions Float         @default(0)
+  netSalary     Float
+  status        PayrollStatus @default(PENDING)
+  approvedBy    String?
+  approvedAt    DateTime?
+  paidAt        DateTime?
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, month, year])
   @@index([userId, month, year])

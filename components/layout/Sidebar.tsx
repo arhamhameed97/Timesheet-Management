@@ -57,7 +57,7 @@ const allNavItems: NavItem[] = [
     title: 'Payroll', 
     href: '/payroll', 
     icon: DollarSign,
-    feature: 'manage_payroll',
+    roles: [UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE], // All roles can view payroll (page handles permissions)
   },
   { 
     title: 'Designations', 
@@ -151,6 +151,8 @@ export function Sidebar({ role }: SidebarProps) {
     </div>
   );
 }
+
+
 
 
 

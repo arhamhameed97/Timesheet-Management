@@ -4,6 +4,11 @@ import { prisma } from '@/lib/db';
 import { updatePayrollSchema } from '@/lib/validations';
 import { UserRole, PayrollStatus } from '@prisma/client';
 import { canManageUser } from '@/lib/permissions';
+import {
+  calculateTotalBonuses,
+  calculateTotalDeductions,
+  calculateNetSalary,
+} from '@/lib/payroll-helpers';
 
 export async function GET(
   request: NextRequest,
@@ -43,7 +48,14 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({ payroll });
+    // Parse bonuses and deductions from JSON
+    const payrollResponse = {
+      ...payroll,
+      bonuses: payroll.bonuses ? (typeof payroll.bonuses === 'string' ? JSON.parse(payroll.bonuses) : payroll.bonuses) : [],
+      deductions: payroll.deductions ? (typeof payroll.deductions === 'string' ? JSON.parse(payroll.deductions) : payroll.deductions) : [],
+    };
+
+    return NextResponse.json({ payroll: payrollResponse });
   } catch (error) {
     console.error('Get payroll error:', error);
     return NextResponse.json(
@@ -99,18 +111,40 @@ export async function PATCH(
       }
     }
 
-    // Recalculate net salary if base salary, allowances, or deductions change
-    let netSalary = payroll.netSalary;
-    if (validatedData.baseSalary !== undefined || 
-        validatedData.allowances !== undefined || 
-        validatedData.deductions !== undefined) {
-      const baseSalary = validatedData.baseSalary ?? payroll.baseSalary;
-      const allowances = validatedData.allowances ?? payroll.allowances;
-      const deductions = validatedData.deductions ?? payroll.deductions;
-      netSalary = baseSalary + allowances - deductions;
+    // Prepare update data
+    const updateData: any = { ...validatedData };
+
+    // Handle bonuses and deductions
+    let bonuses = validatedData.bonuses;
+    let deductions = validatedData.deductions;
+
+    // If not provided, use existing values
+    if (!bonuses) {
+      bonuses = payroll.bonuses ? (typeof payroll.bonuses === 'string' ? JSON.parse(payroll.bonuses as string) : payroll.bonuses) : [];
+    }
+    if (!deductions) {
+      deductions = payroll.deductions ? (typeof payroll.deductions === 'string' ? JSON.parse(payroll.deductions as string) : payroll.deductions) : [];
     }
 
-    const updateData: any = { ...validatedData, netSalary };
+    // Calculate totals
+    const totalBonuses = calculateTotalBonuses(bonuses);
+    const totalDeductions = calculateTotalDeductions(deductions);
+
+    // Recalculate net salary if base salary, bonuses, or deductions change
+    const baseSalary = validatedData.baseSalary ?? payroll.baseSalary;
+    const netSalary = calculateNetSalary(baseSalary, bonuses, deductions);
+
+    updateData.totalBonuses = totalBonuses;
+    updateData.totalDeductions = totalDeductions;
+    updateData.netSalary = netSalary;
+    
+    // Store bonuses and deductions as JSON
+    if (validatedData.bonuses !== undefined) {
+      updateData.bonuses = bonuses.length > 0 ? bonuses : null;
+    }
+    if (validatedData.deductions !== undefined) {
+      updateData.deductions = deductions.length > 0 ? deductions : null;
+    }
     
     // Set approver and approval time if approving
     if (validatedData.status === PayrollStatus.APPROVED) {
@@ -137,7 +171,14 @@ export async function PATCH(
       },
     });
 
-    return NextResponse.json({ payroll: updated });
+    // Parse bonuses and deductions for response
+    const payrollResponse = {
+      ...updated,
+      bonuses: updated.bonuses ? (typeof updated.bonuses === 'string' ? JSON.parse(updated.bonuses as string) : updated.bonuses) : [],
+      deductions: updated.deductions ? (typeof updated.deductions === 'string' ? JSON.parse(updated.deductions as string) : updated.deductions) : [],
+    };
+
+    return NextResponse.json({ payroll: payrollResponse });
   } catch (error: any) {
     if (error.name === 'ZodError') {
       return NextResponse.json(

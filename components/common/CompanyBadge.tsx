@@ -25,3 +25,5 @@ export function CompanyBadge({ company, className = '' }: CompanyBadgeProps) {
 
 
 
+
+

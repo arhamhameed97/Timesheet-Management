@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, FileText, DollarSign, CheckCircle } from 'lucide-react';
 import { DesignationBadge } from '@/components/common/DesignationBadge';
@@ -24,6 +25,8 @@ interface EmployeeDashboardProps {
 }
 
 export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
+  const router = useRouter();
+
   return (
     <div className="space-y-6">
       <div>
@@ -87,17 +90,37 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+            <div 
+              className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
+              onClick={() => router.push('/attendance')}
+            >
               <Clock className="h-6 w-6 text-purple-600 mb-2" />
               <h3 className="font-semibold">Check In/Out</h3>
               <p className="text-sm text-gray-600">Record your attendance</p>
             </div>
-            <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+            <div 
+              className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
+              onClick={() => router.push('/timesheets')}
+            >
               <FileText className="h-6 w-6 text-purple-600 mb-2" />
               <h3 className="font-semibold">Submit Timesheet</h3>
               <p className="text-sm text-gray-600">Log your work hours</p>
             </div>
-            <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+            <div 
+              className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+              onClick={(e) => {
+                e.preventDefault();
+                router.push('/payroll');
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  router.push('/payroll');
+                }
+              }}
+            >
               <DollarSign className="h-6 w-6 text-purple-600 mb-2" />
               <h3 className="font-semibold">View Payroll</h3>
               <p className="text-sm text-gray-600">Check your salary details</p>
@@ -108,6 +131,8 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
     </div>
   );
 }
+
+
 
 
 

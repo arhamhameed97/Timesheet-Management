@@ -276,6 +276,15 @@ export default function EmployeesPage() {
       if (formData.managerId) {
         requestBody.managerId = formData.managerId;
       }
+      if (formData.paymentType) {
+        requestBody.paymentType = formData.paymentType;
+      }
+      if (formData.hourlyRate) {
+        requestBody.hourlyRate = parseFloat(formData.hourlyRate);
+      }
+      if (formData.monthlySalary) {
+        requestBody.monthlySalary = parseFloat(formData.monthlySalary);
+      }
       
       // Only include companyId for super admins
       if (user?.role === UserRole.SUPER_ADMIN && formData.companyId) {
@@ -302,6 +311,9 @@ export default function EmployeesPage() {
           role: 'EMPLOYEE',
           managerId: '',
           companyId: user?.companyId || '',
+          paymentType: '' as '' | 'HOURLY' | 'SALARY',
+          hourlyRate: '',
+          monthlySalary: '',
         });
         fetchEmployees();
         // Show success message
@@ -441,6 +453,59 @@ export default function EmployeesPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                
+                {/* Payment Type Section */}
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <Label className="text-sm font-semibold text-gray-900 mb-2 block">Payment Information</Label>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="paymentType">Payment Type</Label>
+                      <Select
+                        value={formData.paymentType}
+                        onValueChange={(value) => setFormData({ ...formData, paymentType: value as 'HOURLY' | 'SALARY', hourlyRate: '', monthlySalary: '' })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select payment type (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="HOURLY">Hourly</SelectItem>
+                          <SelectItem value="SALARY">Salary</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {formData.paymentType === 'HOURLY' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="hourlyRate">Hourly Rate ($) *</Label>
+                        <Input
+                          id="hourlyRate"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.hourlyRate}
+                          onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
+                          placeholder="e.g., 25.00"
+                          required
+                        />
+                      </div>
+                    )}
+                    {formData.paymentType === 'SALARY' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="monthlySalary">Monthly Salary ($) *</Label>
+                        <Input
+                          id="monthlySalary"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.monthlySalary}
+                          onChange={(e) => setFormData({ ...formData, monthlySalary: e.target.value })}
+                          placeholder="e.g., 5000.00"
+                          required
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                     Cancel
@@ -810,6 +875,8 @@ export default function EmployeesPage() {
     </MainLayout>
   );
 }
+
+
 
 
 

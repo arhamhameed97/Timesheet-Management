@@ -108,6 +108,7 @@ export default function AttendancePage() {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDateDetails, setShowDateDetails] = useState(false);
+  const [calendarView, setCalendarView] = useState<'week' | 'month' | 'year'>('month');
 
   useEffect(() => {
     let mounted = true;
@@ -141,12 +142,13 @@ export default function AttendancePage() {
     }
   }, [userInfo]);
 
-  // Fetch attendance when selected employee or month changes
+  // Fetch attendance when selected employee, month, or view changes
   useEffect(() => {
     if (userInfo) {
       fetchAttendance();
+      fetchTodayAttendance();
     }
-  }, [selectedEmployeeId, currentMonth]);
+  }, [selectedEmployeeId, currentMonth, calendarView]);
 
   // Calculate stats when attendance changes
   useEffect(() => {
@@ -319,6 +321,7 @@ export default function AttendancePage() {
     const endOfCurrentMonth = endOfMonth(now);
 
     // Filter attendance for current month
+    // If an employee is selected, the attendance array already contains only that employee's data
     const thisMonthAttendance = attendance.filter((record) => {
       const recordDate = new Date(record.date);
       return recordDate >= startOfCurrentMonth && recordDate <= endOfCurrentMonth && record.checkOutTime;
@@ -379,7 +382,14 @@ export default function AttendancePage() {
       }
       
       const today = format(new Date(), 'yyyy-MM-dd');
-      const response = await fetch(`/api/attendance?startDate=${today}&endDate=${today}`, {
+      let url = `/api/attendance?startDate=${today}&endDate=${today}`;
+      
+      // Add userId parameter if an employee is selected
+      if (selectedEmployeeId) {
+        url += `&userId=${selectedEmployeeId}`;
+      }
+      
+      const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -450,9 +460,22 @@ export default function AttendancePage() {
         return;
       }
       
-      // Calculate date range for current month
-      const start = startOfMonth(currentMonth);
-      const end = endOfMonth(currentMonth);
+      // Calculate date range based on calendar view
+      let start: Date;
+      let end: Date;
+      
+      if (calendarView === 'week') {
+        start = startOfWeek(currentMonth, { weekStartsOn: 1 });
+        end = endOfWeek(currentMonth, { weekStartsOn: 1 });
+      } else if (calendarView === 'year') {
+        start = new Date(currentMonth.getFullYear(), 0, 1);
+        end = new Date(currentMonth.getFullYear(), 11, 31);
+      } else {
+        // month view
+        start = startOfMonth(currentMonth);
+        end = endOfMonth(currentMonth);
+      }
+      
       const startDate = format(start, 'yyyy-MM-dd');
       const endDate = format(end, 'yyyy-MM-dd');
       
@@ -480,6 +503,12 @@ export default function AttendancePage() {
   };
 
   const handleCheckIn = async () => {
+    // Only allow check-in for own attendance, not when viewing others
+    if (selectedEmployeeId) {
+      alert('You can only check in for your own attendance. Please select "My Attendance" first.');
+      return;
+    }
+    
     setCheckingIn(true);
     try {
       const token = localStorage.getItem('token');
@@ -527,6 +556,12 @@ export default function AttendancePage() {
   };
 
   const handleCheckOut = async () => {
+    // Only allow check-out for own attendance, not when viewing others
+    if (selectedEmployeeId) {
+      alert('You can only check out for your own attendance. Please select "My Attendance" first.');
+      return;
+    }
+    
     setCheckingOut(true);
     try {
       const token = localStorage.getItem('token');
@@ -674,6 +709,19 @@ export default function AttendancePage() {
     return days;
   };
 
+  const getWeeklyCalendarDays = () => {
+    const weekStart = startOfWeek(currentMonth, { weekStartsOn: 1 });
+    return eachDayOfInterval({ start: weekStart, end: endOfWeek(weekStart, { weekStartsOn: 1 }) });
+  };
+
+  const getYearCalendarMonths = () => {
+    const months: Date[] = [];
+    for (let i = 0; i < 12; i++) {
+      months.push(new Date(currentMonth.getFullYear(), i, 1));
+    }
+    return months;
+  };
+
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
     setShowDateDetails(true);
@@ -741,14 +789,14 @@ export default function AttendancePage() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="h-[calc(100vh-120px)] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2 flex-shrink-0">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Attendance</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
+            <p className="text-gray-600 text-xs">
               {selectedEmployeeId && employees.find(e => e.id === selectedEmployeeId)
-                ? `Viewing attendance for ${employees.find(e => e.id === selectedEmployeeId)?.name}`
+                ? `Viewing: ${employees.find(e => e.id === selectedEmployeeId)?.name}`
                 : 'Track your daily attendance and work hours'}
             </p>
           </div>
@@ -756,109 +804,123 @@ export default function AttendancePage() {
             {/* Employee Selector for Managers/Admins */}
             {userInfo && (userInfo.role === 'MANAGER' || userInfo.role === 'COMPANY_ADMIN' || userInfo.role === 'SUPER_ADMIN' || userInfo.role === 'TEAM_LEAD') && employees.length > 0 && (
               <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-gray-500" />
+                <Users className="h-3 w-3 text-gray-500" />
                 <select
                   value={selectedEmployeeId || ''}
                   onChange={(e) => handleEmployeeChange(e.target.value)}
-                  className="px-3 py-2 border rounded-md text-sm min-w-[200px]"
+                  className="px-2 py-1 border rounded text-xs min-w-[150px]"
                 >
                   <option value="">My Attendance</option>
                   {employees.map((employee) => (
                     <option key={employee.id} value={employee.id}>
-                      {employee.name} ({employee.email})
+                      {employee.name}
                     </option>
                   ))}
                 </select>
               </div>
             )}
             {filteredAttendance.length > 0 && (
-              <Button onClick={exportAttendance} variant="outline" className="gap-2">
-                <Download className="h-4 w-4" />
-                Export CSV
+              <Button onClick={exportAttendance} variant="outline" size="sm" className="gap-1 text-xs h-7">
+                <Download className="h-3 w-3" />
+                Export
               </Button>
             )}
           </div>
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-purple-900">Total Hours This Month</CardTitle>
-              <Clock className="h-4 w-4 text-purple-600" />
+        <div className="grid grid-cols-4 gap-2 mb-2 flex-shrink-0">
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 p-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1">
+              <CardTitle className="text-[10px] font-medium text-purple-900">Total Hours</CardTitle>
+              <Clock className="h-3 w-3 text-purple-600" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-900">{stats.totalHoursThisMonth.toFixed(1)}</div>
-              <p className="text-xs text-purple-700 mt-1">Hours worked</p>
+            <CardContent className="p-0 pt-1">
+              <div className="text-lg font-bold text-purple-900">{stats.totalHoursThisMonth.toFixed(1)}</div>
+              <p className="text-[10px] text-purple-700">This month</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-blue-900">Days Worked</CardTitle>
-              <CalendarDays className="h-4 w-4 text-blue-600" />
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 p-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1">
+              <CardTitle className="text-[10px] font-medium text-blue-900">Days Worked</CardTitle>
+              <CalendarDays className="h-3 w-3 text-blue-600" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-900">{stats.daysWorkedThisMonth}</div>
-              <p className="text-xs text-blue-700 mt-1">This month</p>
+            <CardContent className="p-0 pt-1">
+              <div className="text-lg font-bold text-blue-900">{stats.daysWorkedThisMonth}</div>
+              <p className="text-[10px] text-blue-700">This month</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-green-900">Current Streak</CardTitle>
-              <Award className="h-4 w-4 text-green-600" />
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 p-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1">
+              <CardTitle className="text-[10px] font-medium text-green-900">Streak</CardTitle>
+              <Award className="h-3 w-3 text-green-600" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-900">{stats.currentStreak}</div>
-              <p className="text-xs text-green-700 mt-1">Days in a row</p>
+            <CardContent className="p-0 pt-1">
+              <div className="text-lg font-bold text-green-900">{stats.currentStreak}</div>
+              <p className="text-[10px] text-green-700">Days in a row</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-orange-900">Average Hours/Day</CardTitle>
-              <TrendingUp className="h-4 w-4 text-orange-600" />
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 p-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1">
+              <CardTitle className="text-[10px] font-medium text-orange-900">Avg Hours/Day</CardTitle>
+              <TrendingUp className="h-3 w-3 text-orange-600" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-900">{stats.averageHoursPerDay.toFixed(1)}</div>
-              <p className="text-xs text-orange-700 mt-1">Per day average</p>
+            <CardContent className="p-0 pt-1">
+              <div className="text-lg font-bold text-orange-900">{stats.averageHoursPerDay.toFixed(1)}</div>
+              <p className="text-[10px] text-orange-700">Per day</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Today's Attendance Card - Enhanced */}
-        <Card className="border-2 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-primary/10 to-purple-100/50 rounded-t-lg">
+        {/* Today's Attendance Card - Full Width */}
+        <Card className="border-2 shadow-lg flex-shrink min-h-0 flex flex-col">
+          <CardHeader className="bg-gradient-to-r from-primary/10 to-purple-100/50 rounded-t-lg p-3 flex-shrink-0">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-bold">Today&apos;s Attendance</CardTitle>
-              <div className="text-sm text-gray-600 font-medium">
+              <CardTitle className="text-base font-bold">
+                {selectedEmployeeId && employees.find(e => e.id === selectedEmployeeId)
+                  ? `${employees.find(e => e.id === selectedEmployeeId)?.name}'s Attendance`
+                  : 'Today\'s Attendance'}
+              </CardTitle>
+              <div className="text-xs text-gray-600 font-medium">
                 {format(new Date(), 'EEEE, MMMM dd, yyyy')}
               </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-6">
-            {!todayAttendance?.checkInTime ? (
-              <div className="text-center py-8">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-4">
-                  <Clock className="h-10 w-10 text-gray-400" />
+          <CardContent className="pt-3 p-3 flex-1 flex flex-col min-h-0">
+            {selectedEmployeeId && !todayAttendance?.checkInTime ? (
+              <div className="text-center py-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-3">
+                  <Clock className="h-8 w-8 text-gray-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Not Checked In</h3>
-                <p className="text-sm text-gray-500 mb-6">Start your work day by checking in</p>
-                <Button
-                  onClick={handleCheckIn}
-                  disabled={checkingIn}
-                  className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700 text-white shadow-lg px-8 py-6 text-lg"
-                  size="lg"
-                >
-                  <LogIn className="mr-2 h-5 w-5" />
-                  {checkingIn ? 'Checking in...' : 'Check In'}
-                </Button>
+                <h3 className="text-base font-semibold text-gray-900 mb-2">Not Checked In</h3>
+                <p className="text-sm text-gray-500">No attendance record for today</p>
+              </div>
+            ) : !todayAttendance?.checkInTime ? (
+              <div className="text-center py-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-3">
+                  <Clock className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-base font-semibold text-gray-900 mb-2">Not Checked In</h3>
+                <p className="text-sm text-gray-500 mb-4">Start your work day by checking in</p>
+                {!selectedEmployeeId && (
+                  <Button
+                    onClick={handleCheckIn}
+                    disabled={checkingIn}
+                    className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700 text-white shadow-lg px-6 py-3"
+                    size="sm"
+                  >
+                    <LogIn className="mr-2 h-4 w-4" />
+                    {checkingIn ? 'Checking in...' : 'Check In'}
+                  </Button>
+                )}
               </div>
             ) : !todayAttendance?.checkOutTime ? (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
                       <span className="text-sm font-medium text-green-700">Active Shift</span>
@@ -868,69 +930,59 @@ export default function AttendancePage() {
                       <span className="text-gray-900">{formatTime(todayAttendance.checkInTime)}</span>
                     </div>
                   </div>
-                  <Button
-                    onClick={handleCheckOut}
-                    disabled={checkingOut}
-                    className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg"
-                    size="lg"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    {checkingOut ? 'Checking out...' : 'Check Out'}
-                  </Button>
+                  {!selectedEmployeeId && (
+                    <Button
+                      onClick={handleCheckOut}
+                      disabled={checkingOut}
+                      className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg"
+                      size="sm"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      {checkingOut ? 'Checking out...' : 'Check Out'}
+                    </Button>
+                  )}
                 </div>
 
-                {/* Large Timer Display */}
-                <div className="bg-gradient-to-br from-primary/10 via-purple-50 to-blue-50 rounded-xl p-8 border-2 border-primary/20">
+                {/* Timer Display */}
+                <div className="bg-gradient-to-br from-primary/10 via-purple-50 to-blue-50 rounded-lg p-4 border border-primary/20">
                   <div className="text-center">
-                    <div className="text-xs uppercase tracking-wider text-gray-500 mb-3">Current Shift Time</div>
-                    <div className="flex items-center justify-center gap-3 mb-2">
-                      <Clock className="h-8 w-8 text-primary" />
-                      <div className="text-6xl font-mono font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                    <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">Current Shift Time</div>
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <Clock className="h-6 w-6 text-primary" />
+                      <div className="text-4xl font-mono font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
                         {elapsedTime}
                       </div>
                     </div>
-                    <div className="text-sm text-gray-600 mt-4">
-                      {attendanceDetails?.firstCheckIn ? (
-                        <>
-                          Started at <span className="font-semibold">{formatTime(attendanceDetails.firstCheckIn.toISOString())}</span>
-                        </>
-                      ) : (
-                        <>
-                          Started at <span className="font-semibold">{formatTime(todayAttendance.checkInTime)}</span>
-                        </>
-                      )}
+                    <div className="text-xs text-gray-600">
+                      Started at {attendanceDetails?.firstCheckIn ? formatTime(attendanceDetails.firstCheckIn.toISOString()) : formatTime(todayAttendance.checkInTime)}
                     </div>
                   </div>
                 </div>
 
                 {/* Break Time and Total Shift Time Display */}
                 {attendanceDetails && attendanceDetails.totalBreakTime > 0 && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3 border border-purple-200">
                       <div className="text-xs uppercase tracking-wider text-purple-700 mb-1">Total Shift Time</div>
-                      <div className="text-xl font-bold text-purple-900">{totalShiftTime || '00:00:00'}</div>
+                      <div className="text-lg font-bold text-purple-900">{totalShiftTime || '00:00:00'}</div>
                     </div>
-                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-3 border border-orange-200">
                       <div className="text-xs uppercase tracking-wider text-orange-700 mb-1">Break Time</div>
-                      <div className="text-xl font-bold text-orange-900">{breakTime || '00:00:00'}</div>
+                      <div className="text-lg font-bold text-orange-900">{breakTime || '00:00:00'}</div>
                     </div>
                   </div>
                 )}
 
                 {/* Check-in/Check-out History */}
                 {attendanceDetails && attendanceDetails.checkInOutHistory.length > 2 && (
-                  <div className="space-y-2 pt-4 border-t">
-                    <h4 className="text-sm font-semibold text-gray-700">Today&apos;s Timeline</h4>
-                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                  <div className="space-y-1 pt-2 border-t">
+                    <h4 className="text-xs font-semibold text-gray-700">Today&apos;s Timeline</h4>
+                    <div className="space-y-1 max-h-24 overflow-y-auto">
                       {attendanceDetails.checkInOutHistory.map((event, index) => (
-                        <div key={index} className="flex items-center gap-3 text-sm">
+                        <div key={index} className="flex items-center gap-2 text-xs">
                           <div className={`w-2 h-2 rounded-full ${event.type === 'in' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                          <span className="text-gray-600">
-                            {event.type === 'in' ? 'Checked In' : 'Checked Out'}
-                          </span>
-                          <span className="text-gray-900 font-medium">
-                            {formatTime(event.time)}
-                          </span>
+                          <span className="text-gray-600">{event.type === 'in' ? 'Checked In' : 'Checked Out'}</span>
+                          <span className="text-gray-900 font-medium">{formatTime(event.time)}</span>
                         </div>
                       ))}
                     </div>
@@ -938,333 +990,416 @@ export default function AttendancePage() {
                 )}
               </div>
             ) : (
-              <div className="space-y-6">
-                <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100 mb-4">
-                    <Calendar className="h-10 w-10 text-blue-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Checked Out</h3>
-                  <p className="text-sm text-gray-500 mb-6">You can check back in to continue your shift</p>
-                </div>
-
+              <div className="space-y-2 flex-1 flex flex-col min-h-0">
                 {/* Shift Summary */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
-                    <div className="text-xs uppercase tracking-wider text-purple-700 mb-1">Total Shift Time</div>
-                    <div className="text-2xl font-bold text-purple-900">{totalShiftTime || '00:00:00'}</div>
+                <div className="grid grid-cols-2 gap-2 flex-shrink-0">
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-2 border border-purple-200">
+                    <div className="text-[10px] uppercase tracking-wider text-purple-700 mb-0.5">Total Shift Time</div>
+                    <div className="text-sm font-bold text-purple-900">{totalShiftTime || '00:00:00'}</div>
                   </div>
-                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
-                    <div className="text-xs uppercase tracking-wider text-orange-700 mb-1">Break Time</div>
-                    <div className="text-2xl font-bold text-orange-900">{breakTime || '00:00:00'}</div>
+                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-2 border border-orange-200">
+                    <div className="text-[10px] uppercase tracking-wider text-orange-700 mb-0.5">Break Time</div>
+                    <div className="text-sm font-bold text-orange-900">{breakTime || '00:00:00'}</div>
                   </div>
                 </div>
 
                 {/* Check-in/Check-out History */}
                 {attendanceDetails && attendanceDetails.checkInOutHistory.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold text-gray-700">Today&apos;s Timeline</h4>
-                    <div className="space-y-2">
+                  <div className="space-y-1 pt-1.5 border-t flex-shrink-0">
+                    <h4 className="text-[10px] font-semibold text-gray-700 mb-1">Today&apos;s Timeline</h4>
+                    <div className="space-y-0.5">
                       {attendanceDetails.checkInOutHistory.map((event, index) => (
-                        <div key={index} className="flex items-center gap-3 text-sm">
-                          <div className={`w-2 h-2 rounded-full ${event.type === 'in' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                          <span className="text-gray-600">
-                            {event.type === 'in' ? 'Checked In' : 'Checked Out'}
-                          </span>
-                          <span className="text-gray-900 font-medium">
-                            {formatTime(event.time)}
-                          </span>
+                        <div key={index} className="flex items-center gap-1.5 text-[10px]">
+                          <div className={`w-1.5 h-1.5 rounded-full ${event.type === 'in' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <span className="text-gray-600">{event.type === 'in' ? 'Checked In' : 'Checked Out'}</span>
+                          <span className="text-gray-900 font-medium">{formatTime(event.time)}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* Re-check In Button */}
-                <div className="pt-4 border-t">
-                  <Button
-                    onClick={handleCheckIn}
-                    disabled={checkingIn}
-                    className="w-full bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700 text-white shadow-lg"
-                    size="lg"
-                  >
-                    <LogIn className="mr-2 h-5 w-5" />
-                    {checkingIn ? 'Checking in...' : 'Check Back In'}
-                  </Button>
-                  <p className="text-xs text-gray-500 text-center mt-2">
-                    Continue your shift by checking back in
-                  </p>
-                </div>
+                {/* Re-check In Button - Always visible at bottom */}
+                {!selectedEmployeeId && (
+                  <div className="pt-2 border-t mt-auto flex-shrink-0">
+                    <Button
+                      onClick={handleCheckIn}
+                      disabled={checkingIn}
+                      className="w-full bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700 text-white shadow-lg h-8 text-xs"
+                      size="sm"
+                    >
+                      <LogIn className="mr-1.5 h-3 w-3" />
+                      {checkingIn ? 'Checking in...' : 'Check Back In'}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Monthly Calendar View */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Attendance Calendar
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePrevMonth}
-                  className="h-8 w-8 p-0"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm font-medium min-w-[150px] text-center">
-                  {format(currentMonth, 'MMMM yyyy')}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNextMonth}
-                  className="h-8 w-8 p-0"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentMonth(new Date())}
-                  className="text-xs"
-                >
-                  Today
-                </Button>
+        {/* Bottom Section: Calendar and History Side by Side */}
+        <div className="flex-1 grid grid-cols-2 gap-2 min-h-0 overflow-hidden">
+          {/* Left: Attendance Calendar */}
+          <Card className="flex flex-col overflow-hidden">
+            <CardHeader className="flex-shrink-0 p-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-1 text-sm">
+                  <Calendar className="h-4 w-4" />
+                  Calendar
+                </CardTitle>
+                <div className="flex items-center gap-1">
+                  <select
+                    value={calendarView}
+                    onChange={(e) => setCalendarView(e.target.value as 'week' | 'month' | 'year')}
+                    className="px-2 py-1 text-xs border rounded h-7"
+                  >
+                    <option value="week">Week</option>
+                    <option value="month">Month</option>
+                    <option value="year">Year</option>
+                  </select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePrevMonth}
+                    className="h-7 w-7 p-0"
+                  >
+                    <ChevronLeft className="h-3 w-3" />
+                  </Button>
+                  <span className="text-xs font-medium min-w-[90px] text-center">
+                    {calendarView === 'week' 
+                      ? format(startOfWeek(currentMonth, { weekStartsOn: 1 }), 'MMM dd') + ' - ' + format(endOfWeek(currentMonth, { weekStartsOn: 1 }), 'MMM dd')
+                      : calendarView === 'month'
+                      ? format(currentMonth, 'MMM yyyy')
+                      : format(currentMonth, 'yyyy')}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextMonth}
+                    className="h-7 w-7 p-0"
+                  >
+                    <ChevronRight className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentMonth(new Date())}
+                    className="text-xs px-2 h-7"
+                  >
+                    Today
+                  </Button>
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Calendar Grid */}
-            <div className="space-y-2">
-              {/* Day Headers */}
-              <div className="grid grid-cols-7 gap-2 mb-2">
-                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
-                  <div key={day} className="text-center text-xs font-semibold text-gray-600 py-2">
-                    {day}
-                  </div>
-                ))}
-              </div>
-              
-              {/* Calendar Days */}
-              <div className="grid grid-cols-7 gap-2">
-                {getMonthlyCalendarDays().map((day, index) => {
-                  if (!day) {
-                    return <div key={`empty-${index}`} className="p-2" />;
-                  }
-                  
-                  const dayAttendance = getAttendanceForDate(day);
-                  const isToday = isSameDay(day, new Date());
-                  const isPast = day < new Date() && !isToday;
-                  const isFuture = day > new Date() && !isToday;
-                  const hoursWorked = getHoursWorked(dayAttendance);
-                  
-                  return (
-                    <div
-                      key={day.toISOString()}
-                      onClick={() => handleDateClick(day)}
-                      className={`p-2 rounded-lg border-2 cursor-pointer transition-all hover:shadow-md min-h-[100px] ${
-                        isToday
-                          ? 'border-primary bg-primary/10'
-                          : dayAttendance
-                          ? 'border-green-200 bg-green-50 hover:bg-green-100'
-                          : isPast
-                          ? 'border-gray-200 bg-gray-50 hover:bg-gray-100'
-                          : isFuture
-                          ? 'border-gray-100 bg-white opacity-50'
-                          : 'border-gray-100 bg-white'
-                      }`}
-                    >
-                      <div className={`text-sm font-bold mb-1 ${isToday ? 'text-primary' : 'text-gray-900'}`}>
-                        {format(day, 'd')}
-                      </div>
-                      {dayAttendance?.checkInTime && (
-                        <div className="space-y-1">
-                          <div className="text-xs text-gray-600">
-                            <span className="font-medium">In:</span> {formatTime(dayAttendance.checkInTime)}
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto p-3">
+
+                {/* Calendar Grid */}
+                {calendarView === 'month' && (
+                  <div className="space-y-0">
+                    {/* Day Headers */}
+                    <div className="grid grid-cols-7 gap-0 mb-0.5">
+                      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+                        <div key={day} className="text-center text-[10px] font-semibold text-gray-600 py-0.5">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Calendar Days */}
+                    <div className="grid grid-cols-7 gap-0.5 flex-1" style={{ gridTemplateRows: 'repeat(6, minmax(0, 1fr))' }}>
+                      {getMonthlyCalendarDays().map((day, index) => {
+                        if (!day) {
+                          return <div key={`empty-${index}`} className="p-0" />;
+                        }
+                        
+                        const dayAttendance = getAttendanceForDate(day);
+                        const isToday = isSameDay(day, new Date());
+                        const isPast = day < new Date() && !isToday;
+                        const isFuture = day > new Date() && !isToday;
+                        const hoursWorked = getHoursWorked(dayAttendance);
+                        
+                        return (
+                          <div
+                            key={day.toISOString()}
+                            onClick={() => handleDateClick(day)}
+                            className={`p-1 rounded border cursor-pointer transition-all hover:shadow-sm flex flex-col min-h-0 ${
+                              isToday
+                                ? 'border-primary bg-primary/10'
+                                : dayAttendance
+                                ? 'border-green-200 bg-green-50 hover:bg-green-100'
+                                : isPast
+                                ? 'border-gray-200 bg-gray-50 hover:bg-gray-100'
+                                : isFuture
+                                ? 'border-gray-100 bg-white opacity-50'
+                                : 'border-gray-100 bg-white'
+                            }`}
+                          >
+                            <div className={`text-[11px] font-bold mb-0.5 ${isToday ? 'text-primary' : 'text-gray-900'}`}>
+                              {format(day, 'd')}
+                            </div>
+                            {dayAttendance?.checkInTime && (
+                              <div className="flex-1 flex flex-col justify-center space-y-0.5 min-h-0">
+                                <div className="text-[9px] text-gray-700 font-medium leading-tight">
+                                  <span className="font-semibold">In:</span> {formatTime(dayAttendance.checkInTime)}
+                                </div>
+                                {dayAttendance.checkOutTime && (
+                                  <div className="text-[9px] text-gray-700 font-medium leading-tight">
+                                    <span className="font-semibold">Out:</span> {formatTime(dayAttendance.checkOutTime)}
+                                  </div>
+                                )}
+                                {hoursWorked !== '-' && (
+                                  <div className="text-[9px] font-bold text-green-700 mt-0.5 leading-tight">
+                                    {hoursWorked}
+                                  </div>
+                                )}
+                                {!dayAttendance.checkOutTime && (
+                                  <div className="text-[9px] text-green-600 font-semibold mt-0.5 leading-tight">Active</div>
+                                )}
+                              </div>
+                            )}
+                            {!dayAttendance && isPast && (
+                              <div className="flex-1 flex items-center justify-center min-h-0">
+                                <div className="text-[10px] text-gray-400">-</div>
+                              </div>
+                            )}
+                            {!dayAttendance && !isPast && (
+                              <div className="flex-1 min-h-0"></div>
+                            )}
                           </div>
-                          {dayAttendance.checkOutTime && (
-                            <div className="text-xs text-gray-600">
-                              <span className="font-medium">Out:</span> {formatTime(dayAttendance.checkOutTime)}
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {calendarView === 'week' && (
+                  <div className="space-y-1">
+                    {/* Day Headers */}
+                    <div className="grid grid-cols-7 gap-1 mb-1">
+                      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+                        <div key={day} className="text-center text-sm font-semibold text-gray-600 py-1">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Week Days */}
+                    <div className="grid grid-cols-7 gap-1">
+                      {getWeeklyCalendarDays().map((day, index) => {
+                        const dayAttendance = getAttendanceForDate(day);
+                        const isToday = isSameDay(day, new Date());
+                        const hoursWorked = getHoursWorked(dayAttendance);
+                        
+                        return (
+                          <div
+                            key={index}
+                            onClick={() => handleDateClick(day)}
+                            className={`p-3 rounded-lg border-2 cursor-pointer transition-all hover:shadow-md flex flex-col min-h-[120px] ${
+                              isToday
+                                ? 'border-primary bg-primary/10'
+                                : dayAttendance
+                                ? 'border-green-200 bg-green-50 hover:bg-green-100'
+                                : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
+                            }`}
+                          >
+                            <div className={`text-lg font-bold mb-2 ${isToday ? 'text-primary' : 'text-gray-900'}`}>
+                              {format(day, 'd')}
                             </div>
-                          )}
-                          {hoursWorked !== '-' && (
+                            {dayAttendance?.checkInTime && (
+                              <div className="flex-1 flex flex-col justify-center space-y-1">
+                                <div className="text-sm text-gray-700 font-medium">
+                                  <span className="font-semibold">In:</span> {formatTime(dayAttendance.checkInTime)}
+                                </div>
+                                {dayAttendance.checkOutTime && (
+                                  <div className="text-sm text-gray-700 font-medium">
+                                    <span className="font-semibold">Out:</span> {formatTime(dayAttendance.checkOutTime)}
+                                  </div>
+                                )}
+                                {hoursWorked !== '-' && (
+                                  <div className="text-sm font-bold text-green-700 mt-1">
+                                    {hoursWorked}
+                                  </div>
+                                )}
+                                {!dayAttendance.checkOutTime && (
+                                  <div className="text-sm text-green-600 font-semibold mt-1">Active</div>
+                                )}
+                              </div>
+                            )}
+                            {!dayAttendance && (
+                              <div className="flex-1 flex items-center justify-center">
+                                <div className="text-base text-gray-400">-</div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {calendarView === 'year' && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {getYearCalendarMonths().map((month, index) => {
+                      const monthStart = startOfMonth(month);
+                      const monthEnd = endOfMonth(month);
+                      const monthAttendance = attendance.filter((record) => {
+                        const recordDate = new Date(record.date);
+                        return recordDate >= monthStart && recordDate <= monthEnd;
+                      });
+                      const daysWithAttendance = monthAttendance.filter(a => a.checkInTime).length;
+                      const isCurrentMonth = isSameDay(month, new Date());
+                      
+                      return (
+                        <div
+                          key={index}
+                          onClick={() => {
+                            setCurrentMonth(month);
+                            setCalendarView('month');
+                          }}
+                          className={`p-3 rounded border cursor-pointer transition-all hover:shadow-sm ${
+                            isCurrentMonth
+                              ? 'border-primary bg-primary/10'
+                              : monthAttendance.length > 0
+                              ? 'border-green-200 bg-green-50'
+                              : 'border-gray-200 bg-gray-50'
+                          }`}
+                        >
+                          <div className={`text-sm font-bold mb-1 ${isCurrentMonth ? 'text-primary' : 'text-gray-900'}`}>
+                            {format(month, 'MMM')}
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            {daysWithAttendance} days
+                          </div>
+                          {monthAttendance.length > 0 && (
                             <div className="text-xs font-semibold text-green-700 mt-1">
-                              {hoursWorked}
+                              {(() => {
+                                let totalSeconds = 0;
+                                monthAttendance.forEach((record) => {
+                                  if (record.checkInTime && record.checkOutTime) {
+                                    totalSeconds += differenceInSeconds(
+                                      new Date(record.checkOutTime),
+                                      new Date(record.checkInTime)
+                                    );
+                                  }
+                                });
+                                const hours = Math.floor(totalSeconds / 3600);
+                                return `${hours}h`;
+                              })()}
                             </div>
-                          )}
-                          {!dayAttendance.checkOutTime && (
-                            <div className="text-xs text-green-600 font-medium mt-1">Active</div>
                           )}
                         </div>
-                      )}
-                      {!dayAttendance && isPast && (
-                        <div className="text-xs text-gray-400 mt-1">No record</div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Weekly Calendar View */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5" />
-              This Week
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-7 gap-2">
-              {getWeekDays().map((day, index) => {
-                const dayAttendance = getAttendanceForDate(day);
-                const isToday = isSameDay(day, new Date());
-                const isPast = day < new Date() && !isToday;
-                
-                return (
-                  <div
-                    key={index}
-                    onClick={() => handleDateClick(day)}
-                    className={`p-3 rounded-lg border-2 text-center cursor-pointer transition-all hover:shadow-md ${
-                      isToday
-                        ? 'border-primary bg-primary/10'
-                        : dayAttendance
-                        ? 'border-green-200 bg-green-50 hover:bg-green-100'
-                        : isPast
-                        ? 'border-gray-200 bg-gray-50 hover:bg-gray-100'
-                        : 'border-gray-100 bg-white'
-                    }`}
-                  >
-                    <div className={`text-xs font-medium mb-1 ${isToday ? 'text-primary' : 'text-gray-600'}`}>
-                      {format(day, 'EEE')}
-                    </div>
-                    <div className={`text-lg font-bold mb-1 ${isToday ? 'text-primary' : 'text-gray-900'}`}>
-                      {format(day, 'd')}
-                    </div>
-                    {dayAttendance?.checkInTime && (
-                      <div className="text-xs text-gray-600">
-                        {formatTime(dayAttendance.checkInTime)}
-                      </div>
-                    )}
-                    {dayAttendance?.checkOutTime && (
-                      <div className="text-xs text-green-600 font-medium">✓</div>
-                    )}
-                    {dayAttendance && (
-                      <div className="text-xs font-semibold text-green-700 mt-1">
-                        {getHoursWorked(dayAttendance)}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Attendance History with Filters */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Attendance History
-              </CardTitle>
-              <div className="flex gap-2">
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-8 pr-4 py-2 border rounded-md text-sm w-48"
-                  />
-                </div>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="px-3 py-2 border rounded-md text-sm"
-                >
-                  <option value="all">All Status</option>
-                  <option value="PRESENT">Present</option>
-                  <option value="ABSENT">Absent</option>
-                  <option value="LATE">Late</option>
-                  <option value="HALF_DAY">Half Day</option>
-                </select>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="mt-2 text-gray-500">Loading attendance...</p>
-              </div>
-            ) : filteredAttendance.length === 0 ? (
-              <div className="text-center py-12">
-                <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">No attendance records found.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Check-in</TableHead>
-                      <TableHead>Check-out</TableHead>
-                      <TableHead>Hours</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Notes</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAttendance.map((record) => {
-                      let hours = '-';
-                      if (record.checkInTime && record.checkOutTime) {
-                        const checkIn = new Date(record.checkInTime);
-                        const checkOut = new Date(record.checkOutTime);
-                        const totalSeconds = differenceInSeconds(checkOut, checkIn);
-                        const h = Math.floor(totalSeconds / 3600);
-                        const m = Math.floor((totalSeconds % 3600) / 60);
-                        hours = `${h}h ${m}m`;
-                      }
-                      
-                      const statusColors: Record<string, string> = {
-                        PRESENT: 'bg-green-100 text-green-800',
-                        ABSENT: 'bg-red-100 text-red-800',
-                        LATE: 'bg-yellow-100 text-yellow-800',
-                        HALF_DAY: 'bg-orange-100 text-orange-800',
-                      };
-
-                      return (
-                        <TableRow key={record.id} className="hover:bg-gray-50">
-                          <TableCell className="font-medium">{formatDate(record.date)}</TableCell>
-                          <TableCell>{formatTime(record.checkInTime)}</TableCell>
-                          <TableCell>{formatTime(record.checkOutTime)}</TableCell>
-                          <TableCell className="font-medium">{hours}</TableCell>
-                          <TableCell>
-                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${statusColors[record.status] || 'bg-gray-100 text-gray-800'}`}>
-                              {record.status}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-gray-600">{formatNotes(record.notes)}</TableCell>
-                        </TableRow>
                       );
                     })}
-                  </TableBody>
-                </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+          {/* Right: Attendance History */}
+          <Card className="flex flex-col overflow-hidden">
+            <CardHeader className="flex-shrink-0 p-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-1 text-sm">
+                  <Activity className="h-3 w-3" />
+                  History
+                </CardTitle>
+                <div className="flex gap-1">
+                  <div className="relative">
+                    <Search className="absolute left-1.5 top-1.5 h-3 w-3 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-6 pr-2 py-1 border rounded text-xs w-24 h-6"
+                    />
+                  </div>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="px-1.5 py-1 border rounded text-xs h-6"
+                  >
+                    <option value="all">All</option>
+                    <option value="PRESENT">Present</option>
+                    <option value="ABSENT">Absent</option>
+                    <option value="LATE">Late</option>
+                    <option value="HALF_DAY">Half Day</option>
+                  </select>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto p-2">
+
+              {loading ? (
+                <div className="text-center py-4">
+                  <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  <p className="mt-1 text-xs text-gray-500">Loading...</p>
+                </div>
+              ) : filteredAttendance.length === 0 ? (
+                <div className="text-center py-6">
+                  <Calendar className="h-6 w-6 text-gray-300 mx-auto mb-2" />
+                  <p className="text-xs text-gray-500">No records found</p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {filteredAttendance.slice(0, 15).map((record) => {
+                    let hours = '-';
+                    if (record.checkInTime && record.checkOutTime) {
+                      const checkIn = new Date(record.checkInTime);
+                      const checkOut = new Date(record.checkOutTime);
+                      const totalSeconds = differenceInSeconds(checkOut, checkIn);
+                      const h = Math.floor(totalSeconds / 3600);
+                      const m = Math.floor((totalSeconds % 3600) / 60);
+                      hours = `${h}h ${m}m`;
+                    }
+                    
+                    const statusColors: Record<string, string> = {
+                      PRESENT: 'bg-green-100 text-green-800',
+                      ABSENT: 'bg-red-100 text-red-800',
+                      LATE: 'bg-yellow-100 text-yellow-800',
+                      HALF_DAY: 'bg-orange-100 text-orange-800',
+                    };
+
+                    return (
+                      <div
+                        key={record.id}
+                        className="p-2 border rounded hover:bg-gray-50 hover:shadow-sm cursor-pointer transition-all"
+                        onClick={() => {
+                          setSelectedDate(new Date(record.date));
+                          setShowDateDetails(true);
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-bold text-gray-900">{formatDate(record.date)}</span>
+                          <span className={`px-1.5 py-0.5 text-[9px] rounded-full font-semibold ${statusColors[record.status] || 'bg-gray-100 text-gray-800'}`}>
+                            {record.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[9px] text-gray-700">
+                          <span className="font-medium">In: <span className="font-semibold">{formatTime(record.checkInTime)}</span></span>
+                          {record.checkOutTime && (
+                            <>
+                              <span className="text-gray-400">•</span>
+                              <span className="font-medium">Out: <span className="font-semibold">{formatTime(record.checkOutTime)}</span></span>
+                              <span className="text-gray-400">•</span>
+                              <span className="font-bold text-green-700 text-[10px]">{hours}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {filteredAttendance.length > 15 && (
+                    <div className="text-center text-[9px] text-gray-500 pt-1">
+                      Showing 15 of {filteredAttendance.length}
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Date Details Dialog */}
         <Dialog open={showDateDetails} onOpenChange={setShowDateDetails}>

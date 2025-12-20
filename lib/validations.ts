@@ -24,6 +24,21 @@ export const createEmployeeSchema = z.object({
   managerId: z.string().optional(),
   phone: z.string().optional(),
   companyId: z.string().optional(), // Optional for regular users, required for super admin
+  paymentType: z.enum(['HOURLY', 'SALARY']).optional(),
+  hourlyRate: z.number().min(0).optional(),
+  monthlySalary: z.number().min(0).optional(),
+}).refine((data) => {
+  // If paymentType is HOURLY, hourlyRate should be provided
+  if (data.paymentType === 'HOURLY' && (!data.hourlyRate || data.hourlyRate <= 0)) {
+    return false;
+  }
+  // If paymentType is SALARY, monthlySalary should be provided
+  if (data.paymentType === 'SALARY' && (!data.monthlySalary || data.monthlySalary <= 0)) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Hourly rate is required for hourly employees, and monthly salary is required for salaried employees',
 });
 
 export const updateEmployeeSchema = z.object({
@@ -34,6 +49,21 @@ export const updateEmployeeSchema = z.object({
   managerId: z.string().optional().nullable(),
   phone: z.string().optional(),
   isActive: z.boolean().optional(),
+  paymentType: z.enum(['HOURLY', 'SALARY']).optional().nullable(),
+  hourlyRate: z.number().min(0).optional().nullable(),
+  monthlySalary: z.number().min(0).optional().nullable(),
+}).refine((data) => {
+  // If paymentType is HOURLY, hourlyRate should be provided
+  if (data.paymentType === 'HOURLY' && data.hourlyRate !== null && (!data.hourlyRate || data.hourlyRate <= 0)) {
+    return false;
+  }
+  // If paymentType is SALARY, monthlySalary should be provided
+  if (data.paymentType === 'SALARY' && data.monthlySalary !== null && (!data.monthlySalary || data.monthlySalary <= 0)) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Hourly rate is required for hourly employees, and monthly salary is required for salaried employees',
 });
 
 export const createDesignationSchema = z.object({
@@ -85,20 +115,52 @@ export const createTeamProgressSchema = z.object({
   date: z.string().optional(), // ISO date string
 });
 
+const bonusSchema = z.object({
+  name: z.string().min(1, 'Bonus name is required'),
+  amount: z.number().min(0, 'Bonus amount must be positive'),
+});
+
+const deductionSchema = z.object({
+  name: z.string().min(1, 'Deduction name is required'),
+  amount: z.number().min(0, 'Deduction amount must be positive'),
+});
+
 export const createPayrollSchema = z.object({
   userId: z.string(),
   month: z.number().min(1).max(12),
   year: z.number().min(2000),
+  paymentType: z.enum(['HOURLY', 'SALARY']),
+  hoursWorked: z.number().min(0).optional(),
+  hourlyRate: z.number().min(0).optional(),
   baseSalary: z.number().min(0),
-  allowances: z.number().min(0).optional(),
-  deductions: z.number().min(0).optional(),
+  bonuses: z.array(bonusSchema).optional(),
+  deductions: z.array(deductionSchema).optional(),
   notes: z.string().optional(),
+}).refine((data) => {
+  // If paymentType is HOURLY, hourlyRate should be provided (hoursWorked can be auto-calculated)
+  if (data.paymentType === 'HOURLY') {
+    if (!data.hourlyRate || data.hourlyRate <= 0) {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: 'Hourly rate is required for hourly employees',
 });
 
 export const updatePayrollSchema = z.object({
+  paymentType: z.enum(['HOURLY', 'SALARY']).optional(),
+  hoursWorked: z.number().min(0).optional(),
+  hourlyRate: z.number().min(0).optional(),
   baseSalary: z.number().min(0).optional(),
-  allowances: z.number().min(0).optional(),
-  deductions: z.number().min(0).optional(),
+  bonuses: z.array(z.object({
+    name: z.string().min(1, 'Bonus name is required'),
+    amount: z.number().min(0, 'Bonus amount must be positive'),
+  })).optional(),
+  deductions: z.array(z.object({
+    name: z.string().min(1, 'Deduction name is required'),
+    amount: z.number().min(0, 'Deduction amount must be positive'),
+  })).optional(),
   status: z.enum(['PENDING', 'APPROVED', 'PAID', 'REJECTED']).optional(),
   notes: z.string().optional(),
 });
@@ -113,6 +175,8 @@ export const createLeaveSchema = z.object({
 export const updateLeaveSchema = z.object({
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED']).optional(),
 });
+
+
 
 
 

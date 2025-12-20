@@ -102,18 +102,9 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Payroll route - COMPANY_ADMIN, MANAGER, SUPER_ADMIN (no EMPLOYEE, TEAM_LEAD)
-  if (pathname.startsWith('/payroll')) {
-    if (!([UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN, UserRole.MANAGER] as UserRole[]).includes(userRole)) {
-      if (pathname.startsWith('/api')) {
-        return NextResponse.json(
-          { error: 'Forbidden: Insufficient permissions' },
-          { status: 403 }
-        );
-      }
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
-  }
+  // Payroll route - All authenticated users can access (employees see own, admins/managers see all)
+  // The page itself handles role-based filtering
+  // No middleware restriction needed - let the page handle permissions
 
   return NextResponse.next();
 }

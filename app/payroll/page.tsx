@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Check, X, DollarSign } from 'lucide-react';
+import { Plus, Check, X, DollarSign, Trash2, Eye, ChevronDown, ChevronRight, Clock } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -30,19 +30,51 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { UserRole, PayrollStatus } from '@prisma/client';
+
+type PaymentType = 'HOURLY' | 'SALARY';
+import { PayrollCalendar } from '@/components/payroll/PayrollCalendar';
+import { EarningsChart } from '@/components/payroll/EarningsChart';
+
+interface Bonus {
+  name: string;
+  amount: number;
+}
+
+interface Deduction {
+  name: string;
+  amount: number;
+}
 
 interface Payroll {
   id: string;
   month: number;
   year: number;
+  paymentType: 'HOURLY' | 'SALARY' | null;
+  hoursWorked: number | null;
+  hourlyRate: number | null;
   baseSalary: number;
-  allowances: number;
-  deductions: number;
+  bonuses: Bonus[] | null;
+  deductions: Deduction[] | null;
+  totalBonuses: number;
+  totalDeductions: number;
   netSalary: number;
-  status: string;
+  status: PayrollStatus;
+  notes: string | null;
   user: {
+    id: string;
     name: string;
+    email: string;
   };
+}
+
+interface Employee {
+  id: string;
+  name: string;
+  email: string;
+  paymentType: 'HOURLY' | 'SALARY' | null;
+  hourlyRate: number | null;
+  monthlySalary: number | null;
 }
 
 const months = [
@@ -53,23 +85,80 @@ const months = [
 export default function PayrollPage() {
   const [payroll, setPayroll] = useState<Payroll[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
   const [open, setOpen] = useState(false);
+  const [selectedPayroll, setSelectedPayroll] = useState<Payroll | null>(null);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [stats, setStats] = useState<any>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [dailyEarnings, setDailyEarnings] = useState<Record<string, { hours: number; earnings: number }>>({});
+  const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth() + 1);
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
   const [formData, setFormData] = useState({
     userId: '',
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
-    baseSalary: 0,
-    allowances: 0,
-    deductions: 0,
+    paymentType: '' as '' | 'HOURLY' | 'SALARY',
+    hoursWorked: '',
+    hourlyRate: '',
+    baseSalary: '',
+    bonuses: [] as Bonus[],
+    deductions: [] as Deduction[],
+    notes: '',
   });
 
   useEffect(() => {
+    fetchUser();
     fetchPayroll();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      if (user.role === UserRole.EMPLOYEE) {
+        fetchStats();
+        fetchDailyEarnings(calendarMonth, calendarYear);
+      } else {
+        fetchEmployees();
+      }
+    }
+  }, [user, calendarMonth, calendarYear]);
+
+  const fetchUser = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No token found');
+        setLoading(false);
+        return;
+      }
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+      } else {
+        console.error('Failed to fetch user:', response.status, response.statusText);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user:', error);
+      setLoading(false);
+    }
+  };
 
   const fetchPayroll = async () => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No token found');
+        setLoading(false);
+        return;
+      }
       const response = await fetch('/api/payroll', {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -79,6 +168,8 @@ export default function PayrollPage() {
       if (response.ok) {
         const data = await response.json();
         setPayroll(data.payroll || []);
+      } else {
+        console.error('Failed to fetch payroll:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('Failed to fetch payroll:', error);
@@ -87,38 +178,260 @@ export default function PayrollPage() {
     }
   };
 
+  const fetchEmployees = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/employees', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data.employees || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch employees:', error);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/payroll/stats', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    }
+  };
+
+  const fetchDailyEarnings = async (month: number, year: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const response = await fetch(`/api/payroll/daily-earnings?month=${month}&year=${year}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Daily earnings fetched for', month, year, ':', data.dailyEarnings);
+        
+        // Debug: Log a few sample values to see what we're getting
+        if (data.dailyEarnings) {
+          const sampleDays = Object.entries(data.dailyEarnings).slice(0, 3);
+          sampleDays.forEach(([day, earnings]: [string, any]) => {
+            console.log(`Day ${day}: hours=${earnings?.hours}, earnings=${earnings?.earnings}`);
+          });
+        }
+        
+        // Ensure we set an empty object if no data, so calendar knows data was fetched
+        setDailyEarnings(data.dailyEarnings || {});
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to fetch daily earnings:', response.status, response.statusText, errorData);
+        // Set empty object to indicate fetch was attempted
+        setDailyEarnings({});
+      }
+    } catch (error) {
+      console.error('Failed to fetch daily earnings:', error);
+    }
+  };
+
+  const handleEmployeeSelect = async (employeeId: string) => {
+    const employee = employees.find((e) => e.id === employeeId);
+    if (employee) {
+      setSelectedEmployee(employee);
+      setFormData((prev) => ({
+        ...prev,
+        userId: employeeId,
+        paymentType: (employee.paymentType || 'SALARY') as 'HOURLY' | 'SALARY',
+        hourlyRate: employee.hourlyRate?.toString() || '',
+        baseSalary: employee.monthlySalary?.toString() || '',
+      }));
+
+      // If hourly, calculate hours worked
+      if (employee.paymentType === 'HOURLY') {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch(
+            `/api/payroll?userId=${employeeId}&month=${formData.month}&year=${formData.year}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          // Calculate hours from attendance (this would ideally be done via an API endpoint)
+          // For now, we'll let the backend calculate it
+        } catch (error) {
+          console.error('Failed to fetch hours:', error);
+        }
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
+      
+      // Ensure baseSalary is a valid number
+      const baseSalary = formData.baseSalary ? parseFloat(formData.baseSalary) : 0;
+      
+      const requestBody: any = {
+        userId: formData.userId,
+        month: formData.month,
+        year: formData.year,
+        paymentType: formData.paymentType,
+        baseSalary: !isNaN(baseSalary) && baseSalary >= 0 ? baseSalary : 0,
+      };
+
+      if (formData.paymentType === 'HOURLY') {
+        // Only include hoursWorked if provided (otherwise backend will calculate)
+        if (formData.hoursWorked && formData.hoursWorked.trim()) {
+          const hours = parseFloat(formData.hoursWorked);
+          if (!isNaN(hours) && hours > 0) {
+            requestBody.hoursWorked = hours;
+          }
+        }
+        // hourlyRate is required for HOURLY
+        if (formData.hourlyRate && formData.hourlyRate.trim()) {
+          const rate = parseFloat(formData.hourlyRate);
+          if (!isNaN(rate) && rate > 0) {
+            requestBody.hourlyRate = rate;
+          }
+        }
+      }
+      
+      // Filter out bonuses with empty names or zero amounts
+      const validBonuses = formData.bonuses.filter(b => b.name.trim() && b.amount > 0);
+      if (validBonuses.length > 0) {
+        requestBody.bonuses = validBonuses;
+      }
+      
+      // Filter out deductions with empty names or zero amounts
+      const validDeductions = formData.deductions.filter(d => d.name.trim() && d.amount > 0);
+      if (validDeductions.length > 0) {
+        requestBody.deductions = validDeductions;
+      }
+      
+      if (formData.notes) {
+        requestBody.notes = formData.notes;
+      }
+
       const response = await fetch('/api/payroll', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(requestBody),
       });
 
       if (response.ok) {
         setOpen(false);
-        setFormData({
-          userId: '',
-          month: new Date().getMonth() + 1,
-          year: new Date().getFullYear(),
-          baseSalary: 0,
-          allowances: 0,
-          deductions: 0,
-        });
+        resetForm();
         fetchPayroll();
+        alert('Payroll created successfully');
       } else {
         const data = await response.json();
-        alert(data.error || 'Failed to create payroll');
+        let errorMessage = data.error || 'Failed to create payroll';
+        if (data.details && Array.isArray(data.details)) {
+          const details = data.details.map((d: any) => `${d.path.join('.')}: ${d.message}`).join('\n');
+          errorMessage = `${errorMessage}\n\n${details}`;
+        }
+        alert(errorMessage);
       }
     } catch (error) {
       console.error('Failed to create payroll:', error);
       alert('Failed to create payroll');
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      userId: '',
+      month: new Date().getMonth() + 1,
+      year: new Date().getFullYear(),
+      paymentType: '' as '' | 'HOURLY' | 'SALARY',
+      hoursWorked: '',
+      hourlyRate: '',
+      baseSalary: '',
+      bonuses: [],
+      deductions: [],
+      notes: '',
+    });
+    setSelectedEmployee(null);
+  };
+
+  const addBonus = () => {
+    setFormData((prev) => ({
+      ...prev,
+      bonuses: [...prev.bonuses, { name: '', amount: 0 }],
+    }));
+  };
+
+  const removeBonus = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      bonuses: prev.bonuses.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateBonus = (index: number, field: 'name' | 'amount', value: string | number) => {
+    setFormData((prev) => {
+      const newBonuses = [...prev.bonuses];
+      newBonuses[index] = { ...newBonuses[index], [field]: value };
+      return { ...prev, bonuses: newBonuses };
+    });
+  };
+
+  const addDeduction = () => {
+    setFormData((prev) => ({
+      ...prev,
+      deductions: [...prev.deductions, { name: '', amount: 0 }],
+    }));
+  };
+
+  const removeDeduction = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      deductions: prev.deductions.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateDeduction = (index: number, field: 'name' | 'amount', value: string | number) => {
+    setFormData((prev) => {
+      const newDeductions = [...prev.deductions];
+      newDeductions[index] = { ...newDeductions[index], [field]: value };
+      return { ...prev, deductions: newDeductions };
+    });
+  };
+
+  const calculateTotalBonuses = () => {
+    return formData.bonuses.reduce((sum, b) => sum + (b.amount || 0), 0);
+  };
+
+  const calculateTotalDeductions = () => {
+    return formData.deductions.reduce((sum, d) => sum + (d.amount || 0), 0);
+  };
+
+  const calculateNetSalary = () => {
+    const base = parseFloat(formData.baseSalary) || 0;
+    return base + calculateTotalBonuses() - calculateTotalDeductions();
   };
 
   const handleApprove = async (id: string) => {
@@ -169,13 +482,13 @@ export default function PayrollPage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: PayrollStatus) => {
     switch (status) {
-      case 'APPROVED':
+      case PayrollStatus.APPROVED:
         return 'bg-green-100 text-green-800';
-      case 'REJECTED':
+      case PayrollStatus.REJECTED:
         return 'bg-red-100 text-red-800';
-      case 'PAID':
+      case PayrollStatus.PAID:
         return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-yellow-100 text-yellow-800';
@@ -189,6 +502,374 @@ export default function PayrollPage() {
     }).format(amount);
   };
 
+  // Show loading state while fetching user
+  if (loading || !user) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-lg font-semibold mb-2">Loading...</div>
+            <div className="text-sm text-gray-500">Fetching payroll information</div>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  // Employee View
+  if (user?.role === UserRole.EMPLOYEE) {
+    return (
+      <MainLayout>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">My Payroll</h1>
+            <p className="text-gray-600 mt-1">View your payroll history and earnings</p>
+          </div>
+
+          {/* Summary Cards */}
+          {stats && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Current Month</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(Math.abs(stats.stats.currentMonthEarnings))}</div>
+                  <p className="text-xs text-muted-foreground">This month&apos;s earnings</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Year to Date</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(Math.abs(stats.stats.yearToDateTotal))}</div>
+                  <p className="text-xs text-muted-foreground">Total earnings this year</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Average Monthly</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(Math.abs(stats.stats.averageMonthlyEarnings))}</div>
+                  <p className="text-xs text-muted-foreground">Average per month</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.stats.yearToDateHours.toFixed(2)}h</div>
+                  <p className="text-xs text-muted-foreground">This year</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Pending</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.stats.pendingCount}</div>
+                  <p className="text-xs text-muted-foreground">Pending payrolls</p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Calendar and Chart */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <PayrollCalendar
+              payrollRecords={payroll.map((p) => ({
+                id: p.id,
+                month: p.month,
+                year: p.year,
+                netSalary: Math.abs(p.netSalary),
+                status: p.status,
+              }))}
+              dailyEarnings={dailyEarnings}
+              onDateClick={(payrollRecord, date) => {
+                if (payrollRecord) {
+                  const found = payroll.find((p: Payroll) => p.id === payrollRecord.id);
+                  if (found) setSelectedPayroll(found);
+                }
+              }}
+              onMonthChange={(month, year) => {
+                setCalendarMonth(month);
+                setCalendarYear(year);
+                if (user?.role === UserRole.EMPLOYEE) {
+                  fetchDailyEarnings(month, year);
+                }
+              }}
+            />
+            <EarningsChart payrollData={payroll} />
+          </div>
+
+          {/* Payroll History */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Payroll History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="text-center py-8">Loading...</div>
+              ) : payroll.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No payroll records found.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Period</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Hours</TableHead>
+                      <TableHead>Base</TableHead>
+                      <TableHead>Bonuses</TableHead>
+                      <TableHead>Deductions</TableHead>
+                      <TableHead>Net Salary</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payroll.map((record) => {
+                      const isExpanded = expandedRows.has(record.id);
+                      const hasBonuses = record.bonuses && record.bonuses.length > 0;
+                      const hasDeductions = record.deductions && record.deductions.length > 0;
+                      const canExpand = hasBonuses || hasDeductions;
+
+                      return (
+                        <>
+                          <TableRow 
+                            key={record.id}
+                            className={canExpand ? 'cursor-pointer hover:bg-gray-50' : ''}
+                            onClick={() => {
+                              if (canExpand) {
+                                const newExpanded = new Set(expandedRows);
+                                if (isExpanded) {
+                                  newExpanded.delete(record.id);
+                                } else {
+                                  newExpanded.add(record.id);
+                                }
+                                setExpandedRows(newExpanded);
+                              }
+                            }}
+                          >
+                            <TableCell>
+                              {canExpand && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="mr-2 h-4 w-4 p-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const newExpanded = new Set(expandedRows);
+                                    if (isExpanded) {
+                                      newExpanded.delete(record.id);
+                                    } else {
+                                      newExpanded.add(record.id);
+                                    }
+                                    setExpandedRows(newExpanded);
+                                  }}
+                                >
+                                  {isExpanded ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              )}
+                              {months[record.month - 1]} {record.year}
+                            </TableCell>
+                            <TableCell>{record.paymentType || '-'}</TableCell>
+                            <TableCell>
+                              {record.hoursWorked ? `${Math.abs(record.hoursWorked).toFixed(2)}h` : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {record.paymentType === 'HOURLY' 
+                                ? formatCurrency(Math.abs(record.baseSalary))
+                                : formatCurrency(record.baseSalary)}
+                            </TableCell>
+                            <TableCell>{formatCurrency(record.totalBonuses)}</TableCell>
+                            <TableCell>{formatCurrency(record.totalDeductions)}</TableCell>
+                            <TableCell className="font-semibold">
+                              {formatCurrency(Math.abs(record.netSalary))}
+                            </TableCell>
+                            <TableCell>
+                              <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(record.status)}`}>
+                                {record.status}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedPayroll(record);
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                          {isExpanded && (hasBonuses || hasDeductions) && (
+                            <TableRow>
+                              <TableCell colSpan={10} className="bg-gray-50">
+                                <div className="p-4 space-y-4">
+                                  {hasBonuses && (
+                                    <div>
+                                      <h4 className="font-semibold text-sm mb-2 text-green-700">Bonuses</h4>
+                                      <div className="space-y-1">
+                                        {record.bonuses!.map((bonus, idx) => (
+                                          <div key={idx} className="flex justify-between text-sm">
+                                            <span>{bonus.name}</span>
+                                            <span className="font-semibold text-green-600">
+                                              {formatCurrency(bonus.amount)}
+                                            </span>
+                                          </div>
+                                        ))}
+                                        <div className="flex justify-between text-sm font-semibold pt-1 border-t">
+                                          <span>Total Bonuses</span>
+                                          <span className="text-green-600">
+                                            {formatCurrency(record.totalBonuses)}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {hasDeductions && (
+                                    <div>
+                                      <h4 className="font-semibold text-sm mb-2 text-red-700">Deductions</h4>
+                                      <div className="space-y-1">
+                                        {record.deductions!.map((deduction, idx) => (
+                                          <div key={idx} className="flex justify-between text-sm">
+                                            <span>{deduction.name}</span>
+                                            <span className="font-semibold text-red-600">
+                                              {formatCurrency(deduction.amount)}
+                                            </span>
+                                          </div>
+                                        ))}
+                                        <div className="flex justify-between text-sm font-semibold pt-1 border-t">
+                                          <span>Total Deductions</span>
+                                          <span className="text-red-600">
+                                            {formatCurrency(record.totalDeductions)}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Payroll Details Dialog */}
+        {selectedPayroll && (
+          <Dialog open={!!selectedPayroll} onOpenChange={() => setSelectedPayroll(null)}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>
+                  Payroll Details - {months[selectedPayroll.month - 1]} {selectedPayroll.year}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Payment Type</Label>
+                    <p className="text-sm">{selectedPayroll.paymentType || '-'}</p>
+                  </div>
+                  {selectedPayroll.hoursWorked && (
+                    <div>
+                      <Label>Hours Worked</Label>
+                      <p className="text-sm">{Math.abs(selectedPayroll.hoursWorked).toFixed(2)} hours</p>
+                    </div>
+                  )}
+                  <div>
+                    <Label>{selectedPayroll.paymentType === 'HOURLY' ? 'Hourly Pay' : 'Base Salary'}</Label>
+                    <p className="text-sm font-semibold">
+                      {formatCurrency(Math.abs(selectedPayroll.baseSalary))}
+                    </p>
+                  </div>
+                  <div>
+                    <Label>Net Salary</Label>
+                    <p className="text-sm font-semibold text-green-600">
+                      {formatCurrency(Math.abs(selectedPayroll.netSalary))}
+                    </p>
+                  </div>
+                </div>
+                {selectedPayroll.bonuses && selectedPayroll.bonuses.length > 0 && (
+                  <div>
+                    <Label>Bonuses</Label>
+                    <div className="mt-2 space-y-1">
+                      {selectedPayroll.bonuses.map((bonus, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span>{bonus.name}</span>
+                          <span className="font-semibold text-green-600">
+                            {formatCurrency(bonus.amount)}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between text-sm font-semibold pt-1 border-t">
+                        <span>Total Bonuses</span>
+                        <span className="text-green-600">
+                          {formatCurrency(selectedPayroll.totalBonuses)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {selectedPayroll.deductions && selectedPayroll.deductions.length > 0 && (
+                  <div>
+                    <Label>Deductions</Label>
+                    <div className="mt-2 space-y-1">
+                      {selectedPayroll.deductions.map((deduction, idx) => (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span>{deduction.name}</span>
+                          <span className="font-semibold text-red-600">
+                            {formatCurrency(deduction.amount)}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between text-sm font-semibold pt-1 border-t">
+                        <span>Total Deductions</span>
+                        <span className="text-red-600">
+                          {formatCurrency(selectedPayroll.totalDeductions)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {selectedPayroll.notes && (
+                  <div>
+                    <Label>Notes</Label>
+                    <p className="text-sm text-gray-600">{selectedPayroll.notes}</p>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </MainLayout>
+    );
+  }
+
+  // Admin/Manager View
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -199,12 +880,12 @@ export default function PayrollPage() {
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90">
+              <Button className="bg-primary hover:bg-primary/90" onClick={resetForm}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Payroll
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create Payroll</DialogTitle>
                 <DialogDescription>
@@ -212,6 +893,45 @@ export default function PayrollPage() {
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Step 1: Employee Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="employee">Employee *</Label>
+                  <Select
+                    value={formData.userId}
+                    onValueChange={handleEmployeeSelect}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select employee" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {employees.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.name} ({emp.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedEmployee && (
+                    <div className="p-2 bg-blue-50 rounded text-sm">
+                      <p>
+                        <strong>Payment Type:</strong> {selectedEmployee.paymentType || 'Not set'}
+                      </p>
+                      {selectedEmployee.paymentType === 'HOURLY' && selectedEmployee.hourlyRate && (
+                        <p>
+                          <strong>Hourly Rate:</strong> {formatCurrency(selectedEmployee.hourlyRate)}
+                        </p>
+                      )}
+                      {selectedEmployee.paymentType === 'SALARY' && selectedEmployee.monthlySalary && (
+                        <p>
+                          <strong>Monthly Salary:</strong> {formatCurrency(selectedEmployee.monthlySalary)}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Step 2: Period */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="month">Month *</Label>
@@ -244,53 +964,237 @@ export default function PayrollPage() {
                     />
                   </div>
                 </div>
+
+                {/* Step 3: Payment Configuration */}
+                <div className="p-4 bg-gray-50 rounded-lg border">
+                  <Label className="text-sm font-semibold mb-2 block">Payment Configuration</Label>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="paymentType">Payment Type *</Label>
+                      <Select
+                        value={formData.paymentType}
+                        onValueChange={(value) => setFormData({ ...formData, paymentType: value as 'HOURLY' | 'SALARY' })}
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select payment type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="HOURLY">Hourly</SelectItem>
+                          <SelectItem value="SALARY">Salary</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {formData.paymentType === 'HOURLY' && (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="hoursWorked">Hours Worked *</Label>
+                          <Input
+                            id="hoursWorked"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={formData.hoursWorked}
+                            onChange={(e) => setFormData({ ...formData, hoursWorked: e.target.value })}
+                            placeholder="Will be calculated from attendance if not provided"
+                          />
+                          <p className="text-xs text-gray-500">
+                            Leave empty to auto-calculate from attendance records
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="hourlyRate">Hourly Rate ($) *</Label>
+                          <Input
+                            id="hourlyRate"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={formData.hourlyRate}
+                            onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
+                            required
+                          />
+                        </div>
+                        {formData.hoursWorked && formData.hourlyRate && (
+                          <div className="p-2 bg-blue-50 rounded text-sm">
+                            <strong>Base Salary Preview:</strong>{' '}
+                            {formatCurrency(parseFloat(formData.hoursWorked) * parseFloat(formData.hourlyRate))}
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {formData.paymentType === 'SALARY' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="baseSalary">Base Salary ($) *</Label>
+                        <Input
+                          id="baseSalary"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.baseSalary}
+                          onChange={(e) => setFormData({ ...formData, baseSalary: e.target.value })}
+                          required
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Step 4: Bonuses */}
+                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-semibold">Bonuses</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={addBonus}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Bonus
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {formData.bonuses.map((bonus, index) => (
+                      <div key={index} className="flex gap-2 items-end">
+                        <div className="flex-1">
+                          <Input
+                            placeholder="Bonus name"
+                            value={bonus.name}
+                            onChange={(e) => updateBonus(index, 'name', e.target.value)}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="Amount"
+                            value={bonus.amount || ''}
+                            onChange={(e) => updateBonus(index, 'amount', parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeBonus(index)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
+                    ))}
+                    {formData.bonuses.length === 0 && (
+                      <p className="text-xs text-gray-500">No bonuses added</p>
+                    )}
+                    {formData.bonuses.length > 0 && (
+                      <div className="pt-2 border-t">
+                        <p className="text-sm font-semibold">
+                          Total Bonuses: {formatCurrency(calculateTotalBonuses())}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Step 5: Deductions */}
+                <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-semibold">Deductions</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={addDeduction}>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Deduction
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {formData.deductions.map((deduction, index) => (
+                      <div key={index} className="flex gap-2 items-end">
+                        <div className="flex-1">
+                          <Input
+                            placeholder="Deduction name"
+                            value={deduction.name}
+                            onChange={(e) => updateDeduction(index, 'name', e.target.value)}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="Amount"
+                            value={deduction.amount || ''}
+                            onChange={(e) => updateDeduction(index, 'amount', parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeDeduction(index)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
+                    ))}
+                    {formData.deductions.length === 0 && (
+                      <p className="text-xs text-gray-500">No deductions added</p>
+                    )}
+                    {formData.deductions.length > 0 && (
+                      <div className="pt-2 border-t">
+                        <p className="text-sm font-semibold">
+                          Total Deductions: {formatCurrency(calculateTotalDeductions())}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Step 6: Summary */}
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <Label className="text-sm font-semibold mb-2 block">Summary</Label>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span>{formData.paymentType === 'HOURLY' ? 'Hourly Pay' : 'Base Salary'}:</span>
+                      <span className="font-semibold">
+                        {formData.paymentType === 'HOURLY' && formData.hoursWorked && formData.hourlyRate
+                          ? formatCurrency(Math.abs(parseFloat(formData.hoursWorked) || 0) * parseFloat(formData.hourlyRate))
+                          : formatCurrency(parseFloat(formData.baseSalary) || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-green-600">
+                      <span>Total Bonuses:</span>
+                      <span className="font-semibold">{formatCurrency(calculateTotalBonuses())}</span>
+                    </div>
+                    <div className="flex justify-between text-red-600">
+                      <span>Total Deductions:</span>
+                      <span className="font-semibold">{formatCurrency(calculateTotalDeductions())}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t font-bold text-lg">
+                      <span>Net Salary:</span>
+                      <span className="text-green-600">{formatCurrency(calculateNetSalary())}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes */}
                 <div className="space-y-2">
-                  <Label htmlFor="baseSalary">Base Salary *</Label>
+                  <Label htmlFor="notes">Notes</Label>
                   <Input
-                    id="baseSalary"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.baseSalary}
-                    onChange={(e) => setFormData({ ...formData, baseSalary: parseFloat(e.target.value) || 0 })}
-                    required
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    placeholder="Optional notes"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="allowances">Allowances</Label>
-                    <Input
-                      id="allowances"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.allowances}
-                      onChange={(e) => setFormData({ ...formData, allowances: parseFloat(e.target.value) || 0 })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="deductions">Deductions</Label>
-                    <Input
-                      id="deductions"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.deductions}
-                      onChange={(e) => setFormData({ ...formData, deductions: parseFloat(e.target.value) || 0 })}
-                    />
-                  </div>
-                </div>
+
                 <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                  <Button type="button" variant="outline" onClick={() => { setOpen(false); resetForm(); }}>
                     Cancel
                   </Button>
-                  <Button type="submit">Create</Button>
+                  <Button type="submit">Create Payroll</Button>
                 </div>
               </form>
             </DialogContent>
           </Dialog>
         </div>
 
+        {/* Payroll Records Table */}
         <Card>
           <CardHeader>
             <CardTitle>Payroll Records</CardTitle>
@@ -308,8 +1212,10 @@ export default function PayrollPage() {
                   <TableRow>
                     <TableHead>Employee</TableHead>
                     <TableHead>Period</TableHead>
-                    <TableHead>Base Salary</TableHead>
-                    <TableHead>Allowances</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Hours</TableHead>
+                    <TableHead>Base</TableHead>
+                    <TableHead>Bonuses</TableHead>
                     <TableHead>Deductions</TableHead>
                     <TableHead>Net Salary</TableHead>
                     <TableHead>Status</TableHead>
@@ -317,45 +1223,157 @@ export default function PayrollPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {payroll.map((record) => (
-                    <TableRow key={record.id}>
-                      <TableCell className="font-medium">{record.user.name}</TableCell>
-                      <TableCell>
-                        {months[record.month - 1]} {record.year}
-                      </TableCell>
-                      <TableCell>{formatCurrency(record.baseSalary)}</TableCell>
-                      <TableCell>{formatCurrency(record.allowances)}</TableCell>
-                      <TableCell>{formatCurrency(record.deductions)}</TableCell>
-                      <TableCell className="font-semibold">
-                        {formatCurrency(record.netSalary)}
-                      </TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(record.status)}`}>
-                          {record.status}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {record.status === 'PENDING' && (
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleApprove(record.id)}
-                            >
-                              <Check className="h-4 w-4 text-green-600" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleReject(record.id)}
-                            >
-                              <X className="h-4 w-4 text-red-600" />
-                            </Button>
-                          </div>
+                  {payroll.map((record) => {
+                    const isExpanded = expandedRows.has(record.id);
+                    const hasBonuses = record.bonuses && record.bonuses.length > 0;
+                    const hasDeductions = record.deductions && record.deductions.length > 0;
+                    const canExpand = hasBonuses || hasDeductions;
+
+                    return (
+                      <>
+                        <TableRow 
+                          key={record.id}
+                          className={canExpand ? 'cursor-pointer hover:bg-gray-50' : ''}
+                          onClick={() => {
+                            if (canExpand) {
+                              const newExpanded = new Set(expandedRows);
+                              if (isExpanded) {
+                                newExpanded.delete(record.id);
+                              } else {
+                                newExpanded.add(record.id);
+                              }
+                              setExpandedRows(newExpanded);
+                            }
+                          }}
+                        >
+                          <TableCell className="font-medium">
+                            {canExpand && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="mr-2 h-4 w-4 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const newExpanded = new Set(expandedRows);
+                                  if (isExpanded) {
+                                    newExpanded.delete(record.id);
+                                  } else {
+                                    newExpanded.add(record.id);
+                                  }
+                                  setExpandedRows(newExpanded);
+                                }}
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                            )}
+                            {record.user.name}
+                          </TableCell>
+                          <TableCell>
+                            {months[record.month - 1]} {record.year}
+                          </TableCell>
+                          <TableCell>{record.paymentType || '-'}</TableCell>
+                          <TableCell>
+                            {record.hoursWorked ? `${Math.abs(record.hoursWorked).toFixed(2)}h` : '-'}
+                          </TableCell>
+                          <TableCell>
+                            {record.paymentType === 'HOURLY' 
+                              ? formatCurrency(Math.abs(record.baseSalary))
+                              : formatCurrency(record.baseSalary)}
+                          </TableCell>
+                          <TableCell>{formatCurrency(record.totalBonuses)}</TableCell>
+                          <TableCell>{formatCurrency(record.totalDeductions)}</TableCell>
+                          <TableCell className="font-semibold">
+                            {formatCurrency(Math.abs(record.netSalary))}
+                          </TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(record.status)}`}>
+                              {record.status}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {record.status === PayrollStatus.PENDING && (
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleApprove(record.id);
+                                  }}
+                                >
+                                  <Check className="h-4 w-4 text-green-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleReject(record.id);
+                                  }}
+                                >
+                                  <X className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        {isExpanded && (hasBonuses || hasDeductions) && (
+                          <TableRow>
+                            <TableCell colSpan={10} className="bg-gray-50">
+                              <div className="p-4 space-y-4">
+                                {hasBonuses && (
+                                  <div>
+                                    <h4 className="font-semibold text-sm mb-2 text-green-700">Bonuses</h4>
+                                    <div className="space-y-1">
+                                      {record.bonuses!.map((bonus, idx) => (
+                                        <div key={idx} className="flex justify-between text-sm">
+                                          <span>{bonus.name}</span>
+                                          <span className="font-semibold text-green-600">
+                                            {formatCurrency(bonus.amount)}
+                                          </span>
+                                        </div>
+                                      ))}
+                                      <div className="flex justify-between text-sm font-semibold pt-1 border-t">
+                                        <span>Total Bonuses</span>
+                                        <span className="text-green-600">
+                                          {formatCurrency(record.totalBonuses)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                                {hasDeductions && (
+                                  <div>
+                                    <h4 className="font-semibold text-sm mb-2 text-red-700">Deductions</h4>
+                                    <div className="space-y-1">
+                                      {record.deductions!.map((deduction, idx) => (
+                                        <div key={idx} className="flex justify-between text-sm">
+                                          <span>{deduction.name}</span>
+                                          <span className="font-semibold text-red-600">
+                                            {formatCurrency(deduction.amount)}
+                                          </span>
+                                        </div>
+                                      ))}
+                                      <div className="flex justify-between text-sm font-semibold pt-1 border-t">
+                                        <span>Total Deductions</span>
+                                        <span className="text-red-600">
+                                          {formatCurrency(record.totalDeductions)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
                         )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                      </>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
@@ -365,9 +1383,4 @@ export default function PayrollPage() {
     </MainLayout>
   );
 }
-
-
-
-
-
 

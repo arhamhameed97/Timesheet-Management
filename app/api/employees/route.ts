@@ -343,6 +343,9 @@ export async function POST(request: NextRequest) {
           role,
           managerId: validatedData.managerId || null,
           phone: validatedData.phone || null,
+          paymentType: validatedData.paymentType || null,
+          hourlyRate: validatedData.hourlyRate || null,
+          monthlySalary: validatedData.monthlySalary || null,
         },
         include: {
           company: {
@@ -399,6 +402,8 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+
 
 
 
