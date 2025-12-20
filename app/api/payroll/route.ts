@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext, unauthorizedResponse, forbiddenResponse } from '@/lib/middleware-helpers';
 import { prisma } from '@/lib/db';
 import { createPayrollSchema, updatePayrollSchema } from '@/lib/validations';
-import { UserRole, PayrollStatus, PaymentType } from '@prisma/client';
+import { UserRole, PayrollStatus, PaymentType, Prisma } from '@prisma/client';
 import { canManageUser, canAccessCompany } from '@/lib/permissions';
 import {
   calculateHoursWorked,
@@ -265,8 +265,8 @@ export async function POST(request: NextRequest) {
         hoursWorked,
         hourlyRate,
         baseSalary,
-        bonuses: bonuses.length > 0 ? bonuses : null,
-        deductions: deductions.length > 0 ? deductions : null,
+        bonuses: bonuses.length > 0 ? bonuses : Prisma.JsonNull,
+        deductions: deductions.length > 0 ? deductions : Prisma.JsonNull,
         totalBonuses,
         totalDeductions,
         netSalary,

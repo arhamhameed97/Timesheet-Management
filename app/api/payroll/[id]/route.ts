@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext, unauthorizedResponse, forbiddenResponse } from '@/lib/middleware-helpers';
 import { prisma } from '@/lib/db';
 import { updatePayrollSchema } from '@/lib/validations';
-import { UserRole, PayrollStatus } from '@prisma/client';
+import { UserRole, PayrollStatus, Prisma } from '@prisma/client';
 import { canManageUser } from '@/lib/permissions';
 import {
   calculateTotalBonuses,
@@ -141,11 +141,11 @@ export async function PATCH(
     // Store bonuses and deductions as JSON
     if (validatedData.bonuses !== undefined) {
       const bonusesArray = validatedData.bonuses;
-      updateData.bonuses = bonusesArray.length > 0 ? bonusesArray : null;
+      updateData.bonuses = bonusesArray.length > 0 ? bonusesArray : Prisma.JsonNull;
     }
     if (validatedData.deductions !== undefined) {
       const deductionsArray = validatedData.deductions;
-      updateData.deductions = deductionsArray.length > 0 ? deductionsArray : null;
+      updateData.deductions = deductionsArray.length > 0 ? deductionsArray : Prisma.JsonNull;
     }
     
     // Set approver and approval time if approving
