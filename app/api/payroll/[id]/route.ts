@@ -140,10 +140,12 @@ export async function PATCH(
     
     // Store bonuses and deductions as JSON
     if (validatedData.bonuses !== undefined) {
-      updateData.bonuses = bonuses.length > 0 ? bonuses : null;
+      const bonusesArray = validatedData.bonuses;
+      updateData.bonuses = bonusesArray.length > 0 ? bonusesArray : null;
     }
     if (validatedData.deductions !== undefined) {
-      updateData.deductions = deductions.length > 0 ? deductions : null;
+      const deductionsArray = validatedData.deductions;
+      updateData.deductions = deductionsArray.length > 0 ? deductionsArray : null;
     }
     
     // Set approver and approval time if approving
