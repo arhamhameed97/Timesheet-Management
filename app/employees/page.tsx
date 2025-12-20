@@ -104,6 +104,9 @@ export default function EmployeesPage() {
     role: 'EMPLOYEE',
     managerId: '',
     companyId: '',
+    paymentType: '' as 'HOURLY' | 'SALARY' | '',
+    hourlyRate: '',
+    monthlySalary: '',
   });
 
   useEffect(() => {
