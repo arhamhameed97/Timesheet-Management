@@ -43,15 +43,20 @@ export async function GET(request: NextRequest) {
     const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
     const dailyEarnings: Record<string, { hours: number; earnings: number }> = {};
 
+    // Get user payment info for debugging
+    const { getEmployeePaymentInfo } = await import('@/lib/payroll-helpers');
+    const paymentInfo = await getEmployeePaymentInfo(userId);
+    console.log(`[daily-earnings] User ${userId} payment info:`, paymentInfo);
+
     // Calculate earnings for each day of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(yearNum, monthNum - 1, day);
       const result = await calculateDailyHoursAndEarnings(userId, date);
       dailyEarnings[day.toString()] = result;
       
-      // Debug: Log non-zero earnings
-      if (result.hours > 0 || result.earnings > 0) {
-        console.log(`Day ${day}: ${result.hours}h - $${result.earnings}`);
+      // Debug: Log days with hours or earnings
+      if (result.hours > 0) {
+        console.log(`Day ${day}: ${result.hours}h - $${result.earnings} (hourlyRate: ${paymentInfo?.hourlyRate || 'not set'})`);
       }
     }
 
@@ -64,4 +69,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
 

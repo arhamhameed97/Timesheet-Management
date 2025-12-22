@@ -230,12 +230,29 @@ export async function calculateDailyHoursAndEarnings(
     return { hours: 0, earnings: 0 };
   }
 
-  // For salaried employees, we don't calculate daily earnings from attendance
-  // They should see their daily earnings from payroll records instead
-  if (paymentInfo.paymentType !== 'HOURLY' || !paymentInfo.hourlyRate) {
-    return { hours: 0, earnings: 0 };
-  }
+  // Try to get hourly rate from Payroll record for this month/year first
+  // This ensures we use the same rate that was used for monthly payroll calculation
+  const month = date.getMonth() + 1;
+  const year = date.getFullYear();
+  const payrollRecord = await prisma.payroll.findUnique({
+    where: {
+      userId_month_year: {
+        userId,
+        month,
+        year,
+      },
+    },
+    select: {
+      hourlyRate: true,
+      paymentType: true,
+    },
+  });
 
+  // Use hourly rate from payroll record if available, otherwise fall back to user profile
+  const hourlyRate = payrollRecord?.hourlyRate || paymentInfo.hourlyRate;
+  const effectivePaymentType = payrollRecord?.paymentType || paymentInfo.paymentType;
+
+  // Calculate hours worked for ALL employees (both hourly and salaried)
   let dayHours = 0;
 
   // Try to parse check-in/check-out history from notes
@@ -313,9 +330,23 @@ export async function calculateDailyHoursAndEarnings(
   // Round to 2 decimal places
   dayHours = Math.round(dayHours * 100) / 100;
 
-  // Calculate earnings
-  const earnings = calculateHourlyPay(dayHours, paymentInfo.hourlyRate);
+  // Calculate earnings: multiply hours by hourly rate if hourly rate exists
+  // Priority: Use hourlyRate from Payroll record, then fall back to User profile
+  let earnings = 0;
+  if (hourlyRate && hourlyRate > 0 && dayHours > 0) {
+    earnings = calculateHourlyPay(dayHours, hourlyRate);
+  } else if (dayHours > 0) {
+    // Debug: Log when hours exist but earnings aren't calculated
+    console.log(`[calculateDailyHoursAndEarnings] Day ${date.toDateString()}: ${dayHours}h worked but no earnings calculated.`, {
+      payrollHourlyRate: payrollRecord?.hourlyRate,
+      userHourlyRate: paymentInfo.hourlyRate,
+      effectiveHourlyRate: hourlyRate,
+      paymentType: effectivePaymentType,
+      monthlySalary: paymentInfo.monthlySalary
+    });
+  }
 
   return { hours: dayHours, earnings };
 }
+
 

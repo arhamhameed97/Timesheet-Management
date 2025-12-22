@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext, unauthorizedResponse } from '@/lib/middleware-helpers';
 import { prisma } from '@/lib/db';
 import { PayrollStatus } from '@prisma/client';
+import { calculateHoursWorked, calculateDailyHoursAndEarnings } from '@/lib/payroll-helpers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,16 +43,28 @@ export async function GET(request: NextRequest) {
     const currentMonth = currentDate.getMonth() + 1;
     const currentYear = currentDate.getFullYear();
 
-    // Current month earnings
-    const currentMonthPayroll = parsedPayroll.find(
-      (p) => p.month === currentMonth && p.year === currentYear
-    );
-    const currentMonthEarnings = currentMonthPayroll?.netSalary || 0;
+    // Calculate current month earnings from daily attendance records (not payroll records)
+    // This ensures accuracy even if payroll hasn't been created yet
+    let currentMonthEarnings = 0;
+    const daysInCurrentMonth = new Date(currentYear, currentMonth, 0).getDate();
+    for (let day = 1; day <= daysInCurrentMonth; day++) {
+      const date = new Date(currentYear, currentMonth - 1, day);
+      const dailyData = await calculateDailyHoursAndEarnings(userId, date);
+      currentMonthEarnings += dailyData.earnings;
+    }
+    currentMonthEarnings = Math.round(currentMonthEarnings * 100) / 100;
 
-    // Year-to-date total
-    const yearToDateTotal = parsedPayroll
-      .filter((p) => p.year === currentYear)
-      .reduce((sum, p) => sum + p.netSalary, 0);
+    // Calculate year-to-date total from daily attendance records (not payroll records)
+    let yearToDateTotal = 0;
+    for (let month = 1; month <= currentMonth; month++) {
+      const daysInMonth = new Date(currentYear, month, 0).getDate();
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(currentYear, month - 1, day);
+        const dailyData = await calculateDailyHoursAndEarnings(userId, date);
+        yearToDateTotal += dailyData.earnings;
+      }
+    }
+    yearToDateTotal = Math.round(yearToDateTotal * 100) / 100;
 
     // All-time total
     const allTimeTotal = parsedPayroll.reduce((sum, p) => sum + p.netSalary, 0);
@@ -65,19 +78,43 @@ export async function GET(request: NextRequest) {
       (p) => p.status === PayrollStatus.PENDING
     ).length;
 
-    // Calculate total hours worked
-    // Current month hours
-    const currentMonthHours = currentMonthPayroll?.hoursWorked || 0;
+    // Calculate total hours worked from actual attendance records (not from Payroll records)
+    // This ensures consistency with the calendar which calculates from attendance
     
-    // Year-to-date hours
-    const yearToDateHours = parsedPayroll
-      .filter((p) => p.year === currentYear && p.hoursWorked !== null)
-      .reduce((sum, p) => sum + Math.abs(p.hoursWorked || 0), 0);
+    // Current month hours - calculate from attendance records
+    const currentMonthHours = await calculateHoursWorked(userId, currentMonth, currentYear);
     
-    // All-time total hours
-    const allTimeHours = parsedPayroll
-      .filter((p) => p.hoursWorked !== null)
-      .reduce((sum, p) => sum + Math.abs(p.hoursWorked || 0), 0);
+    // Year-to-date hours - calculate from attendance records for each month in the current year
+    let yearToDateHours = 0;
+    for (let month = 1; month <= currentMonth; month++) {
+      const monthHours = await calculateHoursWorked(userId, month, currentYear);
+      yearToDateHours += monthHours;
+    }
+    yearToDateHours = Math.round(yearToDateHours * 100) / 100;
+    
+    // All-time total hours - calculate from attendance records for all years with payroll
+    // Get all unique years from payroll records
+    const allYears = new Set<number>();
+    parsedPayroll.forEach((p) => {
+      allYears.add(p.year);
+    });
+    
+    // If no payroll records, still calculate current year
+    if (allYears.size === 0) {
+      allYears.add(currentYear);
+    }
+    
+    // Calculate hours for all months in all years that have payroll records
+    let allTimeHours = 0;
+    for (const year of allYears) {
+      // Calculate for all 12 months of each year (not just months with payroll)
+      // This ensures we capture all attendance, even if payroll wasn't created for some months
+      for (let month = 1; month <= 12; month++) {
+        const monthHours = await calculateHoursWorked(userId, month, year);
+        allTimeHours += monthHours;
+      }
+    }
+    allTimeHours = Math.round(allTimeHours * 100) / 100;
 
     // Monthly breakdown for the current year
     const monthlyBreakdown = Array.from({ length: 12 }, (_, i) => {
@@ -135,4 +172,5 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
 
