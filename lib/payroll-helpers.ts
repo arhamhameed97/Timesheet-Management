@@ -20,7 +20,11 @@ export async function calculateHoursWorked(
   year: number
 ): Promise<number> {
   // Get start and end dates for the month in UTC to match attendance record dates
+  // month is 1-indexed (1 = January, 12 = December)
+  // For startDate: month - 1 because Date.UTC uses 0-indexed months
   const startDate = new Date(Date.UTC(year, month - 1, 1));
+  // For endDate: use month (1-indexed) with day 0 to get last day of current month
+  // Date.UTC(year, month, 0) where month is 1-indexed (12 for Dec) = Date.UTC(2025, 12, 0) = Dec 31, 2025
   const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
 
   // Fetch all attendance records for the period
@@ -84,9 +88,23 @@ export async function calculateHoursWorked(
         }
       }
 
-      // If there's a check-in without a check-out, calculate to checkOutTime or now
+      // If there's a check-in without a check-out, calculate to checkOutTime or end of that day
+      // Don't use current time for past dates - use checkOutTime if available, otherwise end of the attendance date
       if (lastCheckIn) {
-        const endTime = record.checkOutTime ? new Date(record.checkOutTime) : new Date();
+        let endTime: Date;
+        if (record.checkOutTime) {
+          endTime = new Date(record.checkOutTime);
+        } else {
+          // For past dates, use end of the attendance date, not current time
+          // Get the date from the record (we need to fetch it or use checkInTime's date)
+          const recordDate = new Date(record.checkInTime);
+          endTime = new Date(Date.UTC(
+            recordDate.getUTCFullYear(),
+            recordDate.getUTCMonth(),
+            recordDate.getUTCDate(),
+            23, 59, 59, 999
+          ));
+        }
         const seconds = differenceInSeconds(endTime, lastCheckIn);
         if (seconds > 0) {
           dayHours += seconds / 3600;
@@ -105,10 +123,16 @@ export async function calculateHoursWorked(
           dayHours = Math.abs(seconds) / 3600;
         }
       } else if (record.checkInTime) {
-        // If checked in but not checked out, calculate to now (shouldn't happen for past months)
+        // If checked in but not checked out, calculate to end of that day (not current time for past dates)
         const checkIn = new Date(record.checkInTime);
-        const now = new Date();
-        const seconds = differenceInSeconds(now, checkIn);
+        const recordDate = new Date(checkIn);
+        const endOfDay = new Date(Date.UTC(
+          recordDate.getUTCFullYear(),
+          recordDate.getUTCMonth(),
+          recordDate.getUTCDate(),
+          23, 59, 59, 999
+        ));
+        const seconds = differenceInSeconds(endOfDay, checkIn);
         if (seconds > 0) {
           dayHours = seconds / 3600;
         }

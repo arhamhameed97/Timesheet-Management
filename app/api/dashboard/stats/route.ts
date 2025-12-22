@@ -10,12 +10,15 @@ export async function GET(request: NextRequest) {
       return unauthorizedResponse();
     }
 
-    // Get today's date (date only, no time)
+    // Get today's date (date only, no time) - use UTC to match attendance records
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    today.setHours(0, 0, 0, 0);
-    const currentMonth = now.getMonth() + 1;
-    const currentYear = now.getFullYear();
+    const today = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate()
+    ));
+    const currentMonth = now.getUTCMonth() + 1;
+    const currentYear = now.getUTCFullYear();
 
     // Get employees the user can see (respects role-based permissions)
     let employeeIds: string[] | null = null;

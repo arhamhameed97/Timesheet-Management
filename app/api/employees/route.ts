@@ -134,13 +134,34 @@ export async function GET(request: NextRequest) {
     });
 
     // Get date for attendance stats - use provided date or default to today
-    const attendanceDateObj = attendanceDate ? new Date(attendanceDate) : new Date();
-    attendanceDateObj.setHours(0, 0, 0, 0);
+    // Use UTC dates consistently to match how attendance records are stored
+    let attendanceDateObj: Date;
+    if (attendanceDate) {
+      // Parse the date string and create UTC date at start of day
+      const dateParts = attendanceDate.split('-');
+      attendanceDateObj = new Date(Date.UTC(
+        parseInt(dateParts[0]),
+        parseInt(dateParts[1]) - 1, // Month is 0-indexed
+        parseInt(dateParts[2])
+      ));
+    } else {
+      // Use current UTC date at start of day
+      const now = new Date();
+      attendanceDateObj = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate()
+      ));
+    }
     
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+    const now = new Date();
+    const today = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate()
+    ));
+    const startOfMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+    const endOfMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0, 23, 59, 59));
 
     // Get employee IDs for attendance and timesheet queries
     const employeeIds = employees.map(e => e.id);

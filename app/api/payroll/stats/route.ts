@@ -39,9 +39,10 @@ export async function GET(request: NextRequest) {
     }));
 
     // Calculate statistics
+    // Use UTC to match attendance record dates
     const currentDate = new Date();
-    const currentMonth = currentDate.getMonth() + 1;
-    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getUTCMonth() + 1;
+    const currentYear = currentDate.getUTCFullYear();
 
     // Calculate current month earnings from daily attendance records (not payroll records)
     // This ensures accuracy even if payroll hasn't been created yet
