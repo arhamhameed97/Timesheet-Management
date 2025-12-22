@@ -10,8 +10,13 @@ import { prisma } from './db';
  * @returns The number of attendance records that were auto-checked out
  */
 export async function autoCheckoutPreviousDays(userId: string): Promise<number> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Use UTC date to ensure consistent timezone handling
+  const now = new Date();
+  const today = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate()
+  ));
 
   // Find all attendance records where:
   // 1. The date is before today
@@ -34,9 +39,14 @@ export async function autoCheckoutPreviousDays(userId: string): Promise<number> 
 
   // Auto-checkout each open check-in
   for (const attendance of openCheckIns) {
-    // Create a new date object for checkout time (end of that day: 23:59:59)
-    const checkOutTime = new Date(attendance.date);
-    checkOutTime.setHours(23, 59, 59, 999);
+    // Create a new date object for checkout time (end of that day: 23:59:59 UTC)
+    const recordDate = new Date(attendance.date);
+    const checkOutTime = new Date(Date.UTC(
+      recordDate.getUTCFullYear(),
+      recordDate.getUTCMonth(),
+      recordDate.getUTCDate(),
+      23, 59, 59, 999
+    ));
 
     // Parse existing notes to get check-in/check-out history
     let checkInOutHistory: Array<{ type: 'in' | 'out'; time: string }> = [];

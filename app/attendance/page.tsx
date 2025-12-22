@@ -381,7 +381,13 @@ export default function AttendancePage() {
         return;
       }
       
-      const today = format(new Date(), 'yyyy-MM-dd');
+      // Get today's date in UTC to match server timezone
+      const now = new Date();
+      const year = now.getUTCFullYear();
+      const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(now.getUTCDate()).padStart(2, '0');
+      const today = `${year}-${month}-${day}`;
+      
       let url = `/api/attendance?startDate=${today}&endDate=${today}`;
       
       // Add userId parameter if an employee is selected
@@ -512,13 +518,20 @@ export default function AttendancePage() {
     setCheckingIn(true);
     try {
       const token = localStorage.getItem('token');
+      // Get today's date in UTC to match server timezone
+      const now = new Date();
+      const year = now.getUTCFullYear();
+      const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(now.getUTCDate()).padStart(2, '0');
+      const todayISO = `${year}-${month}-${day}`;
+      
       const response = await fetch('/api/attendance/checkin', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ date: todayISO }),
       });
 
       if (response.ok) {
@@ -565,13 +578,20 @@ export default function AttendancePage() {
     setCheckingOut(true);
     try {
       const token = localStorage.getItem('token');
+      // Get today's date in UTC to match server timezone
+      const now = new Date();
+      const year = now.getUTCFullYear();
+      const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(now.getUTCDate()).padStart(2, '0');
+      const todayISO = `${year}-${month}-${day}`;
+      
       const response = await fetch('/api/attendance/checkout', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ date: todayISO }),
       });
 
       if (response.ok) {

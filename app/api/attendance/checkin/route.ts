@@ -18,12 +18,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = checkInSchema.parse(body);
 
-    const date = validatedData.date
-      ? new Date(validatedData.date)
-      : new Date();
-    
-    // Set time to start of day
-    date.setHours(0, 0, 0, 0);
+    // Use UTC dates consistently to avoid timezone issues
+    let date: Date;
+    if (validatedData.date) {
+      // Parse the date string and create UTC date at start of day
+      const dateParts = validatedData.date.split('-');
+      date = new Date(Date.UTC(
+        parseInt(dateParts[0]),
+        parseInt(dateParts[1]) - 1, // Month is 0-indexed
+        parseInt(dateParts[2])
+      ));
+    } else {
+      // Use current UTC date at start of day
+      const now = new Date();
+      date = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate()
+      ));
+    }
 
     // Check if attendance already exists for today
     const existing = await prisma.attendance.findUnique({

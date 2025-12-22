@@ -19,11 +19,9 @@ export async function calculateHoursWorked(
   month: number,
   year: number
 ): Promise<number> {
-  // Get start and end dates for the month
-  const startDate = new Date(year, month - 1, 1);
-  startDate.setHours(0, 0, 0, 0);
-  const endDate = new Date(year, month, 0, 23, 59, 59);
-  endDate.setHours(23, 59, 59, 999);
+  // Get start and end dates for the month in UTC to match attendance record dates
+  const startDate = new Date(Date.UTC(year, month - 1, 1));
+  const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
 
   // Fetch all attendance records for the period
   const attendanceRecords = await prisma.attendance.findMany({
@@ -199,11 +197,18 @@ export async function calculateDailyHoursAndEarnings(
   userId: string,
   date: Date
 ): Promise<{ hours: number; earnings: number }> {
-  // Set to start of day
-  const dayStart = new Date(date);
-  dayStart.setHours(0, 0, 0, 0);
-  const dayEnd = new Date(date);
-  dayEnd.setHours(23, 59, 59, 999);
+  // Convert to UTC date at start of day to match attendance record dates
+  const dayStart = new Date(Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate()
+  ));
+  const dayEnd = new Date(Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    23, 59, 59, 999
+  ));
 
   // Get attendance record for this day
   const attendance = await prisma.attendance.findUnique({
@@ -232,8 +237,9 @@ export async function calculateDailyHoursAndEarnings(
 
   // Try to get hourly rate from Payroll record for this month/year first
   // This ensures we use the same rate that was used for monthly payroll calculation
-  const month = date.getMonth() + 1;
-  const year = date.getFullYear();
+  // Use UTC month/year to match how dates are stored
+  const month = date.getUTCMonth() + 1;
+  const year = date.getUTCFullYear();
   const payrollRecord = await prisma.payroll.findUnique({
     where: {
       userId_month_year: {

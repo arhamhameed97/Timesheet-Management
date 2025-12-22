@@ -45,21 +45,23 @@ export async function GET(request: NextRequest) {
 
     // Calculate current month earnings from daily attendance records (not payroll records)
     // This ensures accuracy even if payroll hasn't been created yet
+    // Use UTC dates to match attendance record dates
     let currentMonthEarnings = 0;
     const daysInCurrentMonth = new Date(currentYear, currentMonth, 0).getDate();
     for (let day = 1; day <= daysInCurrentMonth; day++) {
-      const date = new Date(currentYear, currentMonth - 1, day);
+      const date = new Date(Date.UTC(currentYear, currentMonth - 1, day));
       const dailyData = await calculateDailyHoursAndEarnings(userId, date);
       currentMonthEarnings += dailyData.earnings;
     }
     currentMonthEarnings = Math.round(currentMonthEarnings * 100) / 100;
 
     // Calculate year-to-date total from daily attendance records (not payroll records)
+    // Use UTC dates to match attendance record dates
     let yearToDateTotal = 0;
     for (let month = 1; month <= currentMonth; month++) {
       const daysInMonth = new Date(currentYear, month, 0).getDate();
       for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(currentYear, month - 1, day);
+        const date = new Date(Date.UTC(currentYear, month - 1, day));
         const dailyData = await calculateDailyHoursAndEarnings(userId, date);
         yearToDateTotal += dailyData.earnings;
       }

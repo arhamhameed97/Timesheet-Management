@@ -34,22 +34,40 @@ export async function GET(request: NextRequest) {
     const where: any = { userId: targetUserId };
 
     if (startDate && endDate) {
-      // Parse dates and set to start/end of day to ensure we capture all records
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      // Parse dates as UTC to ensure consistent timezone handling
+      const startParts = startDate.split('-');
+      const start = new Date(Date.UTC(
+        parseInt(startParts[0]),
+        parseInt(startParts[1]) - 1,
+        parseInt(startParts[2])
+      ));
+      const endParts = endDate.split('-');
+      const end = new Date(Date.UTC(
+        parseInt(endParts[0]),
+        parseInt(endParts[1]) - 1,
+        parseInt(endParts[2]),
+        23, 59, 59, 999
+      ));
       where.date = {
         gte: start,
         lte: end,
       };
     } else if (startDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
+      const startParts = startDate.split('-');
+      const start = new Date(Date.UTC(
+        parseInt(startParts[0]),
+        parseInt(startParts[1]) - 1,
+        parseInt(startParts[2])
+      ));
       where.date = { gte: start };
     } else if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
+      const endParts = endDate.split('-');
+      const end = new Date(Date.UTC(
+        parseInt(endParts[0]),
+        parseInt(endParts[1]) - 1,
+        parseInt(endParts[2]),
+        23, 59, 59, 999
+      ));
       where.date = { lte: end };
     }
 
