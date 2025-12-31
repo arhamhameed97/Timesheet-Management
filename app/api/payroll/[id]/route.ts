@@ -115,15 +115,15 @@ export async function PATCH(
     const updateData: any = { ...validatedData };
 
     // Handle bonuses and deductions
-    let bonuses = validatedData.bonuses;
-    let deductions = validatedData.deductions;
+    let bonuses: Array<{ name: string; amount: number }> = validatedData.bonuses || [];
+    let deductions: Array<{ name: string; amount: number }> = validatedData.deductions || [];
 
     // If not provided, use existing values
-    if (!bonuses) {
-      bonuses = payroll.bonuses ? (typeof payroll.bonuses === 'string' ? JSON.parse(payroll.bonuses as string) : payroll.bonuses) : [];
+    if (validatedData.bonuses === undefined) {
+      bonuses = payroll.bonuses ? (typeof payroll.bonuses === 'string' ? JSON.parse(payroll.bonuses as string) : payroll.bonuses as Array<{ name: string; amount: number }>) : [];
     }
-    if (!deductions) {
-      deductions = payroll.deductions ? (typeof payroll.deductions === 'string' ? JSON.parse(payroll.deductions as string) : payroll.deductions) : [];
+    if (validatedData.deductions === undefined) {
+      deductions = payroll.deductions ? (typeof payroll.deductions === 'string' ? JSON.parse(payroll.deductions as string) : payroll.deductions as Array<{ name: string; amount: number }>) : [];
     }
 
     // Calculate totals
