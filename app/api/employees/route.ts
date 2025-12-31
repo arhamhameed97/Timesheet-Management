@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext, unauthorizedResponse, forbiddenResponse } from '@/lib/middleware-helpers';
 import { prisma } from '@/lib/db';
 import { createEmployeeSchema } from '@/lib/validations';
-import { UserRole } from '@prisma/client';
+import { UserRole, TimesheetStatus } from '@prisma/client';
 import { canManageUser } from '@/lib/permissions';
 import { startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
 import bcrypt from 'bcryptjs';
@@ -113,12 +113,12 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      // Fetch pending timesheets count for each employee
+      // Fetch pending timesheets count for each employee (SUBMITTED = pending approval)
       const pendingTimesheets = await prisma.timesheet.groupBy({
         by: ['userId'],
         where: {
           userId: { in: employeeIds },
-          status: 'PENDING',
+          status: TimesheetStatus.SUBMITTED,
         },
         _count: {
           id: true,

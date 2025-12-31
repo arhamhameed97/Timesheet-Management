@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext, unauthorizedResponse } from '@/lib/middleware-helpers';
 import { prisma } from '@/lib/db';
-import { UserRole } from '@prisma/client';
+import { UserRole, TimesheetStatus } from '@prisma/client';
 import { startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
 
 export async function GET(request: NextRequest) {
@@ -46,10 +46,10 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      // Count pending timesheets across all companies
+      // Count pending timesheets across all companies (SUBMITTED = pending approval)
       pendingTimesheets = await prisma.timesheet.count({
         where: {
-          status: 'PENDING',
+          status: TimesheetStatus.SUBMITTED,
         },
       });
 
@@ -114,13 +114,13 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      // Count pending timesheets for company employees
+      // Count pending timesheets for company employees (SUBMITTED = pending approval)
       pendingTimesheets = await prisma.timesheet.count({
         where: {
           userId: {
             in: employeeIds,
           },
-          status: 'PENDING',
+          status: TimesheetStatus.SUBMITTED,
         },
       });
 
@@ -159,11 +159,11 @@ export async function GET(request: NextRequest) {
       });
       todayAttendance = todayAttendanceRecord ? 1 : 0;
 
-      // Count pending timesheets for the employee
+      // Count pending timesheets for the employee (SUBMITTED = pending approval)
       pendingTimesheets = await prisma.timesheet.count({
         where: {
           userId: context.userId,
-          status: 'PENDING',
+          status: TimesheetStatus.SUBMITTED,
         },
       });
 
