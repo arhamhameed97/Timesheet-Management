@@ -6,7 +6,7 @@ import { Users, Clock, FileText, TrendingUp, CheckCircle, XCircle, Eye } from 'l
 import { DesignationBadge } from '@/components/common/DesignationBadge';
 import { RoleBadge } from '@/components/common/RoleBadge';
 import { UserRole } from '@prisma/client';
-import { format } from 'date-fns';
+import { format, differenceInSeconds } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import {
@@ -52,9 +52,19 @@ interface EmployeeAttendance {
 export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
   const [recentAttendance, setRecentAttendance] = useState<EmployeeAttendance[]>([]);
   const [loadingAttendance, setLoadingAttendance] = useState(true);
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
 
   useEffect(() => {
     fetchRecentAttendance();
+  }, []);
+
+  // Update current time every minute for real-time shift time calculation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchRecentAttendance = async () => {
@@ -84,6 +94,22 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
   const formatTime = (dateString: string | null) => {
     if (!dateString) return '-';
     return format(new Date(dateString), 'HH:mm');
+  };
+
+  const calculateShiftTime = (checkInTime: string | null, checkOutTime: string | null): string => {
+    if (!checkInTime) return '-';
+    
+    const checkIn = new Date(checkInTime);
+    const checkOut = checkOutTime ? new Date(checkOutTime) : currentTime; // Use current time if not checked out
+    
+    const totalSeconds = Math.abs(differenceInSeconds(checkOut, checkIn));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
   };
 
   return (
@@ -203,6 +229,12 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
                             <span className="text-xs text-gray-500">
                               {format(new Date(employee.attendanceStats.todayStatus.checkInTime), 'MMM dd')}
                             </span>
+                            <span className="text-xs text-green-600 font-medium mt-0.5">
+                              Shift: {calculateShiftTime(
+                                employee.attendanceStats.todayStatus.checkInTime,
+                                employee.attendanceStats.todayStatus.checkOutTime
+                              )}
+                            </span>
                           </div>
                         ) : (
                           <span className="text-gray-400 text-sm">-</span>
@@ -217,7 +249,15 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
                             </span>
                           </div>
                         ) : employee.attendanceStats?.todayStatus?.checkedIn && !employee.attendanceStats?.todayStatus?.checkedOut ? (
-                          <span className="text-xs text-blue-600 font-medium">In Progress</span>
+                          <div className="flex flex-col">
+                            <span className="text-xs text-blue-600 font-medium">In Progress</span>
+                            <span className="text-xs text-green-600 font-medium mt-0.5">
+                              Shift: {calculateShiftTime(
+                                employee.attendanceStats.todayStatus.checkInTime,
+                                null
+                              )}
+                            </span>
+                          </div>
                         ) : (
                           <span className="text-gray-400 text-sm">-</span>
                         )}
@@ -271,6 +311,8 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
     </div>
   );
 }
+
+
 
 
 

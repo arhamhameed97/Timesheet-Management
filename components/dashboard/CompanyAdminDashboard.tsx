@@ -6,7 +6,7 @@ import { Users, Clock, FileText, DollarSign, Building2, CheckCircle, XCircle, Ey
 import { DesignationBadge } from '@/components/common/DesignationBadge';
 import { RoleBadge } from '@/components/common/RoleBadge';
 import { UserRole } from '@prisma/client';
-import { format } from 'date-fns';
+import { format, differenceInSeconds } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
@@ -57,10 +57,20 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
   const [loadingAttendance, setLoadingAttendance] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [employeeSearch, setEmployeeSearch] = useState<string>('');
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
 
   useEffect(() => {
     fetchRecentAttendance();
   }, [selectedDate]);
+
+  // Update current time every minute for real-time shift time calculation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     // Filter employees based on search term
@@ -103,6 +113,22 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
   const formatTime = (dateString: string | null) => {
     if (!dateString) return '-';
     return format(new Date(dateString), 'HH:mm');
+  };
+
+  const calculateShiftTime = (checkInTime: string | null, checkOutTime: string | null): string => {
+    if (!checkInTime) return '-';
+    
+    const checkIn = new Date(checkInTime);
+    const checkOut = checkOutTime ? new Date(checkOutTime) : currentTime; // Use current time if not checked out
+    
+    const totalSeconds = Math.abs(differenceInSeconds(checkOut, checkIn));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
   };
 
   return (
@@ -251,6 +277,12 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
                             <span className="text-xs text-gray-500">
                               {format(new Date(employee.attendanceStats.todayStatus.checkInTime), 'MMM dd')}
                             </span>
+                            <span className="text-xs text-green-600 font-medium mt-0.5">
+                              Shift: {calculateShiftTime(
+                                employee.attendanceStats.todayStatus.checkInTime,
+                                employee.attendanceStats.todayStatus.checkOutTime
+                              )}
+                            </span>
                           </div>
                         ) : (
                           <span className="text-gray-400 text-sm">-</span>
@@ -265,7 +297,15 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
                             </span>
                           </div>
                         ) : employee.attendanceStats?.todayStatus?.checkedIn && !employee.attendanceStats?.todayStatus?.checkedOut ? (
-                          <span className="text-xs text-blue-600 font-medium">In Progress</span>
+                          <div className="flex flex-col">
+                            <span className="text-xs text-blue-600 font-medium">In Progress</span>
+                            <span className="text-xs text-green-600 font-medium mt-0.5">
+                              Shift: {calculateShiftTime(
+                                employee.attendanceStats.todayStatus.checkInTime,
+                                null
+                              )}
+                            </span>
+                          </div>
                         ) : (
                           <span className="text-gray-400 text-sm">-</span>
                         )}
@@ -319,6 +359,8 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
     </div>
   );
 }
+
+
 
 
 
