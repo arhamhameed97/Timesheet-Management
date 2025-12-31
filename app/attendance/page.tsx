@@ -202,7 +202,8 @@ export default function AttendancePage() {
           lastCheckIn = eventTime;
         } else if (event.type === 'out' && lastCheckIn) {
           // Add shift time from last check-in to this check-out
-          totalShiftTime += differenceInSeconds(eventTime, lastCheckIn);
+          const seconds = differenceInSeconds(eventTime, lastCheckIn);
+          totalShiftTime += Math.abs(seconds); // Use absolute value to prevent negative hours
           lastCheckIn = null;
         }
       }
@@ -218,15 +219,17 @@ export default function AttendancePage() {
         if (current.type === 'out' && next.type === 'in') {
           const checkoutTime = new Date(current.time);
           const checkinTime = new Date(next.time);
-          totalBreakTime += differenceInSeconds(checkinTime, checkoutTime);
+          const seconds = differenceInSeconds(checkinTime, checkoutTime);
+          totalBreakTime += Math.abs(seconds); // Use absolute value to prevent negative break time
         }
       }
     } else if (attendance.checkInTime && attendance.checkOutTime) {
       // Fallback: calculate from single check-in/check-out
-      totalShiftTime = differenceInSeconds(
+      const seconds = differenceInSeconds(
         new Date(attendance.checkOutTime),
         new Date(attendance.checkInTime)
       );
+      totalShiftTime = Math.abs(seconds); // Use absolute value to prevent negative hours
     }
 
     return {
@@ -333,7 +336,9 @@ export default function AttendancePage() {
       if (record.checkInTime && record.checkOutTime) {
         const checkIn = new Date(record.checkInTime);
         const checkOut = new Date(record.checkOutTime);
-        totalSeconds += differenceInSeconds(checkOut, checkIn);
+        const seconds = differenceInSeconds(checkOut, checkIn);
+        // Use absolute value to prevent negative hours (in case of data issues)
+        totalSeconds += Math.abs(seconds);
       }
     });
 
@@ -695,7 +700,7 @@ export default function AttendancePage() {
     
     const checkIn = new Date(attendanceRecord.checkInTime);
     const checkOut = new Date(attendanceRecord.checkOutTime);
-    const totalSeconds = differenceInSeconds(checkOut, checkIn);
+    const totalSeconds = Math.abs(differenceInSeconds(checkOut, checkIn)); // Use absolute value
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     
@@ -779,14 +784,14 @@ export default function AttendancePage() {
       ['Date', 'Check-in', 'Check-out', 'Status', 'Hours', 'Notes'].join(','),
       ...filteredAttendance.map((record) => {
         let hours = '-';
-        if (record.checkInTime && record.checkOutTime) {
-          const checkIn = new Date(record.checkInTime);
-          const checkOut = new Date(record.checkOutTime);
-          const totalSeconds = differenceInSeconds(checkOut, checkIn);
-          const h = Math.floor(totalSeconds / 3600);
-          const m = Math.floor((totalSeconds % 3600) / 60);
-          hours = `${h}:${String(m).padStart(2, '0')}`;
-        }
+                    if (record.checkInTime && record.checkOutTime) {
+                      const checkIn = new Date(record.checkInTime);
+                      const checkOut = new Date(record.checkOutTime);
+                      const totalSeconds = Math.abs(differenceInSeconds(checkOut, checkIn)); // Use absolute value
+                      const h = Math.floor(totalSeconds / 3600);
+                      const m = Math.floor((totalSeconds % 3600) / 60);
+                      hours = `${h}:${String(m).padStart(2, '0')}`;
+                    }
         return [
           formatDate(record.date),
           formatTime(record.checkInTime),
@@ -1297,10 +1302,11 @@ export default function AttendancePage() {
                                 let totalSeconds = 0;
                                 monthAttendance.forEach((record) => {
                                   if (record.checkInTime && record.checkOutTime) {
-                                    totalSeconds += differenceInSeconds(
+                                    const seconds = differenceInSeconds(
                                       new Date(record.checkOutTime),
                                       new Date(record.checkInTime)
                                     );
+                                    totalSeconds += Math.abs(seconds); // Use absolute value
                                   }
                                 });
                                 const hours = Math.floor(totalSeconds / 3600);
@@ -1368,7 +1374,7 @@ export default function AttendancePage() {
                     if (record.checkInTime && record.checkOutTime) {
                       const checkIn = new Date(record.checkInTime);
                       const checkOut = new Date(record.checkOutTime);
-                      const totalSeconds = differenceInSeconds(checkOut, checkIn);
+                      const totalSeconds = Math.abs(differenceInSeconds(checkOut, checkIn)); // Use absolute value
                       const h = Math.floor(totalSeconds / 3600);
                       const m = Math.floor((totalSeconds % 3600) / 60);
                       hours = `${h}h ${m}m`;
