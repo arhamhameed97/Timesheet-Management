@@ -43,8 +43,14 @@ export async function calculateHoursWorked(
 ): Promise<number> {
   // Calculate the start and end of the month using UTC to match database storage
   // This ensures consistent timezone handling with attendance records
+  // month parameter is 1-12 (1-indexed)
+  // Date.UTC uses 0-indexed months, so month - 1 for the start
   const monthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
-  const monthEnd = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)); // Last day of the month
+  // To get last day of current month: Date.UTC(year, month, 0) gives last day of (month-1)
+  // So we need Date.UTC(year, month + 1, 0) to get last day of month
+  // Example: month=1 (Jan) -> Date.UTC(year, 2, 0) = Jan 31st
+  // Example: month=12 (Dec) -> Date.UTC(year, 13, 0) = Dec 31st
+  const monthEnd = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
 
   // Get all attendance records for the month
   const attendanceRecords = await prisma.attendance.findMany({
@@ -58,6 +64,10 @@ export async function calculateHoursWorked(
       checkOutTime: { not: null },
     },
   });
+
+  console.log(`[calculateHoursWorked] User: ${userId}, Month: ${month}/${year}`);
+  console.log(`[calculateHoursWorked] Date range: ${monthStart.toISOString()} to ${monthEnd.toISOString()}`);
+  console.log(`[calculateHoursWorked] Found ${attendanceRecords.length} attendance records`);
 
   let totalSeconds = 0;
 
