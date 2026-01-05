@@ -30,6 +30,14 @@ export async function GET(request: NextRequest) {
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
     
+    // Debug logging
+    console.log(`[payroll-stats] User: ${userId}, Current: ${currentMonth}/${currentYear}`);
+    console.log(`[payroll-stats] Total payroll records: ${payrollRecords.length}`);
+    if (payrollRecords.length > 0) {
+      const yearRange = payrollRecords.map(p => `${p.year}-${p.month}`).join(', ');
+      console.log(`[payroll-stats] Payroll years/months: ${yearRange}`);
+    }
+    
     // Count all payrolls for current month except REJECTED ones
     const currentMonthPayroll = payrollRecords.find(
       (p) => p.month === currentMonth && 
@@ -44,11 +52,18 @@ export async function GET(request: NextRequest) {
     const yearToDatePayrolls = payrollRecords.filter((p) => {
       return p.year === currentYear && p.status !== PayrollStatus.REJECTED;
     });
+    
+    console.log(`[payroll-stats] Year-to-date payrolls (${currentYear}): ${yearToDatePayrolls.length}`);
+    yearToDatePayrolls.forEach(p => {
+      console.log(`[payroll-stats]   - ${p.month}/${p.year}: $${p.netSalary} (${p.status})`);
+    });
 
     const yearToDateTotal = yearToDatePayrolls.reduce(
       (sum, p) => sum + Math.abs(p.netSalary || 0),
       0
     );
+    
+    console.log(`[payroll-stats] Year-to-date total: $${yearToDateTotal}`);
 
     // Calculate average monthly earnings
     // Count all payrolls except REJECTED ones for average
@@ -68,8 +83,10 @@ export async function GET(request: NextRequest) {
       // Calculate hours for each month from January up to and including the current month
       for (let month = 1; month <= currentMonth; month++) {
         const hours = await calculateHoursWorked(userId, month, currentYear);
+        console.log(`[payroll-stats] Hours for ${month}/${currentYear}: ${hours.toFixed(2)}h`);
         yearToDateHours += hours;
       }
+      console.log(`[payroll-stats] Total year-to-date hours: ${yearToDateHours.toFixed(2)}h`);
     } catch (error) {
       console.error('Error calculating year-to-date hours:', error);
       // Fallback: calculate from payroll records if available
@@ -81,6 +98,7 @@ export async function GET(request: NextRequest) {
         (sum, p) => sum + (p.hoursWorked || 0),
         0
       );
+      console.log(`[payroll-stats] Fallback: Using payroll hours: ${yearToDateHours.toFixed(2)}h`);
     }
 
     // Count pending payrolls

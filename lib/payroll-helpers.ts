@@ -41,9 +41,10 @@ export async function calculateHoursWorked(
   month: number,
   year: number
 ): Promise<number> {
-  // Calculate the start and end of the month
-  const monthStart = startOfMonth(new Date(year, month - 1, 1));
-  const monthEnd = endOfMonth(new Date(year, month - 1, 1));
+  // Calculate the start and end of the month using UTC to match database storage
+  // This ensures consistent timezone handling with attendance records
+  const monthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+  const monthEnd = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)); // Last day of the month
 
   // Get all attendance records for the month
   const attendanceRecords = await prisma.attendance.findMany({
