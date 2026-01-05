@@ -3,6 +3,7 @@ import { getAuthContext, unauthorizedResponse } from '@/lib/middleware-helpers';
 import { prisma } from '@/lib/db';
 import { calculateHoursWorked } from '@/lib/payroll-helpers';
 import { startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
+import { PayrollStatus } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,37 +30,42 @@ export async function GET(request: NextRequest) {
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
     
+    // Count all payrolls for current month except REJECTED ones
     const currentMonthPayroll = payrollRecords.find(
-      (p) => p.month === currentMonth && p.year === currentYear
+      (p) => p.month === currentMonth && 
+             p.year === currentYear &&
+             p.status !== PayrollStatus.REJECTED
     );
-    const currentMonthEarnings = currentMonthPayroll?.netSalary || 0;
+    const currentMonthEarnings = currentMonthPayroll ? Math.abs(currentMonthPayroll.netSalary || 0) : 0;
 
     // Calculate year-to-date totals
-    const yearStart = startOfYear(now);
-    const yearEnd = endOfYear(now);
-    
+    // Include all payrolls from current year except REJECTED ones
+    // This includes PENDING, APPROVED, and PAID payrolls
     const yearToDatePayrolls = payrollRecords.filter((p) => {
-      const payrollDate = new Date(p.year, p.month - 1, 1);
-      return payrollDate >= yearStart && payrollDate <= yearEnd;
+      return p.year === currentYear && p.status !== PayrollStatus.REJECTED;
     });
 
     const yearToDateTotal = yearToDatePayrolls.reduce(
-      (sum, p) => sum + (p.netSalary || 0),
+      (sum, p) => sum + Math.abs(p.netSalary || 0),
       0
     );
 
     // Calculate average monthly earnings
-    const allTimePayrolls = payrollRecords.filter((p) => p.netSalary > 0);
+    // Count all payrolls except REJECTED ones for average
+    const allTimePayrolls = payrollRecords.filter((p) => 
+      p.status !== PayrollStatus.REJECTED &&
+      p.netSalary > 0
+    );
     const averageMonthlyEarnings =
       allTimePayrolls.length > 0
-        ? allTimePayrolls.reduce((sum, p) => sum + (p.netSalary || 0), 0) / allTimePayrolls.length
+        ? allTimePayrolls.reduce((sum, p) => sum + Math.abs(p.netSalary || 0), 0) / allTimePayrolls.length
         : 0;
 
     // Calculate year-to-date hours from attendance (not from payroll records)
     // This ensures consistency with the attendance page
     let yearToDateHours = 0;
     try {
-      // Calculate hours for each month in the current year
+      // Calculate hours for each month from January up to and including the current month
       for (let month = 1; month <= currentMonth; month++) {
         const hours = await calculateHoursWorked(userId, month, currentYear);
         yearToDateHours += hours;
@@ -67,7 +73,11 @@ export async function GET(request: NextRequest) {
     } catch (error) {
       console.error('Error calculating year-to-date hours:', error);
       // Fallback: calculate from payroll records if available
-      yearToDateHours = yearToDatePayrolls.reduce(
+      // Use all payrolls from current year up to current month, not just approved ones for hours
+      const allYearPayrolls = payrollRecords.filter((p) => 
+        p.year === currentYear && p.month <= currentMonth
+      );
+      yearToDateHours = allYearPayrolls.reduce(
         (sum, p) => sum + (p.hoursWorked || 0),
         0
       );
@@ -75,7 +85,7 @@ export async function GET(request: NextRequest) {
 
     // Count pending payrolls
     const pendingCount = payrollRecords.filter(
-      (p) => p.status === 'PENDING'
+      (p) => p.status === PayrollStatus.PENDING
     ).length;
 
     return NextResponse.json({
@@ -95,4 +105,6 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+
 
