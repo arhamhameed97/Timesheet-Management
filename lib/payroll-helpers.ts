@@ -131,10 +131,45 @@ export async function calculateDailyHoursAndEarnings(
     
     hours = Math.abs(seconds) / 3600;
 
-    // Get user payment info to calculate earnings
-    const paymentInfo = await getEmployeePaymentInfo(userId);
-    if (paymentInfo?.paymentType === PaymentType.HOURLY && paymentInfo.hourlyRate) {
-      earnings = hours * paymentInfo.hourlyRate;
+    // Get the month and year for this date to check payroll
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+
+    // First, check if there's a payroll record for this month/year with an hourly rate
+    // This takes precedence because payroll creation sets the hourly rate
+    const payroll = await prisma.payroll.findUnique({
+      where: {
+        userId_month_year: {
+          userId,
+          month,
+          year,
+        },
+      },
+      select: {
+        paymentType: true,
+        hourlyRate: true,
+      },
+    });
+
+    let hourlyRate: number | null = null;
+    let paymentType: PaymentType | null = null;
+
+    // If payroll exists and has hourly rate, use that
+    if (payroll && payroll.paymentType === PaymentType.HOURLY && payroll.hourlyRate) {
+      hourlyRate = payroll.hourlyRate;
+      paymentType = payroll.paymentType;
+    } else {
+      // Fall back to user profile payment info
+      const paymentInfo = await getEmployeePaymentInfo(userId);
+      if (paymentInfo?.paymentType === PaymentType.HOURLY && paymentInfo.hourlyRate) {
+        hourlyRate = paymentInfo.hourlyRate;
+        paymentType = paymentInfo.paymentType;
+      }
+    }
+
+    // Calculate earnings if we have hourly rate
+    if (paymentType === PaymentType.HOURLY && hourlyRate && hourlyRate > 0) {
+      earnings = hours * hourlyRate;
     }
   }
 
@@ -174,4 +209,6 @@ export function calculateNetSalary(
   const totalDeductions = calculateTotalDeductions(deductions);
   return baseSalary + totalBonuses - totalDeductions;
 }
+
+
 

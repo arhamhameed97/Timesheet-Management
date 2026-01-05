@@ -176,14 +176,25 @@ export async function POST(request: NextRequest) {
         userId: true,
         month: true,
         year: true,
+        status: true,
       },
     });
 
     if (existing) {
-      return NextResponse.json(
-        { error: 'Payroll already exists for this period' },
-        { status: 400 }
-      );
+      // If payroll exists and is REJECTED, delete it to allow creating a new one
+      if (existing.status === PayrollStatus.REJECTED) {
+        await prisma.payroll.delete({
+          where: {
+            id: existing.id,
+          },
+        });
+      } else {
+        // If payroll exists with PENDING, APPROVED, or PAID status, block creation
+        return NextResponse.json(
+          { error: 'Payroll already exists for this period' },
+          { status: 400 }
+        );
+      }
     }
 
     // Get employee payment info
