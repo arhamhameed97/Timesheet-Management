@@ -535,7 +535,7 @@ export default function PayrollPage() {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{formatCurrency(Math.abs(stats.stats.currentMonthEarnings))}</div>
+                  <div className="text-2xl font-bold">{formatCurrency(Math.abs(stats.stats?.currentMonthEarnings || 0))}</div>
                   <p className="text-xs text-muted-foreground">This month&apos;s earnings</p>
                 </CardContent>
               </Card>
@@ -545,7 +545,7 @@ export default function PayrollPage() {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{formatCurrency(Math.abs(stats.stats.yearToDateTotal))}</div>
+                  <div className="text-2xl font-bold">{formatCurrency(Math.abs(stats.stats?.yearToDateTotal || 0))}</div>
                   <p className="text-xs text-muted-foreground">Total earnings this year</p>
                 </CardContent>
               </Card>
@@ -555,7 +555,7 @@ export default function PayrollPage() {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{formatCurrency(Math.abs(stats.stats.averageMonthlyEarnings))}</div>
+                  <div className="text-2xl font-bold">{formatCurrency(Math.abs(stats.stats?.averageMonthlyEarnings || 0))}</div>
                   <p className="text-xs text-muted-foreground">Average per month</p>
                 </CardContent>
               </Card>
@@ -565,7 +565,7 @@ export default function PayrollPage() {
                   <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.stats.yearToDateHours.toFixed(2)}h</div>
+                  <div className="text-2xl font-bold">{((stats.stats?.yearToDateHours ?? 0) || 0).toFixed(2)}h</div>
                   <p className="text-xs text-muted-foreground">This year</p>
                 </CardContent>
               </Card>
@@ -575,7 +575,7 @@ export default function PayrollPage() {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.stats.pendingCount}</div>
+                  <div className="text-2xl font-bold">{stats.stats?.pendingCount || 0}</div>
                   <p className="text-xs text-muted-foreground">Pending payrolls</p>
                 </CardContent>
               </Card>
@@ -1383,6 +1383,8 @@ export default function PayrollPage() {
     </MainLayout>
   );
 }
+
+
 
 
 

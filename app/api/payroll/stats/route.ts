@@ -59,11 +59,20 @@ export async function GET(request: NextRequest) {
     });
 
     const yearToDateTotal = yearToDatePayrolls.reduce(
-      (sum, p) => sum + Math.abs(p.netSalary || 0),
+      (sum, p) => {
+        const netSalary = p.netSalary ?? 0;
+        return sum + Math.abs(netSalary);
+      },
       0
     );
     
     console.log(`[payroll-stats] Year-to-date total: $${yearToDateTotal}`);
+    console.log(`[payroll-stats] Year-to-date payrolls breakdown:`, yearToDatePayrolls.map(p => ({
+      month: p.month,
+      year: p.year,
+      netSalary: p.netSalary,
+      status: p.status
+    })));
 
     // Calculate average monthly earnings
     // Count all payrolls except REJECTED ones for average
@@ -83,37 +92,55 @@ export async function GET(request: NextRequest) {
       // Calculate hours for each month from January up to and including the current month
       for (let month = 1; month <= currentMonth; month++) {
         const hours = await calculateHoursWorked(userId, month, currentYear);
-        console.log(`[payroll-stats] Hours for ${month}/${currentYear}: ${hours.toFixed(2)}h`);
-        yearToDateHours += hours;
+        const hoursValue = hours ?? 0;
+        console.log(`[payroll-stats] Hours for ${month}/${currentYear}: ${hoursValue.toFixed(2)}h`);
+        yearToDateHours += hoursValue;
       }
-      console.log(`[payroll-stats] Total year-to-date hours: ${yearToDateHours.toFixed(2)}h`);
+      console.log(`[payroll-stats] Total year-to-date hours from attendance: ${yearToDateHours.toFixed(2)}h`);
     } catch (error) {
-      console.error('Error calculating year-to-date hours:', error);
-      // Fallback: calculate from payroll records if available
-      // Use all payrolls from current year up to current month, not just approved ones for hours
+      console.error('Error calculating year-to-date hours from attendance:', error);
+    }
+    
+    // If attendance-based calculation returned 0, try fallback to payroll records
+    // This handles cases where attendance records might not have checkOutTime but payroll was created
+    if (yearToDateHours === 0) {
       const allYearPayrolls = payrollRecords.filter((p) => 
-        p.year === currentYear && p.month <= currentMonth
+        p.year === currentYear && p.month <= currentMonth && p.hoursWorked != null
       );
-      yearToDateHours = allYearPayrolls.reduce(
-        (sum, p) => sum + (p.hoursWorked || 0),
+      const payrollHours = allYearPayrolls.reduce(
+        (sum, p) => {
+          const hours = p.hoursWorked ?? 0;
+          return sum + hours;
+        },
         0
       );
-      console.log(`[payroll-stats] Fallback: Using payroll hours: ${yearToDateHours.toFixed(2)}h`);
+      if (payrollHours > 0) {
+        console.log(`[payroll-stats] Using payroll hours as fallback: ${payrollHours.toFixed(2)}h`);
+        yearToDateHours = payrollHours;
+      }
     }
+    
+    // Ensure yearToDateHours is a valid number
+    yearToDateHours = Number.isFinite(yearToDateHours) ? yearToDateHours : 0;
 
     // Count pending payrolls
     const pendingCount = payrollRecords.filter(
       (p) => p.status === PayrollStatus.PENDING
     ).length;
 
+    // Ensure all values are valid numbers
+    const stats = {
+      currentMonthEarnings: Number.isFinite(currentMonthEarnings) ? currentMonthEarnings : 0,
+      yearToDateTotal: Number.isFinite(yearToDateTotal) ? yearToDateTotal : 0,
+      averageMonthlyEarnings: Number.isFinite(averageMonthlyEarnings) ? averageMonthlyEarnings : 0,
+      yearToDateHours: Number.isFinite(yearToDateHours) ? yearToDateHours : 0,
+      pendingCount: Number.isFinite(pendingCount) ? pendingCount : 0,
+    };
+    
+    console.log(`[payroll-stats] Final stats:`, stats);
+    
     return NextResponse.json({
-      stats: {
-        currentMonthEarnings,
-        yearToDateTotal,
-        averageMonthlyEarnings,
-        yearToDateHours,
-        pendingCount,
-      },
+      stats,
     });
   } catch (error) {
     console.error('Get payroll stats error:', error);
