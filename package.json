@@ -5,11 +5,15 @@
   "scripts": {
     "dev": "next dev",
     "dev:turbo": "next dev --turbo",
+    "dev:vercel": "vercel dev",
     "build": "prisma generate && next build",
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "next lint",
-    "clean": "rm -rf .next && rm -rf node_modules/.cache"
+    "clean": "rm -rf .next && rm -rf node_modules/.cache",
+    "db:studio": "prisma studio",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",
@@ -51,6 +55,8 @@
     "typescript": "^5.5.4"
   }
 }
+
+
 
 
 
