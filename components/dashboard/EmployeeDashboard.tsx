@@ -357,7 +357,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
     const start = startOfMonth(now);
     const end = endOfMonth(now);
     return eachDayOfInterval({ start, end });
-  }, [attendance, leaves]);
+  }, []);
 
   // Get status badge color
   const getStatusColor = (status: AttendanceStatus | null, isLeave: boolean, isWeekendDay: boolean) => {

@@ -1,11 +1,11 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
 // Optimize Prisma Client for development
-const prismaClientOptions = {
+const prismaClientOptions: Prisma.PrismaClientOptions = {
   log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
 }
 
