@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Clock, FileText, DollarSign, LogIn, LogOut, Calendar, CalendarDays, ChevronLeft, ChevronRight, Coffee, Search, User } from 'lucide-react';
 import { UserRole, AttendanceStatus, LeaveStatus, TimesheetStatus } from '@prisma/client';
-import { format, differenceInSeconds, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isWeekend, isWithinInterval, parseISO, subDays, addDays, differenceInDays } from 'date-fns';
+import { format, differenceInSeconds, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isWeekend, isWithinInterval, parseISO, subDays, addDays, differenceInDays, startOfWeek, endOfWeek, getDay } from 'date-fns';
 import {
   Dialog,
   DialogContent,
@@ -632,6 +632,102 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
 
   const shiftDuration = getCurrentShiftDuration();
 
+  // Calculate weekly work time stats
+  const weeklyStats = useMemo(() => {
+    const now = new Date();
+    const weekStart = startOfWeek(now, { weekStartsOn: 0 }); // Sunday
+    const weekEnd = endOfWeek(now, { weekStartsOn: 0 }); // Saturday
+    
+    const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    const dailyHours: { day: string; hours: number; minutes: number; date: Date }[] = [];
+    
+    // Initialize all days with 0 hours
+    for (let i = 0; i < 7; i++) {
+      const dayDate = new Date(weekStart);
+      dayDate.setDate(weekStart.getDate() + i);
+      dailyHours.push({
+        day: weekDays[i],
+        hours: 0,
+        minutes: 0,
+        date: dayDate,
+      });
+    }
+    
+    // Calculate hours for each day from attendance records
+    attendance.forEach((record) => {
+      const recordDate = parseISO(record.date);
+      const dayIndex = getDay(recordDate); // 0 = Sunday, 6 = Saturday
+      
+      if (isWithinInterval(recordDate, { start: weekStart, end: weekEnd })) {
+        let dayTotalSeconds = 0;
+        
+        // Parse notes for check-in/out history
+        try {
+          if (record.notes) {
+            const notesData = JSON.parse(record.notes);
+            if (notesData.checkInOutHistory && Array.isArray(notesData.checkInOutHistory)) {
+              const sortedHistory = [...notesData.checkInOutHistory].sort((a: any, b: any) => 
+                new Date(a.time).getTime() - new Date(b.time).getTime()
+              );
+              
+              let lastCheckIn: Date | null = null;
+              for (const event of sortedHistory) {
+                if (event.type === 'in') {
+                  lastCheckIn = new Date(event.time);
+                } else if (event.type === 'out' && lastCheckIn) {
+                  const seconds = differenceInSeconds(new Date(event.time), lastCheckIn);
+                  dayTotalSeconds += Math.abs(seconds);
+                  lastCheckIn = null;
+                }
+              }
+              
+              // If still checked in, add time to now
+              if (lastCheckIn && !record.checkOutTime) {
+                const seconds = differenceInSeconds(now, lastCheckIn);
+                dayTotalSeconds += Math.abs(seconds);
+              }
+            }
+          }
+        } catch (e) {
+          // Fallback to simple check-in/out calculation
+          if (record.checkInTime && record.checkOutTime) {
+            dayTotalSeconds = differenceInSeconds(
+              new Date(record.checkOutTime),
+              new Date(record.checkInTime)
+            );
+          } else if (record.checkInTime) {
+            dayTotalSeconds = differenceInSeconds(now, new Date(record.checkInTime));
+          }
+        }
+        
+        if (dayTotalSeconds > 0) {
+          dailyHours[dayIndex].hours = Math.floor(dayTotalSeconds / 3600);
+          dailyHours[dayIndex].minutes = Math.floor((dayTotalSeconds % 3600) / 60);
+        }
+      }
+    });
+    
+    // Calculate total weekly hours
+    const totalSeconds = dailyHours.reduce((sum, day) => {
+      return sum + (day.hours * 3600) + (day.minutes * 60);
+    }, 0);
+    
+    const totalHours = Math.floor(totalSeconds / 3600);
+    const totalMinutes = Math.floor((totalSeconds % 3600) / 60);
+    const totalHoursDecimal = totalHours + (totalMinutes / 60);
+    
+    // Find max hours for bar chart scaling
+    const maxHours = Math.max(...dailyHours.map(d => d.hours + d.minutes / 60), 1);
+    
+    return {
+      dailyHours,
+      totalHours,
+      totalMinutes,
+      totalHoursDecimal: totalHoursDecimal.toFixed(1),
+      maxHours,
+    };
+  }, [attendance, currentTime]);
+
   // Calculate annual leave days
   const calculateAnnualLeave = () => {
     const currentYear = new Date().getFullYear();
@@ -869,9 +965,106 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                   </div>
                 </div>
                 
-                {/* Illustration placeholder */}
-                <div className="hidden md:block w-48 h-48 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Clock className="h-24 w-24 text-purple-400" />
+                {/* Stats Visuals */}
+                <div className="hidden md:flex flex-col gap-4 w-48">
+                  {/* Progress Card */}
+                  <div className="bg-white rounded-lg border border-purple-100 p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-gray-700">Progress</h3>
+                    </div>
+                    <div className="mb-3">
+                      <div className="text-2xl font-bold text-gray-900">{weeklyStats.totalHoursDecimal} h</div>
+                      <div className="text-xs text-gray-500">Work Time this week</div>
+                    </div>
+                    {/* Weekly Bar Chart */}
+                    <div className="flex items-end justify-between gap-1 h-20">
+                      {weeklyStats.dailyHours.map((day, index) => {
+                        const heightPercent = weeklyStats.maxHours > 0 
+                          ? (day.hours + day.minutes / 60) / weeklyStats.maxHours * 100 
+                          : 0;
+                        const isToday = isSameDay(day.date, new Date());
+                        const hasData = day.hours > 0 || day.minutes > 0;
+                        
+                        return (
+                          <div key={index} className="flex flex-col items-center flex-1">
+                            {hasData && (
+                              <div className="text-xs font-medium text-gray-600 mb-1">
+                                {day.hours > 0 ? `${day.hours}h` : day.minutes > 0 ? `${day.minutes}m` : ''}
+                              </div>
+                            )}
+                            <div
+                              className={`w-full rounded-t transition-all ${
+                                isToday && hasData
+                                  ? 'bg-yellow-500'
+                                  : hasData
+                                  ? 'bg-gray-800'
+                                  : 'bg-gray-200 border-2 border-dashed border-gray-300'
+                              }`}
+                              style={{ height: hasData ? `${Math.max(heightPercent, 10)}%` : '20%' }}
+                            />
+                            <div className={`mt-1 w-1.5 h-1.5 rounded-full ${
+                              hasData ? 'bg-gray-800' : 'bg-gray-300'
+                            }`} />
+                            <div className="text-[10px] text-gray-500 mt-1">{day.day}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  {/* Time Tracker Card */}
+                  <div className="bg-white rounded-lg border border-purple-100 p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-gray-700">Time tracker</h3>
+                    </div>
+                    {/* Circular Timer */}
+                    <div className="relative w-32 h-32 mx-auto mb-3">
+                      {/* Outer ring */}
+                      <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+                        {/* Background circle */}
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          fill="none"
+                          stroke="#e5e7eb"
+                          strokeWidth="2"
+                          strokeDasharray="2 2"
+                        />
+                        {/* Progress circle */}
+                        {shiftDuration && (
+                          <circle
+                            cx="50"
+                            cy="50"
+                            r="45"
+                            fill="none"
+                            stroke="#fbbf24"
+                            strokeWidth="3"
+                            strokeDasharray={`${(shiftDuration.hours * 60 + shiftDuration.minutes) / 480 * 283} 283`}
+                            strokeLinecap="round"
+                            className="transition-all duration-1000"
+                          />
+                        )}
+                      </svg>
+                      {/* Center time display */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        {shiftDuration ? (
+                          <>
+                            <div className="text-2xl font-bold text-gray-900">
+                              {shiftDuration.hours.toString().padStart(2, '0')}:
+                              {shiftDuration.minutes.toString().padStart(2, '0')}
+                            </div>
+                            <div className="text-xs text-gray-500">Work Time</div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-2xl font-bold text-gray-400">00:00</div>
+                            <div className="text-xs text-gray-400">Work Time</div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>

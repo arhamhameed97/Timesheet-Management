@@ -2,13 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Clock, FileText, TrendingUp, CheckCircle, XCircle, Eye, CheckSquare, Filter } from 'lucide-react';
+import { Users, Clock, FileText, TrendingUp, CheckCircle, XCircle, Eye, CheckSquare, Filter, Plus } from 'lucide-react';
 import { DesignationBadge } from '@/components/common/DesignationBadge';
 import { RoleBadge } from '@/components/common/RoleBadge';
 import { UserRole } from '@prisma/client';
 import { format, differenceInSeconds, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { TaskStatus, TaskPriority } from '@prisma/client';
 import {
@@ -92,11 +96,22 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
   const [allTasks, setAllTasks] = useState<Task[]>([]);
   const [loadingAllTasks, setLoadingAllTasks] = useState(false);
   const [taskStatusFilter, setTaskStatusFilter] = useState<string>('all');
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [taskFormData, setTaskFormData] = useState({
+    title: '',
+    description: '',
+    dueDate: '',
+    priority: 'MEDIUM' as 'LOW' | 'MEDIUM' | 'HIGH',
+    assigneeIds: [] as string[],
+  });
+  const [creatingTask, setCreatingTask] = useState(false);
+  const [employeesList, setEmployeesList] = useState<EmployeeAttendance[]>([]);
 
   useEffect(() => {
     fetchRecentAttendance();
     fetchPendingTasks();
     fetchAllTasks();
+    fetchEmployeesList();
   }, []);
 
   useEffect(() => {
@@ -229,6 +244,65 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
         return 'text-green-600 font-semibold';
       default:
         return 'text-gray-600';
+    }
+  };
+
+  const fetchEmployeesList = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/employees', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEmployeesList(data.employees || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch employees list:', error);
+    }
+  };
+
+  const handleAssignTask = async () => {
+    if (!taskFormData.title || !taskFormData.dueDate || taskFormData.assigneeIds.length === 0) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    try {
+      setCreatingTask(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/tasks/assignments', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(taskFormData),
+      });
+
+      if (response.ok) {
+        setTaskDialogOpen(false);
+        setTaskFormData({
+          title: '',
+          description: '',
+          dueDate: '',
+          priority: 'MEDIUM',
+          assigneeIds: [],
+        });
+        await fetchAllTasks();
+        await fetchPendingTasks();
+        alert('Task assigned successfully');
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to assign task');
+      }
+    } catch (error) {
+      console.error('Failed to assign task:', error);
+      alert('Failed to assign task');
+    } finally {
+      setCreatingTask(false);
     }
   };
 
@@ -463,6 +537,126 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
               Task Management ({allTasks.length})
             </CardTitle>
             <div className="flex items-center gap-2">
+              <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="bg-purple-600 hover:bg-purple-700 text-white">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Assign Task
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Assign New Task</DialogTitle>
+                    <DialogDescription>
+                      Create a task and assign it to one or more employees
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="taskTitle">Title *</Label>
+                      <Input
+                        id="taskTitle"
+                        value={taskFormData.title}
+                        onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
+                        placeholder="Enter task title"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="taskDescription">Description</Label>
+                      <Textarea
+                        id="taskDescription"
+                        value={taskFormData.description}
+                        onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
+                        placeholder="Enter task description"
+                        rows={3}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="taskDueDate">Due Date *</Label>
+                        <Input
+                          id="taskDueDate"
+                          type="date"
+                          value={taskFormData.dueDate}
+                          onChange={(e) => setTaskFormData({ ...taskFormData, dueDate: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="taskPriority">Priority</Label>
+                        <Select
+                          value={taskFormData.priority}
+                          onValueChange={(value) => setTaskFormData({ ...taskFormData, priority: value as 'LOW' | 'MEDIUM' | 'HIGH' })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="LOW">Low</SelectItem>
+                            <SelectItem value="MEDIUM">Medium</SelectItem>
+                            <SelectItem value="HIGH">High</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Assign To *</Label>
+                      <div className="max-h-48 overflow-y-auto border rounded p-2 space-y-2">
+                        {employeesList.map((emp) => (
+                          <div key={emp.id} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`assignee-${emp.id}`}
+                              checked={taskFormData.assigneeIds.includes(emp.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setTaskFormData({
+                                    ...taskFormData,
+                                    assigneeIds: [...taskFormData.assigneeIds, emp.id],
+                                  });
+                                } else {
+                                  setTaskFormData({
+                                    ...taskFormData,
+                                    assigneeIds: taskFormData.assigneeIds.filter(id => id !== emp.id),
+                                  });
+                                }
+                              }}
+                            />
+                            <label htmlFor={`assignee-${emp.id}`} className="text-sm cursor-pointer">
+                              {emp.name} ({emp.email})
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setTaskDialogOpen(false);
+                        setTaskFormData({
+                          title: '',
+                          description: '',
+                          dueDate: '',
+                          priority: 'MEDIUM',
+                          assigneeIds: [],
+                        });
+                      }}
+                      disabled={creatingTask}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleAssignTask}
+                      disabled={creatingTask || !taskFormData.title || !taskFormData.dueDate || taskFormData.assigneeIds.length === 0}
+                    >
+                      {creatingTask ? 'Assigning...' : 'Assign Task'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
               <Select value={taskStatusFilter} onValueChange={setTaskStatusFilter}>
                 <SelectTrigger className="w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
