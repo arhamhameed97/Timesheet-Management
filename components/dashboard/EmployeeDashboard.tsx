@@ -100,6 +100,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
   const [employeesOnLeave, setEmployeesOnLeave] = useState<EmployeeOnLeave[]>([]);
   const [attendanceViewDate, setAttendanceViewDate] = useState(new Date());
   const [companyName, setCompanyName] = useState<string>('Your Company');
+  const [breakTime, setBreakTime] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
 
   // Leave form state
   const [leaveForm, setLeaveForm] = useState({
@@ -423,20 +424,130 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
     }
   };
 
-  // Calculate current shift duration
+  // Parse attendance details to calculate total shift time and break time from history
+  const parseAttendanceDetails = useMemo(() => {
+    if (!todayAttendance) return null;
+
+    let firstCheckIn: Date | null = todayAttendance.checkInTime ? new Date(todayAttendance.checkInTime) : null;
+    let checkInOutHistory: Array<{ type: 'in' | 'out'; time: string }> = [];
+    let totalShiftTime = 0;
+    let totalBreakTime = 0;
+
+    // Try to parse notes as JSON
+    try {
+      if (todayAttendance.notes) {
+        const notesData = JSON.parse(todayAttendance.notes);
+        if (notesData.firstCheckIn) {
+          firstCheckIn = new Date(notesData.firstCheckIn);
+        }
+        if (notesData.checkInOutHistory && Array.isArray(notesData.checkInOutHistory)) {
+          checkInOutHistory = notesData.checkInOutHistory;
+        }
+      }
+    } catch (e) {
+      // If notes is not JSON, create history from checkInTime and checkOutTime
+      if (todayAttendance.checkInTime) {
+        checkInOutHistory.push({ type: 'in', time: todayAttendance.checkInTime });
+      }
+      if (todayAttendance.checkOutTime) {
+        checkInOutHistory.push({ type: 'out', time: todayAttendance.checkOutTime });
+      }
+    }
+
+    // Calculate total shift time and break time from history
+    if (checkInOutHistory.length > 0) {
+      // Sort history by time to ensure correct order
+      const sortedHistory = [...checkInOutHistory].sort((a, b) => 
+        new Date(a.time).getTime() - new Date(b.time).getTime()
+      );
+      
+      let lastCheckIn: Date | null = null;
+      
+      // Calculate shift time (sum of all check-in to check-out periods)
+      for (const event of sortedHistory) {
+        const eventTime = new Date(event.time);
+        
+        if (event.type === 'in') {
+          lastCheckIn = eventTime;
+        } else if (event.type === 'out' && lastCheckIn) {
+          // Add shift time from last check-in to this check-out
+          const seconds = differenceInSeconds(eventTime, lastCheckIn);
+          totalShiftTime += Math.abs(seconds);
+          lastCheckIn = null;
+        }
+      }
+      
+      // If currently checked in (no checkout), add time from last check-in to now
+      if (lastCheckIn && !todayAttendance.checkOutTime) {
+        const seconds = differenceInSeconds(currentTime, lastCheckIn);
+        totalShiftTime += Math.abs(seconds);
+      }
+
+      // Calculate break time (sum of all gaps between checkout and next check-in)
+      for (let i = 0; i < sortedHistory.length - 1; i++) {
+        const current = sortedHistory[i];
+        const next = sortedHistory[i + 1];
+        
+        if (current.type === 'out' && next.type === 'in') {
+          const checkoutTime = new Date(current.time);
+          const checkinTime = new Date(next.time);
+          const seconds = differenceInSeconds(checkinTime, checkoutTime);
+          totalBreakTime += Math.abs(seconds);
+        }
+      }
+    } else if (todayAttendance.checkInTime && todayAttendance.checkOutTime) {
+      // Fallback: calculate from single check-in/check-out
+      const seconds = differenceInSeconds(
+        new Date(todayAttendance.checkOutTime),
+        new Date(todayAttendance.checkInTime)
+      );
+      totalShiftTime = Math.abs(seconds);
+    } else if (todayAttendance.checkInTime && !todayAttendance.checkOutTime) {
+      // Currently checked in, calculate from check-in to now
+      const seconds = differenceInSeconds(
+        currentTime,
+        new Date(todayAttendance.checkInTime)
+      );
+      totalShiftTime = Math.abs(seconds);
+    }
+
+    return {
+      firstCheckIn,
+      checkInOutHistory,
+      totalShiftTime,
+      totalBreakTime,
+    };
+  }, [todayAttendance, currentTime]);
+
+  // Calculate current shift duration from parsed details
   const getCurrentShiftDuration = () => {
-    if (!todayAttendance?.checkInTime) return null;
+    if (!parseAttendanceDetails) return null;
     
-    const checkIn = parseISO(todayAttendance.checkInTime);
-    const checkOut = todayAttendance.checkOutTime ? parseISO(todayAttendance.checkOutTime) : currentTime;
+    // Show duration if there's any shift time or if currently checked in
+    if (parseAttendanceDetails.totalShiftTime === 0 && !todayAttendance?.checkInTime) {
+      return null;
+    }
     
-    const totalSeconds = Math.abs(differenceInSeconds(checkOut, checkIn));
+    const totalSeconds = parseAttendanceDetails.totalShiftTime;
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
     
-    return { hours, minutes, seconds, isActive: !todayAttendance.checkOutTime };
+    return { hours, minutes, seconds, isActive: !todayAttendance?.checkOutTime };
   };
+
+  // Calculate break time from parsed details
+  useEffect(() => {
+    if (parseAttendanceDetails && parseAttendanceDetails.totalBreakTime > 0) {
+      const totalSeconds = parseAttendanceDetails.totalBreakTime;
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const secs = totalSeconds % 60;
+      setBreakTime({ hours, minutes, seconds: secs });
+    } else {
+      setBreakTime(null);
+    }
+  }, [parseAttendanceDetails]);
 
   const shiftDuration = getCurrentShiftDuration();
 
@@ -572,16 +683,33 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
 
                   {/* Clock Out Status */}
                   <div className="flex items-center gap-3 mb-6">
-                    <div className={`w-3 h-3 rounded-full ${todayAttendance?.checkOutTime ? 'bg-red-500' : 'bg-gray-300'}`}></div>
+                    <div className={`w-3 h-3 rounded-full ${(todayAttendance?.checkOutTime || (parseAttendanceDetails?.checkInOutHistory && parseAttendanceDetails.checkInOutHistory.some(e => e.type === 'out'))) ? 'bg-red-500' : 'bg-gray-300'}`}></div>
                     <div>
                       <span className="text-sm text-gray-600">Clock Out</span>
-                      {todayAttendance?.checkOutTime ? (
-                        <div className="text-red-600 font-semibold">
-                          {format(parseISO(todayAttendance.checkOutTime), 'HH:mm')}
-                        </div>
-                      ) : (
-                        <div className="text-gray-400">00:00:00</div>
-                      )}
+                      {(() => {
+                        // Show current checkout time if available
+                        if (todayAttendance?.checkOutTime) {
+                          return (
+                            <div className="text-red-600 font-semibold">
+                              {format(parseISO(todayAttendance.checkOutTime), 'HH:mm')}
+                            </div>
+                          );
+                        }
+                        // Otherwise, show last checkout from history if user has checked back in
+                        if (parseAttendanceDetails?.checkInOutHistory) {
+                          const lastCheckout = parseAttendanceDetails.checkInOutHistory
+                            .filter(e => e.type === 'out')
+                            .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())[0];
+                          if (lastCheckout) {
+                            return (
+                              <div className="text-red-600 font-semibold">
+                                {format(parseISO(lastCheckout.time), 'HH:mm')}
+                              </div>
+                            );
+                          }
+                        }
+                        return <div className="text-gray-400">00:00:00</div>;
+                      })()}
                     </div>
                   </div>
 
@@ -593,6 +721,18 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                         {shiftDuration.minutes.toString().padStart(2, '0')} hrs
                       </div>
                       <div className="text-sm text-gray-600">Today&apos;s Hours</div>
+                    </div>
+                  )}
+
+                  {/* Break Time Display */}
+                  {breakTime && breakTime.hours + breakTime.minutes + breakTime.seconds > 0 && (
+                    <div className="mb-4">
+                      <div className="text-2xl font-bold text-orange-600">
+                        {breakTime.hours.toString().padStart(2, '0')}:
+                        {breakTime.minutes.toString().padStart(2, '0')}:
+                        {breakTime.seconds.toString().padStart(2, '0')}
+                      </div>
+                      <div className="text-sm text-gray-600">Break Time</div>
                     </div>
                   )}
 
@@ -608,7 +748,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                         <LogIn className="h-4 w-4 mr-2" />
                         {checkingIn ? 'Checking In...' : 'Clock In'}
                       </Button>
-                    ) : !todayAttendance?.checkOutTime ? (
+                    ) : todayAttendance?.checkInTime && !todayAttendance?.checkOutTime ? (
                       <>
                         <Button
                           onClick={handleCheckOut}
@@ -629,7 +769,15 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                         </Button>
                       </>
                     ) : (
-                      <div className="text-sm text-gray-600 py-2">Shift completed for today</div>
+                      <Button
+                        onClick={handleCheckIn}
+                        disabled={checkingIn}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        size="lg"
+                      >
+                        <LogIn className="h-4 w-4 mr-2" />
+                        {checkingIn ? 'Checking In...' : 'Clock In Again'}
+                      </Button>
                     )}
                   </div>
                 </div>
