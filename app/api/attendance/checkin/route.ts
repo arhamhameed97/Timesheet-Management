@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { checkInSchema } from '@/lib/validations';
 import { AttendanceStatus } from '@prisma/client';
 import { autoCheckoutPreviousDays } from '@/lib/attendance-helpers';
+import { parsePSTDate, getPSTDateString, getPSTDate } from '@/lib/pst-timezone';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,24 +19,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = checkInSchema.parse(body);
 
-    // Use UTC dates consistently to avoid timezone issues
+    // Use PST dates consistently
     let date: Date;
     if (validatedData.date) {
-      // Parse the date string and create UTC date at start of day
-      const dateParts = validatedData.date.split('-');
-      date = new Date(Date.UTC(
-        parseInt(dateParts[0]),
-        parseInt(dateParts[1]) - 1, // Month is 0-indexed
-        parseInt(dateParts[2])
-      ));
+      // Parse the date string as PST
+      date = parsePSTDate(validatedData.date);
     } else {
-      // Use current UTC date at start of day
-      const now = new Date();
-      date = new Date(Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate()
-      ));
+      // Use current PST date at start of day
+      date = getPSTDate();
+      // Set to start of day
+      date.setHours(0, 0, 0, 0);
     }
 
     // Check if attendance already exists for today

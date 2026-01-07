@@ -1003,22 +1003,129 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
             </CardContent>
           </Card>
 
+          {/* My Attendance Card */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5 text-purple-600" />
+                  My Attendance
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setAttendanceViewDate(subDays(attendanceViewDate, 7))}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setAttendanceViewDate(addDays(attendanceViewDate, 7))}
+                    disabled={isSameDay(attendanceViewDate, new Date())}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Time In</TableHead>
+                    <TableHead>Time Out</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {attendanceHistory.map((record, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">
+                        {format(record.date, 'MMM dd, yyyy')}
+                      </TableCell>
+                      <TableCell>
+                        {record.checkInTime ? (
+                          <span className="text-green-600">→ {formatTime(record.checkInTime)}</span>
+                        ) : (
+                          '--'
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {record.checkOutTime ? (
+                          <span className="text-red-600">← {formatTime(record.checkOutTime)}</span>
+                        ) : (
+                          '--'
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadgeClass(record.status)}`}>
+                            {record.status}
+                          </span>
+                          {record.isLeave && record.leaveDuration && (
+                            <span className="text-xs text-blue-600">
+                              {record.leaveDuration}
+                            </span>
+                          )}
+                          {record.isLeave && record.leaveType && (
+                            <span className="text-xs text-gray-500">
+                              {record.leaveType}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column - 1/3 width */}
+        <div className="space-y-6">
           {/* My Tasks Card */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-purple-600" />
-                My Tasks
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-purple-600" />
+                  My Tasks
+                </CardTitle>
+                <Select defaultValue="all" onValueChange={(value) => {
+                  // Filter tasks by status if needed
+                  // For now, show all tasks
+                }}>
+                  <SelectTrigger className="w-32 h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Tasks</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               {loadingTasks ? (
-                <div className="text-center py-8 text-gray-500">Loading tasks...</div>
+                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                  <Search className="h-12 w-12 mb-4 opacity-50" />
+                  <p className="text-sm">Loading tasks...</p>
+                </div>
               ) : tasks.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">No tasks assigned</div>
+                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                  <Search className="h-12 w-12 mb-4 opacity-50" />
+                  <p className="text-sm">No Tasks Available</p>
+                </div>
               ) : (
                 <div className="space-y-3">
-                  {tasks.slice(0, 5).map((task) => {
+                  {tasks.map((task) => {
                     const getStatusColor = (status: string) => {
                       switch (status) {
                         case 'PENDING': return 'bg-gray-100 text-gray-800';
@@ -1116,125 +1223,6 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                       View All Tasks ({tasks.length})
                     </Button>
                   )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* My Attendance Card */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarDays className="h-5 w-5 text-purple-600" />
-                  My Attendance
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setAttendanceViewDate(subDays(attendanceViewDate, 7))}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setAttendanceViewDate(addDays(attendanceViewDate, 7))}
-                    disabled={isSameDay(attendanceViewDate, new Date())}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Time In</TableHead>
-                    <TableHead>Time Out</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {attendanceHistory.map((record, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">
-                        {format(record.date, 'MMM dd, yyyy')}
-                      </TableCell>
-                      <TableCell>
-                        {record.checkInTime ? (
-                          <span className="text-green-600">→ {formatTime(record.checkInTime)}</span>
-                        ) : (
-                          '--'
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {record.checkOutTime ? (
-                          <span className="text-red-600">← {formatTime(record.checkOutTime)}</span>
-                        ) : (
-                          '--'
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadgeClass(record.status)}`}>
-                            {record.status}
-                          </span>
-                          {record.isLeave && record.leaveDuration && (
-                            <span className="text-xs text-blue-600">
-                              {record.leaveDuration}
-                            </span>
-                          )}
-                          {record.isLeave && record.leaveType && (
-                            <span className="text-xs text-gray-500">
-                              {record.leaveType}
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column - 1/3 width */}
-        <div className="space-y-6">
-          {/* Pending Tasks Card */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Pending Tasks - {pendingTimesheets.length}</CardTitle>
-                <Select defaultValue="all">
-                  <SelectTrigger className="w-24 h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Type</SelectItem>
-                    <SelectItem value="timesheet">Timesheet</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {pendingTimesheets.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                  <Search className="h-12 w-12 mb-4 opacity-50" />
-                  <p className="text-sm">No Pending Task Available</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {pendingTimesheets.slice(0, 5).map((timesheet) => (
-                    <div key={timesheet.id} className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer" onClick={() => router.push('/timesheets')}>
-                      <div className="text-sm font-medium">{formatDate(timesheet.date)}</div>
-                      <div className="text-xs text-gray-500">Pending approval</div>
-                    </div>
-                  ))}
                 </div>
               )}
             </CardContent>

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { UserRole } from '@prisma/client';
 import { canManageUser } from '@/lib/permissions';
 import { autoCheckoutPreviousDays } from '@/lib/attendance-helpers';
+import { parsePSTDate, getPSTStartOfDay, getPSTEndOfDay } from '@/lib/pst-timezone';
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,40 +35,18 @@ export async function GET(request: NextRequest) {
     const where: any = { userId: targetUserId };
 
     if (startDate && endDate) {
-      // Parse dates as UTC to ensure consistent timezone handling
-      const startParts = startDate.split('-');
-      const start = new Date(Date.UTC(
-        parseInt(startParts[0]),
-        parseInt(startParts[1]) - 1,
-        parseInt(startParts[2])
-      ));
-      const endParts = endDate.split('-');
-      const end = new Date(Date.UTC(
-        parseInt(endParts[0]),
-        parseInt(endParts[1]) - 1,
-        parseInt(endParts[2]),
-        23, 59, 59, 999
-      ));
+      // Parse dates as PST
+      const start = getPSTStartOfDay(parsePSTDate(startDate));
+      const end = getPSTEndOfDay(parsePSTDate(endDate));
       where.date = {
         gte: start,
         lte: end,
       };
     } else if (startDate) {
-      const startParts = startDate.split('-');
-      const start = new Date(Date.UTC(
-        parseInt(startParts[0]),
-        parseInt(startParts[1]) - 1,
-        parseInt(startParts[2])
-      ));
+      const start = getPSTStartOfDay(parsePSTDate(startDate));
       where.date = { gte: start };
     } else if (endDate) {
-      const endParts = endDate.split('-');
-      const end = new Date(Date.UTC(
-        parseInt(endParts[0]),
-        parseInt(endParts[1]) - 1,
-        parseInt(endParts[2]),
-        23, 59, 59, 999
-      ));
+      const end = getPSTEndOfDay(parsePSTDate(endDate));
       where.date = { lte: end };
     }
 

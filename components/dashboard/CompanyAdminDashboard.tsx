@@ -7,6 +7,7 @@ import { DesignationBadge } from '@/components/common/DesignationBadge';
 import { RoleBadge } from '@/components/common/RoleBadge';
 import { UserRole } from '@prisma/client';
 import { format, differenceInSeconds, parseISO } from 'date-fns';
+import { getPSTDateString } from '@/lib/pst-timezone';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -90,7 +91,7 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
   const [recentAttendance, setRecentAttendance] = useState<EmployeeAttendance[]>([]);
   const [allEmployees, setAllEmployees] = useState<EmployeeAttendance[]>([]);
   const [loadingAttendance, setLoadingAttendance] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [selectedDate, setSelectedDate] = useState<string>(getPSTDateString());
   const [employeeSearch, setEmployeeSearch] = useState<string>('');
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [pendingTasks, setPendingTasks] = useState<any[]>([]);
@@ -264,7 +265,9 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
     try {
       setLoadingAttendance(true);
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/employees?attendanceDate=${selectedDate}`, {
+      // Use PST date for attendance query
+      const pstDate = selectedDate || getPSTDateString();
+      const response = await fetch(`/api/employees?attendanceDate=${pstDate}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -378,144 +381,178 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
-      </div>
+          </div>
 
-      {/* Today's Company Attendance */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Company Attendance</CardTitle>
-            <Link href="/employees">
-              <Button variant="outline" size="sm">
-                View All
-              </Button>
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="flex-1">
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Date</label>
-              <Input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Search Employee</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Search by name or email..."
-                  value={employeeSearch}
-                  onChange={(e) => setEmployeeSearch(e.target.value)}
-                  className="pl-10"
-                />
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-3">
+                <Link href="/settings">
+                  <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <Building2 className="h-6 w-6 text-purple-600 mb-2" />
+                    <h3 className="font-semibold">Company Settings</h3>
+                    <p className="text-sm text-gray-600">Manage company profile and settings</p>
+                  </div>
+                </Link>
+                <Link href="/employees">
+                  <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <Users className="h-6 w-6 text-purple-600 mb-2" />
+                    <h3 className="font-semibold">Manage Employees</h3>
+                    <p className="text-sm text-gray-600">Add or remove employees</p>
+                  </div>
+                </Link>
+                <Link href="/timesheets">
+                  <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                    <FileText className="h-6 w-6 text-purple-600 mb-2" />
+                    <h3 className="font-semibold">Review Timesheets</h3>
+                    <p className="text-sm text-gray-600">Approve pending timesheets</p>
+                  </div>
+                </Link>
               </div>
-            </div>
-          </div>
-          {loadingAttendance ? (
-            <div className="text-center py-4 text-gray-500">Loading...</div>
-          ) : recentAttendance.length === 0 ? (
-            <div className="text-center py-4 text-gray-500">
-              {employeeSearch ? 'No employees found matching your search.' : `No employees found for ${format(new Date(selectedDate), 'MMM dd, yyyy')}.`}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Check-In Time</TableHead>
-                    <TableHead>Check-Out Time</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentAttendance.map((employee) => (
-                    <TableRow key={employee.id}>
-                      <TableCell className="font-medium">{employee.name}</TableCell>
-                      <TableCell>
-                        <RoleBadge role={employee.role} />
-                      </TableCell>
-                      <TableCell>
-                        {employee.attendanceStats?.todayStatus?.checkedOut ? (
-                          <div className="flex items-center gap-1 text-green-600">
-                            <CheckCircle className="h-4 w-4" />
-                            <span className="text-xs">Checked Out</span>
-                          </div>
-                        ) : employee.attendanceStats?.todayStatus?.checkedIn ? (
-                          <div className="flex items-center gap-1 text-blue-600">
-                            <Clock className="h-4 w-4" />
-                            <span className="text-xs">Checked In</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1 text-gray-400">
-                            <XCircle className="h-4 w-4" />
-                            <span className="text-xs">Not Checked In</span>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {employee.attendanceStats?.todayStatus?.checkInTime ? (
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium">{formatTime(employee.attendanceStats.todayStatus.checkInTime)}</span>
-                            <span className="text-xs text-gray-500">
-                              {format(new Date(employee.attendanceStats.todayStatus.checkInTime), 'MMM dd')}
-                            </span>
-                            <span className="text-xs text-green-600 font-medium mt-0.5">
-                              Shift: {calculateShiftTime(
-                                employee.attendanceStats.todayStatus.checkInTime,
-                                employee.attendanceStats.todayStatus.checkOutTime
-                              )}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-sm">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {employee.attendanceStats?.todayStatus?.checkOutTime ? (
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium">{formatTime(employee.attendanceStats.todayStatus.checkOutTime)}</span>
-                            <span className="text-xs text-gray-500">
-                              {format(new Date(employee.attendanceStats.todayStatus.checkOutTime), 'MMM dd')}
-                            </span>
-                          </div>
-                        ) : employee.attendanceStats?.todayStatus?.checkedIn && !employee.attendanceStats?.todayStatus?.checkedOut ? (
-                          <div className="flex flex-col">
-                            <span className="text-xs text-blue-600 font-medium">In Progress</span>
-                            <span className="text-xs text-green-600 font-medium mt-0.5">
-                              Shift: {calculateShiftTime(
-                                employee.attendanceStats.todayStatus.checkInTime,
-                                null
-                              )}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-sm">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Link href="/employees">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="attendance" className="space-y-4">
+          {/* Company Attendance */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Company Attendance</CardTitle>
+                <Link href="/employees">
+                  <Button variant="outline" size="sm">
+                    View All
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex-1">
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Filter by Date</label>
+                  <Input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Search Employee</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Search by name or email..."
+                      value={employeeSearch}
+                      onChange={(e) => setEmployeeSearch(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+              </div>
+              {loadingAttendance ? (
+                <div className="text-center py-4 text-gray-500">Loading...</div>
+              ) : recentAttendance.length === 0 ? (
+                <div className="text-center py-4 text-gray-500">
+                  {employeeSearch ? 'No employees found matching your search.' : `No employees found for ${format(new Date(selectedDate), 'MMM dd, yyyy')}.`}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Employee</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Check-In Time</TableHead>
+                        <TableHead>Check-Out Time</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recentAttendance.map((employee) => (
+                        <TableRow key={employee.id}>
+                          <TableCell className="font-medium">{employee.name}</TableCell>
+                          <TableCell>
+                            <RoleBadge role={employee.role} />
+                          </TableCell>
+                          <TableCell>
+                            {employee.attendanceStats?.todayStatus?.checkedOut ? (
+                              <div className="flex items-center gap-1 text-green-600">
+                                <CheckCircle className="h-4 w-4" />
+                                <span className="text-xs">Checked Out</span>
+                              </div>
+                            ) : employee.attendanceStats?.todayStatus?.checkedIn ? (
+                              <div className="flex items-center gap-1 text-blue-600">
+                                <Clock className="h-4 w-4" />
+                                <span className="text-xs">Checked In</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 text-gray-400">
+                                <XCircle className="h-4 w-4" />
+                                <span className="text-xs">Not Checked In</span>
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {employee.attendanceStats?.todayStatus?.checkInTime ? (
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium">{formatTime(employee.attendanceStats.todayStatus.checkInTime)}</span>
+                                <span className="text-xs text-gray-500">
+                                  {format(new Date(employee.attendanceStats.todayStatus.checkInTime), 'MMM dd')}
+                                </span>
+                                <span className="text-xs text-green-600 font-medium mt-0.5">
+                                  Shift: {calculateShiftTime(
+                                    employee.attendanceStats.todayStatus.checkInTime,
+                                    employee.attendanceStats.todayStatus.checkOutTime
+                                  )}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-sm">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {employee.attendanceStats?.todayStatus?.checkOutTime ? (
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium">{formatTime(employee.attendanceStats.todayStatus.checkOutTime)}</span>
+                                <span className="text-xs text-gray-500">
+                                  {format(new Date(employee.attendanceStats.todayStatus.checkOutTime), 'MMM dd')}
+                                </span>
+                              </div>
+                            ) : employee.attendanceStats?.todayStatus?.checkedIn && !employee.attendanceStats?.todayStatus?.checkedOut ? (
+                              <div className="flex flex-col">
+                                <span className="text-xs text-blue-600 font-medium">In Progress</span>
+                                <span className="text-xs text-green-600 font-medium mt-0.5">
+                                  Shift: {calculateShiftTime(
+                                    employee.attendanceStats.todayStatus.checkInTime,
+                                    null
+                                  )}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-sm">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Link href="/employees">
+                              <Button variant="ghost" size="sm">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
 

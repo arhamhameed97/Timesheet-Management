@@ -6,6 +6,7 @@ import { UserRole, TimesheetStatus } from '@prisma/client';
 import { canManageUser } from '@/lib/permissions';
 import { startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
 import bcrypt from 'bcryptjs';
+import { parsePSTDate, getPSTStartOfDay, getPSTEndOfDay } from '@/lib/pst-timezone';
 
 export async function GET(request: NextRequest) {
   try {
@@ -78,19 +79,16 @@ export async function GET(request: NextRequest) {
     // If attendanceDate is provided, fetch attendance stats for each employee
     let employeesWithStats = employees;
     if (attendanceDate) {
-      // Parse date as UTC to match attendance records stored in UTC
-      const dateParts = attendanceDate.split('-');
-      const year = parseInt(dateParts[0]);
-      const month = parseInt(dateParts[1]) - 1; // Month is 0-indexed
-      const day = parseInt(dateParts[2]);
+      // Parse date as PST
+      const pstDate = parsePSTDate(attendanceDate);
+      const dayStart = getPSTStartOfDay(pstDate);
+      const dayEnd = getPSTEndOfDay(pstDate);
       
-      // Create UTC date ranges for the day
-      const dayStart = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
-      const dayEnd = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
-      
-      // Create UTC date ranges for the month
-      const monthStart = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
-      const monthEnd = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999)); // Last day of month
+      // Create PST date ranges for the month
+      const year = pstDate.getFullYear();
+      const month = pstDate.getMonth();
+      const monthStart = new Date(Date.UTC(year, month, 1, 8, 0, 0, 0)); // Start of month in PST
+      const monthEnd = new Date(Date.UTC(year, month + 1, 0, 7, 59, 59, 999)); // End of month in PST
 
       const employeeIds = employees.map((e) => e.id);
 
