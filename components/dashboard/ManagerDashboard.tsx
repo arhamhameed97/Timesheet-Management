@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Clock, FileText, TrendingUp, CheckCircle, XCircle, Eye } from 'lucide-react';
+import { Users, Clock, FileText, TrendingUp, CheckCircle, XCircle, Eye, CheckSquare, Filter } from 'lucide-react';
 import { DesignationBadge } from '@/components/common/DesignationBadge';
 import { RoleBadge } from '@/components/common/RoleBadge';
 import { UserRole } from '@prisma/client';
-import { format, differenceInSeconds } from 'date-fns';
+import { format, differenceInSeconds, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
+import { TaskStatus, TaskPriority } from '@prisma/client';
 import {
   Table,
   TableBody,
@@ -49,17 +51,57 @@ interface EmployeeAttendance {
   };
 }
 
+interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  dueDate: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  creator: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  approver: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  approvedAt: string | null;
+  assignees: {
+    id: string;
+    userId: string;
+    completedAt: string | null;
+    user: {
+      id: string;
+      name: string;
+      email: string;
+    };
+  }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
   const [recentAttendance, setRecentAttendance] = useState<EmployeeAttendance[]>([]);
   const [loadingAttendance, setLoadingAttendance] = useState(true);
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [pendingTasks, setPendingTasks] = useState<any[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [loadingAllTasks, setLoadingAllTasks] = useState(false);
+  const [taskStatusFilter, setTaskStatusFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchRecentAttendance();
     fetchPendingTasks();
+    fetchAllTasks();
   }, []);
+
+  useEffect(() => {
+    fetchAllTasks();
+  }, [taskStatusFilter]);
 
   const fetchPendingTasks = async () => {
     try {
@@ -91,11 +133,12 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ approve: true }),
+        body: JSON.stringify({ status: TaskStatus.APPROVED }),
       });
 
       if (response.ok) {
         await fetchPendingTasks();
+        await fetchAllTasks();
         alert('Task approved successfully');
       } else {
         const data = await response.json();
@@ -121,6 +164,7 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
 
       if (response.ok) {
         await fetchPendingTasks();
+        await fetchAllTasks();
         alert('Task rejected and set back to In Progress');
       } else {
         const data = await response.json();
@@ -129,6 +173,62 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
     } catch (error) {
       console.error('Failed to reject task:', error);
       alert('Failed to reject task');
+    }
+  };
+
+  const fetchAllTasks = async () => {
+    try {
+      setLoadingAllTasks(true);
+      const token = localStorage.getItem('token');
+      let url = '/api/tasks/assignments';
+      if (taskStatusFilter !== 'all') {
+        url += `?status=${taskStatusFilter}`;
+      }
+      
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAllTasks(data.tasks || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch all tasks:', error);
+    } finally {
+      setLoadingAllTasks(false);
+    }
+  };
+
+  const getTaskStatusBadgeClass = (status: TaskStatus) => {
+    switch (status) {
+      case TaskStatus.PENDING:
+        return 'bg-gray-100 text-gray-800';
+      case TaskStatus.IN_PROGRESS:
+        return 'bg-blue-100 text-blue-800';
+      case TaskStatus.COMPLETED:
+        return 'bg-yellow-100 text-yellow-800';
+      case TaskStatus.APPROVED:
+        return 'bg-green-100 text-green-800';
+      case TaskStatus.CANCELLED:
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getTaskPriorityClass = (priority: TaskPriority) => {
+    switch (priority) {
+      case TaskPriority.HIGH:
+        return 'text-red-600 font-semibold';
+      case TaskPriority.MEDIUM:
+        return 'text-yellow-600 font-semibold';
+      case TaskPriority.LOW:
+        return 'text-green-600 font-semibold';
+      default:
+        return 'text-gray-600';
     }
   };
 
@@ -144,7 +244,9 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
   const fetchRecentAttendance = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/employees', {
+      // Include today's date to get attendance stats
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const response = await fetch(`/api/employees?attendanceDate=${today}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -345,6 +447,157 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
                       </TableCell>
                     </TableRow>
                   ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Task Management Panel */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <CheckSquare className="h-5 w-5 text-purple-600" />
+              Task Management ({allTasks.length})
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Select value={taskStatusFilter} onValueChange={setTaskStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tasks</SelectItem>
+                  <SelectItem value={TaskStatus.PENDING}>Pending</SelectItem>
+                  <SelectItem value={TaskStatus.IN_PROGRESS}>In Progress</SelectItem>
+                  <SelectItem value={TaskStatus.COMPLETED}>Completed</SelectItem>
+                  <SelectItem value={TaskStatus.APPROVED}>Approved</SelectItem>
+                  <SelectItem value={TaskStatus.CANCELLED}>Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingAllTasks ? (
+            <div className="text-center py-8 text-gray-500">Loading tasks...</div>
+          ) : allTasks.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">No tasks found</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Task Title</TableHead>
+                    <TableHead>Assigned By</TableHead>
+                    <TableHead>Assignees</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Due Date</TableHead>
+                    <TableHead>Progress</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allTasks.map((task) => {
+                    const completedCount = task.assignees.filter(a => a.completedAt).length;
+                    const totalAssignees = task.assignees.length;
+                    const progressPercentage = totalAssignees > 0 ? Math.round((completedCount / totalAssignees) * 100) : 0;
+                    
+                    return (
+                      <TableRow key={task.id}>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{task.title}</span>
+                            {task.description && (
+                              <span className="text-xs text-gray-500 mt-1 line-clamp-2">{task.description}</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">{task.creator.name}</div>
+                          <div className="text-xs text-gray-500">{format(parseISO(task.createdAt), 'MMM dd, yyyy')}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            {task.assignees.slice(0, 2).map((assignee) => (
+                              <div key={assignee.id} className="flex items-center gap-1 text-sm">
+                                <span>{assignee.user.name}</span>
+                                {assignee.completedAt && (
+                                  <CheckCircle className="h-3 w-3 text-green-600" />
+                                )}
+                              </div>
+                            ))}
+                            {task.assignees.length > 2 && (
+                              <span className="text-xs text-gray-500">+{task.assignees.length - 2} more</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 text-xs rounded-full ${getTaskStatusBadgeClass(task.status)}`}>
+                            {task.status.replace('_', ' ')}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className={getTaskPriorityClass(task.priority)}>
+                            {task.priority}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">{format(parseISO(task.dueDate), 'MMM dd, yyyy')}</div>
+                          {new Date(task.dueDate) < new Date() && task.status !== TaskStatus.APPROVED && (
+                            <span className="text-xs text-red-600">Overdue</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-gray-200 rounded-full h-2 min-w-[60px]">
+                              <div
+                                className={`h-2 rounded-full ${
+                                  progressPercentage === 100
+                                    ? 'bg-green-600'
+                                    : progressPercentage > 0
+                                    ? 'bg-blue-600'
+                                    : 'bg-gray-300'
+                                }`}
+                                style={{ width: `${progressPercentage}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-gray-600 whitespace-nowrap">
+                              {completedCount}/{totalAssignees}
+                            </span>
+                          </div>
+                          {task.approvedAt && (
+                            <div className="text-xs text-green-600 mt-1">
+                              Approved {format(parseISO(task.approvedAt), 'MMM dd')}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {task.status === TaskStatus.COMPLETED && (
+                            <div className="flex gap-1 justify-end">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleRejectTask(task.id)}
+                              >
+                                Reject
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={() => handleApproveTask(task.id)}
+                              >
+                                Approve
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

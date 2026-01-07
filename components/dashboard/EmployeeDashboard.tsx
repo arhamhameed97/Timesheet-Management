@@ -222,13 +222,17 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
       const startDateStr = format(startOfCurrentMonth, 'yyyy-MM-dd');
       const endDateStr = format(endOfCurrentMonth, 'yyyy-MM-dd');
 
+      // Use UTC dates consistently to match API
+      const nowUTC = new Date();
+      const todayUTC = `${nowUTC.getUTCFullYear()}-${String(nowUTC.getUTCMonth() + 1).padStart(2, '0')}-${String(nowUTC.getUTCDate()).padStart(2, '0')}`;
+      
       const [attendanceResponse, todayResponse] = await Promise.all([
         fetch(`/api/attendance?startDate=${startDateStr}&endDate=${endDateStr}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }),
-        fetch(`/api/attendance?startDate=${format(now, 'yyyy-MM-dd')}&endDate=${format(now, 'yyyy-MM-dd')}`, {
+        fetch(`/api/attendance?startDate=${todayUTC}&endDate=${todayUTC}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -242,10 +246,9 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
 
       if (todayResponse.ok) {
         const data = await todayResponse.json();
-        const todayAtt = (data.attendance || []).find((a: Attendance) => 
-          isSameDay(parseISO(a.date), now)
-        );
-        setTodayAttendance(todayAtt || null);
+        // Find today's attendance - the API returns only today's records when using today's date range
+        const todayAtt = data.attendance?.[0] || null;
+        setTodayAttendance(todayAtt);
       }
     } catch (error) {
       console.error('Failed to fetch attendance:', error);

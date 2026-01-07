@@ -181,7 +181,9 @@ export default function EmployeesPage() {
   const fetchEmployees = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/employees', {
+      // Include today's date to get attendance stats
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const response = await fetch(`/api/employees?attendanceDate=${today}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
