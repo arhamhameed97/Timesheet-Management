@@ -109,6 +109,7 @@ export default function AttendancePage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showDateDetails, setShowDateDetails] = useState(false);
   const [calendarView, setCalendarView] = useState<'week' | 'month' | 'year'>('month');
+  const [leaves, setLeaves] = useState<any[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -118,7 +119,8 @@ export default function AttendancePage() {
         await Promise.all([
           fetchUserInfo(),
           fetchTodayAttendance(),
-          fetchAttendance()
+          fetchAttendance(),
+          fetchLeaves()
         ]);
       } catch (error) {
         console.error('Error loading attendance data:', error);
@@ -377,6 +379,24 @@ export default function AttendancePage() {
       currentStreak: streak,
       averageHoursPerDay: Math.round(averageHours * 100) / 100,
     });
+  };
+
+  const fetchLeaves = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/leaves?status=APPROVED', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setLeaves(data.leaves || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch leaves:', error);
+    }
   };
 
   const fetchTodayAttendance = async () => {
@@ -1144,6 +1164,13 @@ export default function AttendancePage() {
                         const isFuture = day > new Date() && !isToday;
                         const hoursWorked = getHoursWorked(dayAttendance);
                         
+                        // Check if there's an approved leave for this day
+                        const dayLeave = leaves.find((leave) => {
+                          const startDate = new Date(leave.startDate);
+                          const endDate = new Date(leave.endDate);
+                          return day >= startDate && day <= endDate && leave.status === 'APPROVED';
+                        });
+                        
                         return (
                           <div
                             key={day.toISOString()}
@@ -1151,6 +1178,8 @@ export default function AttendancePage() {
                             className={`p-1 rounded border cursor-pointer transition-all hover:shadow-sm flex flex-col min-h-0 ${
                               isToday
                                 ? 'border-primary bg-primary/10'
+                                : dayLeave
+                                ? 'border-blue-200 bg-blue-50 hover:bg-blue-100'
                                 : dayAttendance
                                 ? 'border-green-200 bg-green-50 hover:bg-green-100'
                                 : isPast
@@ -1163,7 +1192,18 @@ export default function AttendancePage() {
                             <div className={`text-[11px] font-bold mb-0.5 ${isToday ? 'text-primary' : 'text-gray-900'}`}>
                               {format(day, 'd')}
                             </div>
-                            {dayAttendance?.checkInTime && (
+                            {dayLeave ? (
+                              <div className="flex-1 flex flex-col justify-center space-y-0.5 min-h-0">
+                                <div className="text-[9px] text-blue-700 font-semibold leading-tight">
+                                  {dayLeave.leaveDuration === 'HALF_DAY_MORNING' ? 'Half Day (AM)' :
+                                   dayLeave.leaveDuration === 'HALF_DAY_AFTERNOON' ? 'Half Day (PM)' :
+                                   'Leave'}
+                                </div>
+                                <div className="text-[8px] text-blue-600 leading-tight">
+                                  {dayLeave.type}
+                                </div>
+                              </div>
+                            ) : dayAttendance?.checkInTime ? (
                               <div className="flex-1 flex flex-col justify-center space-y-0.5 min-h-0">
                                 <div className="text-[9px] text-gray-700 font-medium leading-tight">
                                   <span className="font-semibold">In:</span> {formatTime(dayAttendance.checkInTime)}
@@ -1182,13 +1222,11 @@ export default function AttendancePage() {
                                   <div className="text-[9px] text-green-600 font-semibold mt-0.5 leading-tight">Active</div>
                                 )}
                               </div>
-                            )}
-                            {!dayAttendance && isPast && (
+                            ) : isPast ? (
                               <div className="flex-1 flex items-center justify-center min-h-0">
                                 <div className="text-[10px] text-gray-400">-</div>
                               </div>
-                            )}
-                            {!dayAttendance && !isPast && (
+                            ) : (
                               <div className="flex-1 min-h-0"></div>
                             )}
                           </div>

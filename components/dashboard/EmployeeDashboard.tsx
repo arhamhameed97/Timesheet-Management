@@ -69,6 +69,7 @@ interface Leave {
   type: string;
   reason: string | null;
   status: LeaveStatus;
+  leaveDuration?: string;
 }
 
 interface Timesheet {
@@ -100,6 +101,8 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
   const [employeesOnLeave, setEmployeesOnLeave] = useState<EmployeeOnLeave[]>([]);
   const [attendanceViewDate, setAttendanceViewDate] = useState(new Date());
   const [companyName, setCompanyName] = useState<string>('Your Company');
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
   const [breakTime, setBreakTime] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
 
   // Leave form state
@@ -108,6 +111,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
     endDate: '',
     type: '',
     reason: '',
+    leaveDuration: 'FULL_DAY' as 'FULL_DAY' | 'HALF_DAY_MORNING' | 'HALF_DAY_AFTERNOON',
   });
 
   // Update current time every second for live shift duration
@@ -125,7 +129,65 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
     fetchLeaveData();
     fetchPendingTimesheets();
     fetchEmployeesOnLeave();
+    fetchTasks();
   }, []);
+
+  const fetchTasks = async () => {
+    try {
+      setLoadingTasks(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/tasks/assignments', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTasks(data.tasks || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch tasks:', error);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
+  const handleTaskStatusUpdate = async (taskId: string, newStatus: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/tasks/assignments/${taskId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        await fetchTasks();
+        toast({
+          title: 'Success',
+          description: 'Task status updated successfully',
+        });
+      } else {
+        const data = await response.json();
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to update task status',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update task status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update task status',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const fetchCompanyName = async () => {
     try {
@@ -200,7 +262,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
   const fetchLeaveData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/leaves', {
+      const response = await fetch('/api/leaves?status=APPROVED', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -368,7 +430,19 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
   };
 
   const handleSubmitLeave = async () => {
-    if (!leaveForm.startDate || !leaveForm.endDate || !leaveForm.type) {
+    if (!leaveForm.startDate || !leaveForm.type) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // For half-day, ensure endDate equals startDate
+    const endDate = leaveForm.leaveDuration !== 'FULL_DAY' ? leaveForm.startDate : leaveForm.endDate;
+    
+    if (!endDate) {
       toast({
         title: 'Validation Error',
         description: 'Please fill in all required fields',
@@ -386,7 +460,10 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(leaveForm),
+        body: JSON.stringify({
+          ...leaveForm,
+          endDate,
+        }),
       });
 
       if (response.ok) {
@@ -400,6 +477,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
           endDate: '',
           type: '',
           reason: '',
+          leaveDuration: 'FULL_DAY',
         });
         await fetchLeaveData();
         await fetchAttendanceData();
@@ -601,18 +679,22 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
     return days.map(date => {
       const attendanceRecord = attendance.find(a => isSameDay(parseISO(a.date), date));
       const isWeekendDay = isWeekend(date);
-      const onLeave = leaves.some(leave => {
+      const dayLeave = leaves.find(leave => {
         if (leave.status !== LeaveStatus.APPROVED) return false;
-        const startDate = parseISO(leave.startDate);
-        const endDate = parseISO(leave.endDate);
-        return isWithinInterval(date, { start: startDate, end: endDate });
+        const leaveStartDate = parseISO(leave.startDate);
+        const leaveEndDate = parseISO(leave.endDate);
+        return isWithinInterval(date, { start: leaveStartDate, end: leaveEndDate });
       });
 
       let status = '--';
+      let leaveDuration = null;
       if (isWeekendDay) {
         status = 'Weekend';
-      } else if (onLeave) {
+      } else if (dayLeave) {
         status = 'Leave';
+        leaveDuration = dayLeave.leaveDuration === 'HALF_DAY_MORNING' ? 'Half Day (Morning)' :
+                       dayLeave.leaveDuration === 'HALF_DAY_AFTERNOON' ? 'Half Day (Afternoon)' :
+                       'Full Day';
       } else if (attendanceRecord) {
         if (attendanceRecord.status === AttendanceStatus.PRESENT) {
           status = 'On Time';
@@ -631,7 +713,9 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
         checkOutTime: attendanceRecord?.checkOutTime || null,
         status,
         isWeekend: isWeekendDay,
-        isLeave: onLeave,
+        isLeave: !!dayLeave,
+        leaveDuration,
+        leaveType: dayLeave?.type || null,
       };
     }).reverse();
   };
@@ -831,6 +915,29 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                         />
                       </div>
                       <div className="space-y-2">
+                        <Label htmlFor="leaveDuration">Leave Duration *</Label>
+                        <Select
+                          value={leaveForm.leaveDuration}
+                          onValueChange={(value) => {
+                            const duration = value as 'FULL_DAY' | 'HALF_DAY_MORNING' | 'HALF_DAY_AFTERNOON';
+                            setLeaveForm({ 
+                              ...leaveForm, 
+                              leaveDuration: duration,
+                              endDate: duration !== 'FULL_DAY' ? leaveForm.startDate : leaveForm.endDate,
+                            });
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="FULL_DAY">Full Day</SelectItem>
+                            <SelectItem value="HALF_DAY_MORNING">Half Day (Morning)</SelectItem>
+                            <SelectItem value="HALF_DAY_AFTERNOON">Half Day (Afternoon)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
                         <Label htmlFor="endDate">End Date *</Label>
                         <Input
                           id="endDate"
@@ -838,7 +945,11 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                           value={leaveForm.endDate}
                           onChange={(e) => setLeaveForm({ ...leaveForm, endDate: e.target.value })}
                           required
+                          disabled={leaveForm.leaveDuration !== 'FULL_DAY'}
                         />
+                        {leaveForm.leaveDuration !== 'FULL_DAY' && (
+                          <p className="text-xs text-gray-500">End date is automatically set to start date for half-day leaves</p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="type">Leave Type *</Label>
@@ -886,6 +997,124 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                   </DialogContent>
                 </Dialog>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* My Tasks Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-purple-600" />
+                My Tasks
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingTasks ? (
+                <div className="text-center py-8 text-gray-500">Loading tasks...</div>
+              ) : tasks.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No tasks assigned</div>
+              ) : (
+                <div className="space-y-3">
+                  {tasks.slice(0, 5).map((task) => {
+                    const getStatusColor = (status: string) => {
+                      switch (status) {
+                        case 'PENDING': return 'bg-gray-100 text-gray-800';
+                        case 'IN_PROGRESS': return 'bg-blue-100 text-blue-800';
+                        case 'COMPLETED': return 'bg-yellow-100 text-yellow-800';
+                        case 'APPROVED': return 'bg-green-100 text-green-800';
+                        case 'CANCELLED': return 'bg-red-100 text-red-800';
+                        default: return 'bg-gray-100 text-gray-800';
+                      }
+                    };
+
+                    const getPriorityColor = (priority: string) => {
+                      switch (priority) {
+                        case 'HIGH': return 'bg-red-100 text-red-800';
+                        case 'MEDIUM': return 'bg-yellow-100 text-yellow-800';
+                        case 'LOW': return 'bg-green-100 text-green-800';
+                        default: return 'bg-gray-100 text-gray-800';
+                      }
+                    };
+
+                    return (
+                      <div key={task.id} className="p-4 border rounded-lg hover:bg-gray-50">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900">{task.title}</h4>
+                            {task.description && (
+                              <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                            )}
+                          </div>
+                          <div className="flex gap-2 ml-4">
+                            <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(task.priority)}`}>
+                              {task.priority}
+                            </span>
+                            <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(task.status)}`}>
+                              {task.status.replace('_', ' ')}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between mt-3">
+                          <div className="text-xs text-gray-500">
+                            Due: {format(new Date(task.dueDate), 'MMM dd, yyyy')}
+                            {task.approvedBy && (
+                              <span className="ml-2 text-green-600">
+                                Approved by {task.approver?.name}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            {task.status === 'PENDING' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleTaskStatusUpdate(task.id, 'IN_PROGRESS')}
+                              >
+                                Start Task
+                              </Button>
+                            )}
+                            {task.status === 'IN_PROGRESS' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleTaskStatusUpdate(task.id, 'COMPLETED')}
+                              >
+                                Mark Complete
+                              </Button>
+                            )}
+                            {task.status === 'COMPLETED' && !task.approvedBy && (
+                              <>
+                                <span className="text-xs text-yellow-600 self-center">Awaiting Approval</span>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleTaskStatusUpdate(task.id, 'IN_PROGRESS')}
+                                >
+                                  Mark Incomplete
+                                </Button>
+                              </>
+                            )}
+                            {task.status === 'APPROVED' && (
+                              <span className="text-xs text-green-600 self-center">
+                                Approved {task.approvedAt && format(new Date(task.approvedAt), 'MMM dd')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {tasks.length > 5 && (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => router.push('/tasks')}
+                    >
+                      View All Tasks ({tasks.length})
+                    </Button>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -947,9 +1176,21 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                         )}
                       </TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadgeClass(record.status)}`}>
-                          {record.status}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusBadgeClass(record.status)}`}>
+                            {record.status}
+                          </span>
+                          {record.isLeave && record.leaveDuration && (
+                            <span className="text-xs text-blue-600">
+                              {record.leaveDuration}
+                            </span>
+                          )}
+                          {record.isLeave && record.leaveType && (
+                            <span className="text-xs text-gray-500">
+                              {record.leaveType}
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

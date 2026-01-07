@@ -58,10 +58,84 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [employeeSearch, setEmployeeSearch] = useState<string>('');
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
+  const [pendingTasks, setPendingTasks] = useState<any[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(false);
 
   useEffect(() => {
     fetchRecentAttendance();
+    fetchPendingTasks();
   }, [selectedDate]);
+
+  const fetchPendingTasks = async () => {
+    try {
+      setLoadingTasks(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/tasks/assignments?status=COMPLETED', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPendingTasks(data.tasks || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending tasks:', error);
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
+
+  const handleApproveTask = async (taskId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/tasks/assignments/${taskId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ approve: true }),
+      });
+
+      if (response.ok) {
+        await fetchPendingTasks();
+        alert('Task approved successfully');
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to approve task');
+      }
+    } catch (error) {
+      console.error('Failed to approve task:', error);
+      alert('Failed to approve task');
+    }
+  };
+
+  const handleRejectTask = async (taskId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/tasks/assignments/${taskId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'IN_PROGRESS' }),
+      });
+
+      if (response.ok) {
+        await fetchPendingTasks();
+        alert('Task rejected and set back to In Progress');
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to reject task');
+      }
+    } catch (error) {
+      console.error('Failed to reject task:', error);
+      alert('Failed to reject task');
+    }
+  };
 
   // Update current time every minute for real-time shift time calculation
   useEffect(() => {
@@ -321,6 +395,79 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Tasks Pending Approval */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5 text-purple-600" />
+            Tasks Pending Approval ({pendingTasks.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loadingTasks ? (
+            <div className="text-center py-8 text-gray-500">Loading tasks...</div>
+          ) : pendingTasks.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">No tasks pending approval</div>
+          ) : (
+            <div className="space-y-3">
+              {pendingTasks.slice(0, 5).map((task) => (
+                <div key={task.id} className="p-4 border rounded-lg">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900">{task.title}</h4>
+                      {task.description && (
+                        <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                      )}
+                    </div>
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      task.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
+                      task.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {task.priority}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-3">
+                    <div className="text-xs text-gray-500">
+                      <div>Assignees: {task.assignees.map((a: any) => a.user.name).join(', ')}</div>
+                      <div>Due: {format(new Date(task.dueDate), 'MMM dd, yyyy')}</div>
+                      {task.assignees.some((a: any) => a.completedAt) && (
+                        <div className="text-yellow-600 mt-1">
+                          Completed: {format(new Date(task.assignees.find((a: any) => a.completedAt)?.completedAt), 'MMM dd, yyyy HH:mm')}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleRejectTask(task.id)}
+                      >
+                        Reject
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => handleApproveTask(task.id)}
+                      >
+                        Approve
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {pendingTasks.length > 5 && (
+                <Link href="/tasks">
+                  <Button variant="outline" className="w-full">
+                    View All Pending Tasks ({pendingTasks.length})
+                  </Button>
+                </Link>
+              )}
             </div>
           )}
         </CardContent>

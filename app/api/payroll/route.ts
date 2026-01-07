@@ -226,12 +226,15 @@ export async function POST(request: NextRequest) {
         hoursWorked = validatedData.hoursWorked;
       }
 
-      // Use provided hourly rate or employee's default
-      hourlyRate = validatedData.hourlyRate || employeeInfo.hourlyRate || 0;
+      // Use provided hourly rate or employee's hourly rate
+      hourlyRate = validatedData.hourlyRate || employeeInfo.hourlyRate || null;
       
       if (!hourlyRate || hourlyRate <= 0) {
         return NextResponse.json(
-          { error: 'Hourly rate is required for hourly employees' },
+          { 
+            error: 'Hourly rate is required for hourly employees. Please set the hourly rate in the employee profile or provide it during payroll generation.',
+            details: 'Employee hourly rate is not set. Please update the employee profile with their hourly rate.'
+          },
           { status: 400 }
         );
       }

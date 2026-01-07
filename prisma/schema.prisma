@@ -56,6 +56,26 @@ enum PaymentType {
   SALARY
 }
 
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  APPROVED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum LeaveDuration {
+  FULL_DAY
+  HALF_DAY_MORNING
+  HALF_DAY_AFTERNOON
+}
+
 model Company {
   id        String   @id @default(cuid())
   name      String
@@ -65,42 +85,45 @@ model Company {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users       User[]
+  users        User[]
   designations Designation[]
-  teams       Team[]
+  teams        Team[]
 }
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  password     String
-  name         String
-  companyId    String?
+  id            String       @id @default(cuid())
+  email         String       @unique
+  password      String
+  name          String
+  companyId     String?
   designationId String?
-  role         UserRole  @default(EMPLOYEE)
-  managerId    String?   // For hierarchy - who manages this user
-  phone        String?
-  paymentType  PaymentType?
-  hourlyRate   Float?
+  role          UserRole     @default(EMPLOYEE)
+  managerId     String? // For hierarchy - who manages this user
+  phone         String?
+  paymentType   PaymentType?
+  hourlyRate    Float?
   monthlySalary Float?
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
-  company      Company?      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  designation  Designation?  @relation(fields: [designationId], references: [id], onDelete: SetNull)
-  manager      User?         @relation("UserHierarchy", fields: [managerId], references: [id], onDelete: SetNull)
-  subordinates User[]        @relation("UserHierarchy")
-  
-  attendance   Attendance[]
-  timesheets  Timesheet[]
-  approvedTimesheets Timesheet[] @relation("TimesheetApprover")
-  taskLogs    TaskLog[]
-  teams       TeamMember[]
-  teamProgress TeamProgress[]
-  payroll     Payroll[]
-  leaves      Leave[]
-  managedTeams Team[]        @relation("TeamManager")
+  company      Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  designation  Designation? @relation(fields: [designationId], references: [id], onDelete: SetNull)
+  manager      User?        @relation("UserHierarchy", fields: [managerId], references: [id], onDelete: SetNull)
+  subordinates User[]       @relation("UserHierarchy")
+
+  attendance         Attendance[]
+  timesheets         Timesheet[]
+  approvedTimesheets Timesheet[]    @relation("TimesheetApprover")
+  taskLogs           TaskLog[]
+  teams              TeamMember[]
+  teamProgress       TeamProgress[]
+  payroll            Payroll[]
+  leaves             Leave[]
+  managedTeams       Team[]         @relation("TeamManager")
+  assignedTasks      TaskAssignee[]
+  createdTasks       Task[]         @relation("TaskCreator")
+  approvedTasks      Task[]         @relation("TaskApprover")
 }
 
 model Designation {
@@ -110,42 +133,42 @@ model Designation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  users    User[]
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  users   User[]
 }
 
 model Attendance {
-  id          String          @id @default(cuid())
-  userId      String
-  date        DateTime        @db.Date
-  checkInTime DateTime?
+  id           String           @id @default(cuid())
+  userId       String
+  date         DateTime         @db.Date
+  checkInTime  DateTime?
   checkOutTime DateTime?
-  status      AttendanceStatus @default(PRESENT)
-  notes       String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  status       AttendanceStatus @default(PRESENT)
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
   @@index([userId, date])
 }
 
 model Timesheet {
-  id          String          @id @default(cuid())
-  userId      String
-  date        DateTime        @db.Date
-  hours       Float
-  status      TimesheetStatus @default(DRAFT)
-  approvedBy  String?
-  approvedAt  DateTime?
-  notes       String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id         String          @id @default(cuid())
+  userId     String
+  date       DateTime        @db.Date
+  hours      Float
+  status     TimesheetStatus @default(DRAFT)
+  approvedBy String?
+  approvedAt DateTime?
+  notes      String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  taskLogs    TaskLog[]
-  approver    User?           @relation("TimesheetApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskLogs TaskLog[]
+  approver User?     @relation("TimesheetApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
 
   @@unique([userId, date])
   @@index([userId, date])
@@ -161,40 +184,40 @@ model TaskLog {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  timesheet  Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timesheet Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([timesheetId])
   @@index([userId])
 }
 
 model Team {
-  id        String   @id @default(cuid())
-  name      String
-  companyId String
-  managerId String?
+  id          String   @id @default(cuid())
+  name        String
+  companyId   String
+  managerId   String?
   description String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  manager     User?        @relation("TeamManager", fields: [managerId], references: [id], onDelete: SetNull)
-  members     TeamMember[]
-  progress    TeamProgress[]
+  company  Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  manager  User?          @relation("TeamManager", fields: [managerId], references: [id], onDelete: SetNull)
+  members  TeamMember[]
+  progress TeamProgress[]
 
   @@index([companyId])
 }
 
 model TeamMember {
-  id        String         @id @default(cuid())
-  teamId    String
-  userId    String
-  role      TeamMemberRole @default(MEMBER)
-  joinedAt  DateTime       @default(now())
-  leftAt    DateTime?
+  id       String         @id @default(cuid())
+  teamId   String
+  userId   String
+  role     TeamMemberRole @default(MEMBER)
+  joinedAt DateTime       @default(now())
+  leftAt   DateTime?
 
-  team      Team           @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, userId])
   @@index([teamId])
@@ -210,8 +233,8 @@ model TeamProgress {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([teamId])
   @@index([userId])
@@ -219,28 +242,28 @@ model TeamProgress {
 }
 
 model Payroll {
-  id            String        @id @default(cuid())
-  userId        String
-  month         Int
-  year          Int
-  paymentType   PaymentType?
-  hoursWorked   Float?
-  hourlyRate    Float?
-  baseSalary    Float
-  bonuses       Json?          // Array of { name: string, amount: number }
-  deductions    Json?          // Array of { name: string, amount: number }
-  totalBonuses  Float          @default(0)
+  id              String        @id @default(cuid())
+  userId          String
+  month           Int
+  year            Int
+  paymentType     PaymentType?
+  hoursWorked     Float?
+  hourlyRate      Float?
+  baseSalary      Float
+  bonuses         Json? // Array of { name: string, amount: number }
+  deductions      Json? // Array of { name: string, amount: number }
+  totalBonuses    Float         @default(0)
   totalDeductions Float         @default(0)
-  netSalary     Float
-  status        PayrollStatus @default(PENDING)
-  approvedBy    String?
-  approvedAt    DateTime?
-  paidAt        DateTime?
-  notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  netSalary       Float
+  status          PayrollStatus @default(PENDING)
+  approvedBy      String?
+  approvedAt      DateTime?
+  paidAt          DateTime?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, month, year])
   @@index([userId, month, year])
@@ -248,21 +271,59 @@ model Payroll {
 }
 
 model Leave {
-  id          String      @id @default(cuid())
-  userId      String
-  startDate   DateTime    @db.Date
-  endDate     DateTime    @db.Date
-  type        String      // e.g., "Sick Leave", "Vacation", "Personal"
-  reason      String?
-  status      LeaveStatus @default(PENDING)
-  approvedBy  String?
-  approvedAt  DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id            String        @id @default(cuid())
+  userId        String
+  startDate     DateTime      @db.Date
+  endDate       DateTime      @db.Date
+  type          String // e.g., "Sick Leave", "Vacation", "Personal"
+  reason        String?
+  status        LeaveStatus   @default(PENDING)
+  leaveDuration LeaveDuration @default(FULL_DAY)
+  approvedBy    String?
+  approvedAt    DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
   @@index([startDate, endDate])
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  assignedBy  String
+  dueDate     DateTime
+  priority    TaskPriority @default(MEDIUM)
+  status      TaskStatus   @default(PENDING)
+  approvedBy  String?
+  approvedAt  DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  creator   User           @relation("TaskCreator", fields: [assignedBy], references: [id], onDelete: Cascade)
+  approver  User?          @relation("TaskApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+  assignees TaskAssignee[]
+
+  @@index([assignedBy])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model TaskAssignee {
+  id          String    @id @default(cuid())
+  taskId      String
+  userId      String
+  assignedAt  DateTime  @default(now())
+  completedAt DateTime?
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
 }

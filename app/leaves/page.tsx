@@ -40,6 +40,7 @@ interface Leave {
   type: string;
   reason: string | null;
   status: string;
+  leaveDuration?: string;
   user: {
     name: string;
   };
@@ -54,6 +55,7 @@ export default function LeavesPage() {
     endDate: format(new Date(), 'yyyy-MM-dd'),
     type: 'Vacation',
     reason: '',
+    leaveDuration: 'FULL_DAY' as 'FULL_DAY' | 'HALF_DAY_MORNING' | 'HALF_DAY_AFTERNOON',
   });
 
   useEffect(() => {
@@ -84,13 +86,17 @@ export default function LeavesPage() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
+      const endDate = formData.leaveDuration !== 'FULL_DAY' ? formData.startDate : formData.endDate;
       const response = await fetch('/api/leaves', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          endDate,
+        }),
       });
 
       if (response.ok) {
@@ -100,6 +106,7 @@ export default function LeavesPage() {
           endDate: format(new Date(), 'yyyy-MM-dd'),
           type: 'Vacation',
           reason: '',
+          leaveDuration: 'FULL_DAY',
         });
         fetchLeaves();
       } else {
@@ -208,15 +215,42 @@ export default function LeavesPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="endDate">End Date *</Label>
-                    <Input
-                      id="endDate"
-                      type="date"
-                      value={formData.endDate}
-                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                      required
-                    />
+                    <Label htmlFor="leaveDuration">Leave Duration *</Label>
+                    <Select
+                      value={formData.leaveDuration}
+                      onValueChange={(value) => {
+                        const duration = value as 'FULL_DAY' | 'HALF_DAY_MORNING' | 'HALF_DAY_AFTERNOON';
+                        setFormData({ 
+                          ...formData, 
+                          leaveDuration: duration,
+                          endDate: duration !== 'FULL_DAY' ? formData.startDate : formData.endDate,
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="FULL_DAY">Full Day</SelectItem>
+                        <SelectItem value="HALF_DAY_MORNING">Half Day (Morning)</SelectItem>
+                        <SelectItem value="HALF_DAY_AFTERNOON">Half Day (Afternoon)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">End Date *</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    required
+                    disabled={formData.leaveDuration !== 'FULL_DAY'}
+                  />
+                  {formData.leaveDuration !== 'FULL_DAY' && (
+                    <p className="text-xs text-gray-500">End date is automatically set to start date for half-day leaves</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="type">Leave Type *</Label>
@@ -272,6 +306,7 @@ export default function LeavesPage() {
                   <TableRow>
                     <TableHead>Employee</TableHead>
                     <TableHead>Type</TableHead>
+                    <TableHead>Duration</TableHead>
                     <TableHead>Start Date</TableHead>
                     <TableHead>End Date</TableHead>
                     <TableHead>Status</TableHead>
@@ -283,6 +318,13 @@ export default function LeavesPage() {
                     <TableRow key={leave.id}>
                       <TableCell className="font-medium">{leave.user.name}</TableCell>
                       <TableCell>{leave.type}</TableCell>
+                      <TableCell>
+                        <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                          {leave.leaveDuration === 'HALF_DAY_MORNING' ? 'Half Day (Morning)' :
+                           leave.leaveDuration === 'HALF_DAY_AFTERNOON' ? 'Half Day (Afternoon)' :
+                           'Full Day'}
+                        </span>
+                      </TableCell>
                       <TableCell>{format(new Date(leave.startDate), 'MMM dd, yyyy')}</TableCell>
                       <TableCell>{format(new Date(leave.endDate), 'MMM dd, yyyy')}</TableCell>
                       <TableCell>

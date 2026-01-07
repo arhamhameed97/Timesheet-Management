@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext, unauthorizedResponse, forbiddenResponse } from '@/lib/middleware-helpers';
 import { prisma } from '@/lib/db';
 import { createLeaveSchema, updateLeaveSchema } from '@/lib/validations';
-import { UserRole, LeaveStatus } from '@prisma/client';
+import { UserRole, LeaveStatus, LeaveDuration } from '@prisma/client';
 import { canManageUser } from '@/lib/permissions';
 
 export async function GET(request: NextRequest) {
@@ -65,11 +65,17 @@ export async function POST(request: NextRequest) {
     const validatedData = createLeaveSchema.parse(body);
 
     const startDate = new Date(validatedData.startDate);
-    const endDate = new Date(validatedData.endDate);
+    let endDate = new Date(validatedData.endDate);
+    const leaveDuration = validatedData.leaveDuration || LeaveDuration.FULL_DAY;
+
+    // For half-day leaves, ensure startDate equals endDate
+    if (leaveDuration !== LeaveDuration.FULL_DAY) {
+      endDate = new Date(startDate);
+    }
 
     if (endDate < startDate) {
       return NextResponse.json(
-        { error: 'End date must be after start date' },
+        { error: 'End date must be after or equal to start date' },
         { status: 400 }
       );
     }
@@ -81,6 +87,7 @@ export async function POST(request: NextRequest) {
         endDate,
         type: validatedData.type,
         reason: validatedData.reason || undefined,
+        leaveDuration,
         status: LeaveStatus.PENDING,
       },
       include: {

@@ -165,11 +165,28 @@ export const updatePayrollSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const createTaskSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  dueDate: z.string(), // ISO date string
+  priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).default('MEDIUM'),
+  assigneeIds: z.array(z.string()).min(1, 'At least one assignee is required'),
+});
+
+export const updateTaskSchema = z.object({
+  status: z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'APPROVED', 'CANCELLED']).optional(),
+  description: z.string().optional(),
+  dueDate: z.string().optional(), // ISO date string
+  priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
+  approve: z.boolean().optional(), // If true, manager/admin approves the task
+});
+
 export const createLeaveSchema = z.object({
   startDate: z.string(), // ISO date string
   endDate: z.string(), // ISO date string
   type: z.string().min(1, 'Leave type is required'),
   reason: z.string().optional(),
+  leaveDuration: z.enum(['FULL_DAY', 'HALF_DAY_MORNING', 'HALF_DAY_AFTERNOON']).default('FULL_DAY'),
 });
 
 export const updateLeaveSchema = z.object({

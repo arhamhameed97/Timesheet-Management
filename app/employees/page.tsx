@@ -13,17 +13,19 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Plus, Edit, Trash2, Clock, FileText, CheckCircle, XCircle, Filter, Search, Calendar, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Clock, FileText, CheckCircle, XCircle, Filter, Search, Calendar, Eye, CheckSquare } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -90,9 +92,25 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [viewAttendanceOpen, setViewAttendanceOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [profileFormData, setProfileFormData] = useState({
+    paymentType: '' as 'HOURLY' | 'SALARY' | '',
+    hourlyRate: '',
+    monthlySalary: '',
+  });
+  const [updatingProfile, setUpdatingProfile] = useState(false);
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [taskFormData, setTaskFormData] = useState({
+    title: '',
+    description: '',
+    dueDate: '',
+    priority: 'MEDIUM' as 'LOW' | 'MEDIUM' | 'HIGH',
+    assigneeIds: [] as string[],
+  });
+  const [creatingTask, setCreatingTask] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all'); // all, checked-in, checked-out, not-checked-in
   const [filterRole, setFilterRole] = useState<string>('all');
@@ -331,6 +349,57 @@ export default function EmployeesPage() {
     }
   };
 
+  const handleUpdateProfile = async () => {
+    if (!selectedEmployee) return;
+    
+    try {
+      setUpdatingProfile(true);
+      const token = localStorage.getItem('token');
+      
+      const requestBody: any = {};
+      
+      if (profileFormData.paymentType) {
+        requestBody.paymentType = profileFormData.paymentType;
+      }
+      if (profileFormData.hourlyRate) {
+        requestBody.hourlyRate = parseFloat(profileFormData.hourlyRate);
+      }
+      if (profileFormData.monthlySalary) {
+        requestBody.monthlySalary = parseFloat(profileFormData.monthlySalary);
+      }
+      
+      // If payment type changed, clear the other field
+      if (profileFormData.paymentType === 'HOURLY') {
+        requestBody.monthlySalary = null;
+      } else if (profileFormData.paymentType === 'SALARY') {
+        requestBody.hourlyRate = null;
+      }
+      
+      const response = await fetch(`/api/employees/${selectedEmployee.id}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (response.ok) {
+        setProfileModalOpen(false);
+        fetchEmployees();
+        alert('Employee profile updated successfully');
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to update employee profile');
+      }
+    } catch (error) {
+      console.error('Failed to update employee profile:', error);
+      alert('Failed to update employee profile');
+    } finally {
+      setUpdatingProfile(false);
+    }
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -348,13 +417,173 @@ export default function EmployeesPage() {
             <h1 className="text-3xl font-bold text-gray-900">Employees</h1>
             <p className="text-gray-600 mt-1">Manage your team members</p>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Employee
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            {(user?.role === UserRole.MANAGER || user?.role === UserRole.COMPANY_ADMIN || user?.role === UserRole.SUPER_ADMIN) && (
+              <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <CheckSquare className="mr-2 h-4 w-4" />
+                    Assign Task
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Assign New Task</DialogTitle>
+                    <DialogDescription>
+                      Create a task and assign it to one or more employees
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="taskTitle">Title *</Label>
+                      <Input
+                        id="taskTitle"
+                        value={taskFormData.title}
+                        onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
+                        placeholder="Enter task title"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="taskDescription">Description</Label>
+                      <Textarea
+                        id="taskDescription"
+                        value={taskFormData.description}
+                        onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
+                        placeholder="Enter task description"
+                        rows={3}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="taskDueDate">Due Date *</Label>
+                        <Input
+                          id="taskDueDate"
+                          type="date"
+                          value={taskFormData.dueDate}
+                          onChange={(e) => setTaskFormData({ ...taskFormData, dueDate: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="taskPriority">Priority</Label>
+                        <Select
+                          value={taskFormData.priority}
+                          onValueChange={(value) => setTaskFormData({ ...taskFormData, priority: value as 'LOW' | 'MEDIUM' | 'HIGH' })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="LOW">Low</SelectItem>
+                            <SelectItem value="MEDIUM">Medium</SelectItem>
+                            <SelectItem value="HIGH">High</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Assign To *</Label>
+                      <div className="max-h-48 overflow-y-auto border rounded p-2 space-y-2">
+                        {employees.filter(e => e.isActive).map((emp) => (
+                          <div key={emp.id} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`assignee-${emp.id}`}
+                              checked={taskFormData.assigneeIds.includes(emp.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setTaskFormData({
+                                    ...taskFormData,
+                                    assigneeIds: [...taskFormData.assigneeIds, emp.id],
+                                  });
+                                } else {
+                                  setTaskFormData({
+                                    ...taskFormData,
+                                    assigneeIds: taskFormData.assigneeIds.filter(id => id !== emp.id),
+                                  });
+                                }
+                              }}
+                            />
+                            <label htmlFor={`assignee-${emp.id}`} className="text-sm cursor-pointer">
+                              {emp.name} ({emp.email})
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setTaskDialogOpen(false);
+                        setTaskFormData({
+                          title: '',
+                          description: '',
+                          dueDate: '',
+                          priority: 'MEDIUM',
+                          assigneeIds: [],
+                        });
+                      }}
+                      disabled={creatingTask}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={async () => {
+                        if (!taskFormData.title || !taskFormData.dueDate || taskFormData.assigneeIds.length === 0) {
+                          alert('Please fill in all required fields');
+                          return;
+                        }
+                        try {
+                          setCreatingTask(true);
+                          const token = localStorage.getItem('token');
+                          const response = await fetch('/api/tasks/assignments', {
+                            method: 'POST',
+                            headers: {
+                              Authorization: `Bearer ${token}`,
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(taskFormData),
+                          });
+
+                          if (response.ok) {
+                            setTaskDialogOpen(false);
+                            setTaskFormData({
+                              title: '',
+                              description: '',
+                              dueDate: '',
+                              priority: 'MEDIUM',
+                              assigneeIds: [],
+                            });
+                            alert('Task assigned successfully');
+                          } else {
+                            const data = await response.json();
+                            alert(data.error || 'Failed to assign task');
+                          }
+                        } catch (error) {
+                          console.error('Failed to assign task:', error);
+                          alert('Failed to assign task');
+                        } finally {
+                          setCreatingTask(false);
+                        }
+                      }}
+                      disabled={creatingTask || !taskFormData.title || !taskFormData.dueDate || taskFormData.assigneeIds.length === 0}
+                    >
+                      {creatingTask ? 'Assigning...' : 'Assign Task'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary hover:bg-primary/90">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Employee
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Add New Employee</DialogTitle>
@@ -518,6 +747,7 @@ export default function EmployeesPage() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Filters */}
@@ -739,7 +969,36 @@ export default function EmployeesPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const token = localStorage.getItem('token');
+                                const response = await fetch(`/api/employees/${employee.id}`, {
+                                  headers: {
+                                    Authorization: `Bearer ${token}`,
+                                  },
+                                });
+                                if (response.ok) {
+                                  const data = await response.json();
+                                  setSelectedEmployee(data.employee);
+                                  setProfileFormData({
+                                    paymentType: data.employee.paymentType || '',
+                                    hourlyRate: data.employee.hourlyRate?.toString() || '',
+                                    monthlySalary: data.employee.monthlySalary?.toString() || '',
+                                  });
+                                  setProfileModalOpen(true);
+                                } else {
+                                  alert('Failed to load employee profile');
+                                }
+                              } catch (error) {
+                                console.error('Failed to fetch employee:', error);
+                                alert('Failed to load employee profile');
+                              }
+                            }}
+                            title="Edit employee profile"
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="sm">
@@ -870,6 +1129,116 @@ export default function EmployeesPage() {
                     </CardContent>
                   </Card>
                 )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Employee Profile Modal */}
+        <Dialog open={profileModalOpen} onOpenChange={setProfileModalOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Employee Profile - {selectedEmployee?.name}</DialogTitle>
+              <DialogDescription>
+                Update employee payment information
+              </DialogDescription>
+            </DialogHeader>
+            {selectedEmployee && (
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Name:</span>
+                      <span className="text-sm font-medium">{selectedEmployee.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Email:</span>
+                      <span className="text-sm font-medium">{selectedEmployee.email}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Role:</span>
+                      <span className="text-sm font-medium">{selectedEmployee.role.replace('_', ' ')}</span>
+                    </div>
+                    {selectedEmployee.designation && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Designation:</span>
+                        <span className="text-sm font-medium">{selectedEmployee.designation.name}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <Label className="text-sm font-semibold text-gray-900 mb-2 block">Payment Information</Label>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="profilePaymentType">Payment Type</Label>
+                      <Select
+                        value={profileFormData.paymentType}
+                        onValueChange={(value) => setProfileFormData({ 
+                          ...profileFormData, 
+                          paymentType: value as 'HOURLY' | 'SALARY',
+                          hourlyRate: value === 'HOURLY' ? profileFormData.hourlyRate : '',
+                          monthlySalary: value === 'SALARY' ? profileFormData.monthlySalary : '',
+                        })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select payment type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="HOURLY">Hourly</SelectItem>
+                          <SelectItem value="SALARY">Salary</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {profileFormData.paymentType === 'HOURLY' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="profileHourlyRate">Hourly Rate ($) *</Label>
+                        <Input
+                          id="profileHourlyRate"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={profileFormData.hourlyRate}
+                          onChange={(e) => setProfileFormData({ ...profileFormData, hourlyRate: e.target.value })}
+                          placeholder="e.g., 25.00"
+                          required
+                        />
+                      </div>
+                    )}
+                    {profileFormData.paymentType === 'SALARY' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="profileMonthlySalary">Monthly Salary ($) *</Label>
+                        <Input
+                          id="profileMonthlySalary"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={profileFormData.monthlySalary}
+                          onChange={(e) => setProfileFormData({ ...profileFormData, monthlySalary: e.target.value })}
+                          placeholder="e.g., 5000.00"
+                          required
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setProfileModalOpen(false)}
+                    disabled={updatingProfile}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleUpdateProfile}
+                    disabled={updatingProfile || !profileFormData.paymentType}
+                  >
+                    {updatingProfile ? 'Updating...' : 'Update Profile'}
+                  </Button>
+                </DialogFooter>
               </div>
             )}
           </DialogContent>
