@@ -10,6 +10,7 @@ import { format, differenceInSeconds, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import Link from 'next/link';
 import { TaskStatus, TaskPriority } from '@prisma/client';
 import {
@@ -316,7 +317,24 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
         <p className="text-gray-600 mt-1">Welcome back, {user.name}! Here&apos;s your company overview.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="attendance" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Attendance
+          </TabsTrigger>
+          <TabsTrigger value="tasks" className="flex items-center gap-2">
+            <CheckSquare className="h-4 w-4" />
+            Tasks
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
@@ -498,10 +516,12 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
             </div>
           )}
         </CardContent>
-      </Card>
+          </Card>
+        </TabsContent>
 
-      {/* Task Management Panel */}
-      <Card>
+        <TabsContent value="tasks" className="space-y-4">
+          {/* Task Management Panel */}
+          <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
@@ -649,111 +669,82 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
             </div>
           )}
         </CardContent>
-      </Card>
+          </Card>
 
-      {/* Tasks Pending Approval */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-purple-600" />
-            Tasks Pending Approval ({pendingTasks.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loadingTasks ? (
-            <div className="text-center py-8 text-gray-500">Loading tasks...</div>
-          ) : pendingTasks.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No tasks pending approval</div>
-          ) : (
-            <div className="space-y-3">
-              {pendingTasks.slice(0, 5).map((task) => (
-                <div key={task.id} className="p-4 border rounded-lg">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900">{task.title}</h4>
-                      {task.description && (
-                        <p className="text-sm text-gray-600 mt-1">{task.description}</p>
-                      )}
-                    </div>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      task.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
-                      task.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-green-100 text-green-800'
-                    }`}>
-                      {task.priority}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between mt-3">
-                    <div className="text-xs text-gray-500">
-                      <div>Assignees: {task.assignees.map((a: any) => a.user.name).join(', ')}</div>
-                      <div>Due: {format(new Date(task.dueDate), 'MMM dd, yyyy')}</div>
-                      {task.assignees.some((a: any) => a.completedAt) && (
-                        <div className="text-yellow-600 mt-1">
-                          Completed: {format(new Date(task.assignees.find((a: any) => a.completedAt)?.completedAt), 'MMM dd, yyyy HH:mm')}
+          {/* Tasks Pending Approval */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-purple-600" />
+                Tasks Pending Approval ({pendingTasks.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadingTasks ? (
+                <div className="text-center py-8 text-gray-500">Loading tasks...</div>
+              ) : pendingTasks.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">No tasks pending approval</div>
+              ) : (
+                <div className="space-y-3">
+                  {pendingTasks.slice(0, 5).map((task) => (
+                    <div key={task.id} className="p-4 border rounded-lg">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900">{task.title}</h4>
+                          {task.description && (
+                            <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                          )}
                         </div>
-                      )}
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          task.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
+                          task.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {task.priority}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between mt-3">
+                        <div className="text-xs text-gray-500">
+                          <div>Assignees: {task.assignees.map((a: any) => a.user.name).join(', ')}</div>
+                          <div>Due: {format(new Date(task.dueDate), 'MMM dd, yyyy')}</div>
+                          {task.assignees.some((a: any) => a.completedAt) && (
+                            <div className="text-yellow-600 mt-1">
+                              Completed: {format(new Date(task.assignees.find((a: any) => a.completedAt)?.completedAt), 'MMM dd, yyyy HH:mm')}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRejectTask(task.id)}
+                          >
+                            Reject
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => handleApproveTask(task.id)}
+                          >
+                            Approve
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleRejectTask(task.id)}
-                      >
-                        Reject
+                  ))}
+                  {pendingTasks.length > 5 && (
+                    <Link href="/tasks">
+                      <Button variant="outline" className="w-full">
+                        View All Pending Tasks ({pendingTasks.length})
                       </Button>
-                      <Button
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700"
-                        onClick={() => handleApproveTask(task.id)}
-                      >
-                        Approve
-                      </Button>
-                    </div>
-                  </div>
+                    </Link>
+                  )}
                 </div>
-              ))}
-              {pendingTasks.length > 5 && (
-                <Link href="/tasks">
-                  <Button variant="outline" className="w-full">
-                    View All Pending Tasks ({pendingTasks.length})
-                  </Button>
-                </Link>
               )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Link href="/settings">
-              <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <Building2 className="h-6 w-6 text-purple-600 mb-2" />
-                <h3 className="font-semibold">Company Settings</h3>
-                <p className="text-sm text-gray-600">Manage company profile and settings</p>
-              </div>
-            </Link>
-            <Link href="/employees">
-              <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <Users className="h-6 w-6 text-purple-600 mb-2" />
-                <h3 className="font-semibold">Manage Employees</h3>
-                <p className="text-sm text-gray-600">Add or remove employees</p>
-              </div>
-            </Link>
-            <Link href="/timesheets">
-              <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
-                <FileText className="h-6 w-6 text-purple-600 mb-2" />
-                <h3 className="font-semibold">Review Timesheets</h3>
-                <p className="text-sm text-gray-600">Approve pending timesheets</p>
-              </div>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -78,11 +78,19 @@ export async function GET(request: NextRequest) {
     // If attendanceDate is provided, fetch attendance stats for each employee
     let employeesWithStats = employees;
     if (attendanceDate) {
-      const date = new Date(attendanceDate);
-      const dayStart = startOfDay(date);
-      const dayEnd = endOfDay(date);
-      const monthStart = startOfMonth(date);
-      const monthEnd = endOfMonth(date);
+      // Parse date as UTC to match attendance records stored in UTC
+      const dateParts = attendanceDate.split('-');
+      const year = parseInt(dateParts[0]);
+      const month = parseInt(dateParts[1]) - 1; // Month is 0-indexed
+      const day = parseInt(dateParts[2]);
+      
+      // Create UTC date ranges for the day
+      const dayStart = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+      const dayEnd = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
+      
+      // Create UTC date ranges for the month
+      const monthStart = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+      const monthEnd = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999)); // Last day of month
 
       const employeeIds = employees.map((e) => e.id);
 
