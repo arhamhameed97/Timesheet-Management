@@ -845,87 +845,93 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
           {/* Clock In/Out Card */}
           <Card className="bg-gradient-to-br from-white to-purple-50">
             <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h2 className="text-xl font-bold text-gray-900 mb-6">CLOCK IN / Clock Out</h2>
-                  
-                  {/* Clock In Status */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className={`w-3 h-3 rounded-full ${todayAttendance?.checkInTime ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                    <div>
-                      <span className="text-sm text-gray-600">CLOCK IN</span>
-                      {todayAttendance?.checkInTime ? (
-                        <div className="text-green-600 font-semibold">
-                          {format(parseISO(todayAttendance.checkInTime), 'dd-MMM h:mm a')}
-                        </div>
-                      ) : (
-                        <div className="text-gray-400">-- --</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Clock Out Status */}
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className={`w-3 h-3 rounded-full ${(todayAttendance?.checkOutTime || (parseAttendanceDetails?.checkInOutHistory && parseAttendanceDetails.checkInOutHistory.some(e => e.type === 'out'))) ? 'bg-red-500' : 'bg-gray-300'}`}></div>
-                    <div>
-                      <span className="text-sm text-gray-600">Clock Out</span>
-                      {(() => {
-                        // Show current checkout time if available
-                        if (todayAttendance?.checkOutTime) {
-                          return (
-                            <div className="text-red-600 font-semibold">
-                              {format(parseISO(todayAttendance.checkOutTime), 'HH:mm')}
+              <div className="flex items-stretch gap-6 h-full">
+                {/* Left Section - Clock In/Out Controls */}
+                <div className="flex-1 flex flex-col justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900 mb-8">CLOCK IN / Clock Out</h2>
+                    
+                    {/* Status Indicators */}
+                    <div className="space-y-5 mb-8">
+                      {/* Clock In Status */}
+                      <div className="flex items-center gap-3">
+                        <div className={`w-3 h-3 rounded-full ${todayAttendance?.checkInTime ? 'bg-green-500 shadow-lg shadow-green-500/50' : 'bg-gray-300'}`}></div>
+                        <div>
+                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">CLOCK IN</span>
+                          {todayAttendance?.checkInTime ? (
+                            <div className="text-green-600 font-semibold text-base mt-0.5">
+                              {format(parseISO(todayAttendance.checkInTime), 'dd-MMM h:mm a')}
                             </div>
-                          );
-                        }
-                        // Otherwise, show last checkout from history if user has checked back in
-                        if (parseAttendanceDetails?.checkInOutHistory) {
-                          const lastCheckout = parseAttendanceDetails.checkInOutHistory
-                            .filter(e => e.type === 'out')
-                            .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())[0];
-                          if (lastCheckout) {
-                            return (
-                              <div className="text-red-600 font-semibold">
-                                {format(parseISO(lastCheckout.time), 'HH:mm')}
-                              </div>
-                            );
-                          }
-                        }
-                        return <div className="text-gray-400">00:00:00</div>;
-                      })()}
+                          ) : (
+                            <div className="text-gray-400 text-base mt-0.5">-- --</div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Clock Out Status */}
+                      <div className="flex items-center gap-3">
+                        <div className={`w-3 h-3 rounded-full ${(todayAttendance?.checkOutTime || (parseAttendanceDetails?.checkInOutHistory && parseAttendanceDetails.checkInOutHistory.some(e => e.type === 'out'))) ? 'bg-red-500 shadow-lg shadow-red-500/50' : 'bg-gray-300'}`}></div>
+                        <div>
+                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Clock Out</span>
+                          {(() => {
+                            // Show current checkout time if available
+                            if (todayAttendance?.checkOutTime) {
+                              return (
+                                <div className="text-red-600 font-semibold text-base mt-0.5">
+                                  {format(parseISO(todayAttendance.checkOutTime), 'HH:mm')}
+                                </div>
+                              );
+                            }
+                            // Otherwise, show last checkout from history if user has checked back in
+                            if (parseAttendanceDetails?.checkInOutHistory) {
+                              const lastCheckout = parseAttendanceDetails.checkInOutHistory
+                                .filter(e => e.type === 'out')
+                                .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())[0];
+                              if (lastCheckout) {
+                                return (
+                                  <div className="text-red-600 font-semibold text-base mt-0.5">
+                                    {format(parseISO(lastCheckout.time), 'HH:mm')}
+                                  </div>
+                                );
+                              }
+                            }
+                            return <div className="text-gray-400 text-base mt-0.5">00:00:00</div>;
+                          })()}
+                        </div>
+                      </div>
                     </div>
+
+                    {/* Shift Duration */}
+                    {shiftDuration && (
+                      <div className="mb-6">
+                        <div className="text-5xl font-bold text-gray-900 mb-1">
+                          {shiftDuration.hours.toString().padStart(2, '0')}:
+                          {shiftDuration.minutes.toString().padStart(2, '0')} hrs
+                        </div>
+                        <div className="text-sm font-medium text-gray-500">Today&apos;s Hours</div>
+                      </div>
+                    )}
+
+                    {/* Break Time Display */}
+                    {breakTime && breakTime.hours + breakTime.minutes + breakTime.seconds > 0 && (
+                      <div className="mb-6">
+                        <div className="text-2xl font-bold text-orange-600 mb-1">
+                          {breakTime.hours.toString().padStart(2, '0')}:
+                          {breakTime.minutes.toString().padStart(2, '0')}:
+                          {breakTime.seconds.toString().padStart(2, '0')}
+                        </div>
+                        <div className="text-sm font-medium text-gray-500">Break Time</div>
+                      </div>
+                    )}
                   </div>
-
-                  {/* Shift Duration */}
-                  {shiftDuration && (
-                    <div className="mb-6">
-                      <div className="text-4xl font-bold text-gray-900">
-                        {shiftDuration.hours.toString().padStart(2, '0')}:
-                        {shiftDuration.minutes.toString().padStart(2, '0')} hrs
-                      </div>
-                      <div className="text-sm text-gray-600">Today&apos;s Hours</div>
-                    </div>
-                  )}
-
-                  {/* Break Time Display */}
-                  {breakTime && breakTime.hours + breakTime.minutes + breakTime.seconds > 0 && (
-                    <div className="mb-4">
-                      <div className="text-2xl font-bold text-orange-600">
-                        {breakTime.hours.toString().padStart(2, '0')}:
-                        {breakTime.minutes.toString().padStart(2, '0')}:
-                        {breakTime.seconds.toString().padStart(2, '0')}
-                      </div>
-                      <div className="text-sm text-gray-600">Break Time</div>
-                    </div>
-                  )}
 
                   {/* Action Buttons */}
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 mt-auto">
                     {!todayAttendance?.checkInTime ? (
                       <Button
                         onClick={handleCheckIn}
                         disabled={checkingIn}
-                        className="bg-green-600 hover:bg-green-700 text-white"
+                        className="bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transition-all"
                         size="lg"
                       >
                         <LogIn className="h-4 w-4 mr-2" />
@@ -938,6 +944,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                           disabled={checkingOut}
                           variant="destructive"
                           size="lg"
+                          className="shadow-lg hover:shadow-xl transition-all"
                         >
                           <LogOut className="h-4 w-4 mr-2" />
                           {checkingOut ? 'Checking Out...' : 'Clock Out'}
@@ -945,7 +952,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                         <Button
                           variant="outline"
                           size="lg"
-                          className="border-gray-300"
+                          className="border-gray-300 hover:bg-gray-50 shadow-sm hover:shadow-md transition-all"
                         >
                           <Coffee className="h-4 w-4 mr-2" />
                           Break In
@@ -955,7 +962,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                       <Button
                         onClick={handleCheckIn}
                         disabled={checkingIn}
-                        className="bg-green-600 hover:bg-green-700 text-white"
+                        className="bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transition-all"
                         size="lg"
                       >
                         <LogIn className="h-4 w-4 mr-2" />
@@ -965,19 +972,19 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                   </div>
                 </div>
                 
-                {/* Stats Visuals */}
-                <div className="hidden md:flex flex-row gap-3 w-96">
+                {/* Right Section - Stats Visuals */}
+                <div className="hidden md:flex flex-row gap-3 w-96 h-full">
                   {/* Progress Card */}
-                  <div className="bg-white rounded-lg border border-purple-100 p-4 shadow-sm flex-1">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-semibold text-gray-700">Progress</h3>
+                  <div className="bg-white rounded-xl border border-purple-100 p-5 shadow-sm flex-1 flex flex-col h-full">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-bold text-gray-800">Progress</h3>
                     </div>
-                    <div className="mb-3">
-                      <div className="text-2xl font-bold text-gray-900">{weeklyStats.totalHoursDecimal} h</div>
-                      <div className="text-xs text-gray-500">Work Time this week</div>
+                    <div className="mb-4">
+                      <div className="text-3xl font-bold text-gray-900 mb-1">{weeklyStats.totalHoursDecimal} h</div>
+                      <div className="text-xs font-medium text-gray-500">Work Time this week</div>
                     </div>
                     {/* Weekly Bar Chart */}
-                    <div className="flex items-end justify-between gap-1 h-20">
+                    <div className="flex items-end justify-between gap-1 flex-1 min-h-[100px]">
                       {weeklyStats.dailyHours.map((day, index) => {
                         const heightPercent = weeklyStats.maxHours > 0 
                           ? (day.hours + day.minutes / 60) / weeklyStats.maxHours * 100 
@@ -986,26 +993,26 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                         const hasData = day.hours > 0 || day.minutes > 0;
                         
                         return (
-                          <div key={index} className="flex flex-col items-center flex-1">
+                          <div key={index} className="flex flex-col items-center flex-1 h-full justify-end">
                             {hasData && (
-                              <div className="text-xs font-medium text-gray-600 mb-1">
+                              <div className="text-xs font-semibold text-gray-700 mb-1.5">
                                 {day.hours > 0 ? `${day.hours}h` : day.minutes > 0 ? `${day.minutes}m` : ''}
                               </div>
                             )}
                             <div
-                              className={`w-full rounded-t transition-all ${
+                              className={`w-full rounded-t transition-all duration-300 ${
                                 isToday && hasData
-                                  ? 'bg-yellow-500'
+                                  ? 'bg-yellow-500 shadow-md'
                                   : hasData
                                   ? 'bg-gray-800'
                                   : 'bg-gray-200 border-2 border-dashed border-gray-300'
                               }`}
-                              style={{ height: hasData ? `${Math.max(heightPercent, 10)}%` : '20%' }}
+                              style={{ height: hasData ? `${Math.max(heightPercent, 15)}%` : '25%' }}
                             />
-                            <div className={`mt-1 w-1.5 h-1.5 rounded-full ${
+                            <div className={`mt-2 w-1.5 h-1.5 rounded-full ${
                               hasData ? 'bg-gray-800' : 'bg-gray-300'
                             }`} />
-                            <div className="text-[10px] text-gray-500 mt-1">{day.day}</div>
+                            <div className="text-[10px] font-medium text-gray-500 mt-1.5">{day.day}</div>
                           </div>
                         );
                       })}
@@ -1013,14 +1020,14 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                   </div>
                   
                   {/* Time Tracker Card */}
-                  <div className="bg-white rounded-lg border border-purple-100 p-4 shadow-sm flex-1">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-semibold text-gray-700">Time tracker</h3>
+                  <div className="bg-white rounded-xl border border-purple-100 p-5 shadow-sm flex-1 flex flex-col h-full items-center justify-center">
+                    <div className="flex items-center justify-between mb-4 w-full">
+                      <h3 className="text-sm font-bold text-gray-800">Time tracker</h3>
                     </div>
                     {/* Circular Timer */}
-                    <div className="relative w-28 h-28 mx-auto mb-3">
+                    <div className="relative w-32 h-32 mx-auto flex-shrink-0">
                       {/* Outer ring */}
-                      <svg className="w-28 h-28 transform -rotate-90" viewBox="0 0 100 100">
+                      <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
                         {/* Background circle */}
                         <circle
                           cx="50"
@@ -1050,16 +1057,16 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
                         {shiftDuration ? (
                           <>
-                            <div className="text-xl font-bold text-gray-900">
+                            <div className="text-2xl font-bold text-gray-900">
                               {shiftDuration.hours.toString().padStart(2, '0')}:
                               {shiftDuration.minutes.toString().padStart(2, '0')}
                             </div>
-                            <div className="text-[10px] text-gray-500">Work Time</div>
+                            <div className="text-xs font-medium text-gray-500 mt-1">Work Time</div>
                           </>
                         ) : (
                           <>
-                            <div className="text-xl font-bold text-gray-400">00:00</div>
-                            <div className="text-[10px] text-gray-400">Work Time</div>
+                            <div className="text-2xl font-bold text-gray-400">00:00</div>
+                            <div className="text-xs font-medium text-gray-400 mt-1">Work Time</div>
                           </>
                         )}
                       </div>
