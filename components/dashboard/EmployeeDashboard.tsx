@@ -942,9 +942,8 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                         <Button
                           onClick={handleCheckOut}
                           disabled={checkingOut}
-                          variant="destructive"
+                          className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg hover:shadow-xl transition-all"
                           size="lg"
-                          className="shadow-lg hover:shadow-xl transition-all"
                         >
                           <LogOut className="h-4 w-4 mr-2" />
                           {checkingOut ? 'Checking Out...' : 'Clock Out'}
