@@ -686,7 +686,7 @@ export default function AttendancePage() {
       // Add user notes if available
       if (notesData.userNotes) {
         parts.push(
-          <div key="userNotes" className="mt-2 pt-2 border-t border-border">
+          <div key="userNotes" className="mt-2 pt-2 border-t-2 border-border">
             <div className="text-xs font-medium text-foreground mb-1">User Notes:</div>
             <div className="text-xs text-muted-foreground">{notesData.userNotes}</div>
           </div>
@@ -853,7 +853,7 @@ export default function AttendancePage() {
                 <select
                   value={selectedEmployeeId || ''}
                   onChange={(e) => handleEmployeeChange(e.target.value)}
-                  className="px-2 py-1 border rounded text-xs min-w-[150px]"
+                  className="px-2 py-1 border-2 border-border bg-background text-foreground rounded text-xs min-w-[150px]"
                 >
                   <option value="">My Attendance</option>
                   {employees.map((employee) => (
@@ -1020,7 +1020,7 @@ export default function AttendancePage() {
 
                 {/* Check-in/Check-out History */}
                 {attendanceDetails && attendanceDetails.checkInOutHistory.length > 2 && (
-                  <div className="space-y-1 pt-2 border-t">
+                  <div className="space-y-1 pt-2 border-t-2 border-border">
                     <h4 className="text-xs font-semibold text-foreground">Today&apos;s Timeline</h4>
                     <div className="space-y-1 max-h-24 overflow-y-auto">
                       {attendanceDetails.checkInOutHistory.map((event, index) => (
@@ -1050,7 +1050,7 @@ export default function AttendancePage() {
 
                 {/* Check-in/Check-out History */}
                 {attendanceDetails && attendanceDetails.checkInOutHistory.length > 0 && (
-                  <div className="space-y-1 pt-1.5 border-t flex-shrink-0">
+                  <div className="space-y-1 pt-1.5 border-t-2 border-border flex-shrink-0">
                     <h4 className="text-[10px] font-semibold text-foreground mb-1">Today&apos;s Timeline</h4>
                     <div className="space-y-0.5">
                       {attendanceDetails.checkInOutHistory.map((event, index) => (
@@ -1066,7 +1066,7 @@ export default function AttendancePage() {
 
                 {/* Re-check In Button - Always visible at bottom */}
                 {!selectedEmployeeId && (
-                  <div className="pt-2 border-t mt-auto flex-shrink-0">
+                  <div className="pt-2 border-t-2 border-border mt-auto flex-shrink-0">
                     <Button
                       onClick={handleCheckIn}
                       disabled={checkingIn}
@@ -1097,7 +1097,7 @@ export default function AttendancePage() {
                   <select
                     value={calendarView}
                     onChange={(e) => setCalendarView(e.target.value as 'week' | 'month' | 'year')}
-                    className="px-2 py-1 text-xs border rounded h-7"
+                    className="px-2 py-1 text-xs border-2 border-border bg-background text-foreground rounded h-7"
                   >
                     <option value="week">Week</option>
                     <option value="month">Month</option>
@@ -1376,13 +1376,13 @@ export default function AttendancePage() {
                       placeholder="Search..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-6 pr-2 py-1 border rounded text-xs w-24 h-6"
+                      className="pl-6 pr-2 py-1 border-2 border-border bg-background text-foreground placeholder:text-muted-foreground rounded text-xs w-24 h-6"
                     />
                   </div>
                   <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
-                    className="px-1.5 py-1 border rounded text-xs h-6"
+                    className="px-1.5 py-1 border-2 border-border bg-background text-foreground rounded text-xs h-6"
                   >
                     <option value="all">All</option>
                     <option value="PRESENT">Present</option>

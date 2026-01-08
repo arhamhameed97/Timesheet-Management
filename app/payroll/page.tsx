@@ -509,7 +509,7 @@ export default function PayrollPage() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="text-lg font-semibold mb-2">Loading...</div>
-            <div className="text-sm text-gray-500">Fetching payroll information</div>
+            <div className="text-sm text-muted-foreground">Fetching payroll information</div>
           </div>
         </div>
       </MainLayout>
@@ -619,7 +619,7 @@ export default function PayrollPage() {
               {loading ? (
                 <div className="text-center py-8">Loading...</div>
               ) : payroll.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-muted-foreground">
                   No payroll records found.
                 </div>
               ) : (
@@ -730,14 +730,14 @@ export default function PayrollPage() {
                                         {record.bonuses!.map((bonus, idx) => (
                                           <div key={idx} className="flex justify-between text-sm">
                                             <span>{bonus.name}</span>
-                                            <span className="font-semibold text-green-600">
+                                            <span className="font-semibold text-green-600 dark:text-green-400">
                                               {formatCurrency(bonus.amount)}
                                             </span>
                                           </div>
                                         ))}
-                                        <div className="flex justify-between text-sm font-semibold pt-1 border-t">
+                                        <div className="flex justify-between text-sm font-semibold pt-1 border-t-2 border-border">
                                           <span>Total Bonuses</span>
-                                          <span className="text-green-600">
+                                          <span className="text-green-600 dark:text-green-400">
                                             {formatCurrency(record.totalBonuses)}
                                           </span>
                                         </div>
@@ -751,14 +751,14 @@ export default function PayrollPage() {
                                         {record.deductions!.map((deduction, idx) => (
                                           <div key={idx} className="flex justify-between text-sm">
                                             <span>{deduction.name}</span>
-                                            <span className="font-semibold text-red-600">
+                                            <span className="font-semibold text-red-600 dark:text-red-400">
                                               {formatCurrency(deduction.amount)}
                                             </span>
                                           </div>
                                         ))}
-                                        <div className="flex justify-between text-sm font-semibold pt-1 border-t">
+                                        <div className="flex justify-between text-sm font-semibold pt-1 border-t-2 border-border">
                                           <span>Total Deductions</span>
-                                          <span className="text-red-600">
+                                          <span className="text-red-600 dark:text-red-400">
                                             {formatCurrency(record.totalDeductions)}
                                           </span>
                                         </div>
@@ -808,7 +808,7 @@ export default function PayrollPage() {
                   </div>
                   <div>
                     <Label>Net Salary</Label>
-                    <p className="text-sm font-semibold text-green-600">
+                    <p className="text-sm font-semibold text-green-600 dark:text-green-400">
                       {formatCurrency(Math.abs(selectedPayroll.netSalary))}
                     </p>
                   </div>
@@ -820,14 +820,14 @@ export default function PayrollPage() {
                       {selectedPayroll.bonuses.map((bonus, idx) => (
                         <div key={idx} className="flex justify-between text-sm">
                           <span>{bonus.name}</span>
-                          <span className="font-semibold text-green-600">
+                          <span className="font-semibold text-green-600 dark:text-green-400">
                             {formatCurrency(bonus.amount)}
                           </span>
                         </div>
                       ))}
-                      <div className="flex justify-between text-sm font-semibold pt-1 border-t">
+                      <div className="flex justify-between text-sm font-semibold pt-1 border-t-2 border-border">
                         <span>Total Bonuses</span>
-                        <span className="text-green-600">
+                        <span className="text-green-600 dark:text-green-400">
                           {formatCurrency(selectedPayroll.totalBonuses)}
                         </span>
                       </div>
@@ -841,14 +841,14 @@ export default function PayrollPage() {
                       {selectedPayroll.deductions.map((deduction, idx) => (
                         <div key={idx} className="flex justify-between text-sm">
                           <span>{deduction.name}</span>
-                          <span className="font-semibold text-red-600">
+                          <span className="font-semibold text-red-600 dark:text-red-400">
                             {formatCurrency(deduction.amount)}
                           </span>
                         </div>
                       ))}
-                      <div className="flex justify-between text-sm font-semibold pt-1 border-t">
+                      <div className="flex justify-between text-sm font-semibold pt-1 border-t-2 border-border">
                         <span>Total Deductions</span>
-                        <span className="text-red-600">
+                        <span className="text-red-600 dark:text-red-400">
                           {formatCurrency(selectedPayroll.totalDeductions)}
                         </span>
                       </div>
@@ -913,7 +913,7 @@ export default function PayrollPage() {
                     </SelectContent>
                   </Select>
                   {selectedEmployee && (
-                    <div className="p-2 bg-blue-50 rounded text-sm">
+                    <div className="p-2 bg-blue-500/20 dark:bg-blue-500/30 rounded border-2 border-blue-300/50 dark:border-blue-500/30 text-sm">
                       <p>
                         <strong>Payment Type:</strong> {selectedEmployee.paymentType || 'Not set'}
                       </p>
@@ -966,7 +966,7 @@ export default function PayrollPage() {
                 </div>
 
                 {/* Step 3: Payment Configuration */}
-                <div className="p-4 bg-muted/50 rounded-lg border">
+                    <div className="p-4 bg-muted/50 rounded-lg border-2 border-border">
                   <Label className="text-sm font-semibold mb-2 block">Payment Configuration</Label>
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -999,7 +999,7 @@ export default function PayrollPage() {
                             onChange={(e) => setFormData({ ...formData, hoursWorked: e.target.value })}
                             placeholder="Will be calculated from attendance if not provided"
                           />
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-muted-foreground">
                             Leave empty to auto-calculate from attendance records
                           </p>
                         </div>
@@ -1016,7 +1016,7 @@ export default function PayrollPage() {
                           />
                         </div>
                         {formData.hoursWorked && formData.hourlyRate && (
-                          <div className="p-2 bg-blue-50 rounded text-sm">
+                          <div className="p-2 bg-blue-500/20 dark:bg-blue-500/30 rounded border-2 border-blue-300/50 dark:border-blue-500/30 text-sm">
                             <strong>Base Salary Preview:</strong>{' '}
                             {formatCurrency(parseFloat(formData.hoursWorked) * parseFloat(formData.hourlyRate))}
                           </div>
@@ -1042,7 +1042,7 @@ export default function PayrollPage() {
                 </div>
 
                 {/* Step 4: Bonuses */}
-                <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                <div className="p-4 bg-green-500/20 dark:bg-green-500/30 rounded-lg border-2 border-green-300/50 dark:border-green-500/30">
                   <div className="flex items-center justify-between mb-2">
                     <Label className="text-sm font-semibold">Bonuses</Label>
                     <Button type="button" variant="outline" size="sm" onClick={addBonus}>
@@ -1076,15 +1076,15 @@ export default function PayrollPage() {
                           size="sm"
                           onClick={() => removeBonus(index)}
                         >
-                          <Trash2 className="h-4 w-4 text-red-600" />
+                          <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
                         </Button>
                       </div>
                     ))}
                     {formData.bonuses.length === 0 && (
-                      <p className="text-xs text-gray-500">No bonuses added</p>
+                      <p className="text-xs text-muted-foreground">No bonuses added</p>
                     )}
                     {formData.bonuses.length > 0 && (
-                      <div className="pt-2 border-t">
+                      <div className="pt-2 border-t-2 border-border">
                         <p className="text-sm font-semibold">
                           Total Bonuses: {formatCurrency(calculateTotalBonuses())}
                         </p>
@@ -1094,7 +1094,7 @@ export default function PayrollPage() {
                 </div>
 
                 {/* Step 5: Deductions */}
-                <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                <div className="p-4 bg-red-500/20 dark:bg-red-500/30 rounded-lg border-2 border-red-300/50 dark:border-red-500/30">
                   <div className="flex items-center justify-between mb-2">
                     <Label className="text-sm font-semibold">Deductions</Label>
                     <Button type="button" variant="outline" size="sm" onClick={addDeduction}>
@@ -1128,15 +1128,15 @@ export default function PayrollPage() {
                           size="sm"
                           onClick={() => removeDeduction(index)}
                         >
-                          <Trash2 className="h-4 w-4 text-red-600" />
+                          <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
                         </Button>
                       </div>
                     ))}
                     {formData.deductions.length === 0 && (
-                      <p className="text-xs text-gray-500">No deductions added</p>
+                      <p className="text-xs text-muted-foreground">No deductions added</p>
                     )}
                     {formData.deductions.length > 0 && (
-                      <div className="pt-2 border-t">
+                      <div className="pt-2 border-t-2 border-border">
                         <p className="text-sm font-semibold">
                           Total Deductions: {formatCurrency(calculateTotalDeductions())}
                         </p>
@@ -1146,7 +1146,7 @@ export default function PayrollPage() {
                 </div>
 
                 {/* Step 6: Summary */}
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="p-4 bg-blue-500/20 dark:bg-blue-500/30 rounded-lg border-2 border-blue-300/50 dark:border-blue-500/30">
                   <Label className="text-sm font-semibold mb-2 block">Summary</Label>
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
@@ -1157,17 +1157,17 @@ export default function PayrollPage() {
                           : formatCurrency(parseFloat(formData.baseSalary) || 0)}
                       </span>
                     </div>
-                    <div className="flex justify-between text-green-600">
+                    <div className="flex justify-between text-green-600 dark:text-green-400 dark:text-green-400">
                       <span>Total Bonuses:</span>
                       <span className="font-semibold">{formatCurrency(calculateTotalBonuses())}</span>
                     </div>
-                    <div className="flex justify-between text-red-600">
+                    <div className="flex justify-between text-red-600 dark:text-red-400 dark:text-red-400">
                       <span>Total Deductions:</span>
                       <span className="font-semibold">{formatCurrency(calculateTotalDeductions())}</span>
                     </div>
-                    <div className="flex justify-between pt-2 border-t font-bold text-lg">
+                    <div className="flex justify-between pt-2 border-t-2 border-border font-bold text-lg">
                       <span>Net Salary:</span>
-                      <span className="text-green-600">{formatCurrency(calculateNetSalary())}</span>
+                      <span className="text-green-600 dark:text-green-400 dark:text-green-400">{formatCurrency(calculateNetSalary())}</span>
                     </div>
                   </div>
                 </div>
@@ -1203,7 +1203,7 @@ export default function PayrollPage() {
             {loading ? (
               <div className="text-center py-8">Loading...</div>
             ) : payroll.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-muted-foreground">
                 No payroll records found.
               </div>
             ) : (
@@ -1305,7 +1305,7 @@ export default function PayrollPage() {
                                     handleApprove(record.id);
                                   }}
                                 >
-                                  <Check className="h-4 w-4 text-green-600" />
+                                  <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
                                 </Button>
                                 <Button
                                   variant="ghost"
@@ -1315,7 +1315,7 @@ export default function PayrollPage() {
                                     handleReject(record.id);
                                   }}
                                 >
-                                  <X className="h-4 w-4 text-red-600" />
+                                  <X className="h-4 w-4 text-red-600 dark:text-red-400" />
                                 </Button>
                               </div>
                             )}
@@ -1332,14 +1332,14 @@ export default function PayrollPage() {
                                       {record.bonuses!.map((bonus, idx) => (
                                         <div key={idx} className="flex justify-between text-sm">
                                           <span>{bonus.name}</span>
-                                          <span className="font-semibold text-green-600">
+                                          <span className="font-semibold text-green-600 dark:text-green-400">
                                             {formatCurrency(bonus.amount)}
                                           </span>
                                         </div>
                                       ))}
-                                      <div className="flex justify-between text-sm font-semibold pt-1 border-t">
+                                      <div className="flex justify-between text-sm font-semibold pt-1 border-t-2 border-border">
                                         <span>Total Bonuses</span>
-                                        <span className="text-green-600">
+                                        <span className="text-green-600 dark:text-green-400">
                                           {formatCurrency(record.totalBonuses)}
                                         </span>
                                       </div>
@@ -1353,14 +1353,14 @@ export default function PayrollPage() {
                                       {record.deductions!.map((deduction, idx) => (
                                         <div key={idx} className="flex justify-between text-sm">
                                           <span>{deduction.name}</span>
-                                          <span className="font-semibold text-red-600">
+                                          <span className="font-semibold text-red-600 dark:text-red-400">
                                             {formatCurrency(deduction.amount)}
                                           </span>
                                         </div>
                                       ))}
-                                      <div className="flex justify-between text-sm font-semibold pt-1 border-t">
+                                      <div className="flex justify-between text-sm font-semibold pt-1 border-t-2 border-border">
                                         <span>Total Deductions</span>
-                                        <span className="text-red-600">
+                                        <span className="text-red-600 dark:text-red-400">
                                           {formatCurrency(record.totalDeductions)}
                                         </span>
                                       </div>

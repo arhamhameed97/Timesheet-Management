@@ -91,14 +91,14 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
   const getStatusColor = (status: PayrollStatus): string => {
     switch (status) {
       case PayrollStatus.APPROVED:
-        return 'bg-green-100 text-green-800 border-green-300';
+        return 'bg-green-500/20 dark:bg-green-500/30 text-green-700 dark:text-green-400 border-2 border-green-300/50 dark:border-green-500/30';
       case PayrollStatus.PAID:
-        return 'bg-blue-100 text-blue-800 border-blue-300';
+        return 'bg-blue-500/20 dark:bg-blue-500/30 text-blue-700 dark:text-blue-400 border-2 border-blue-300/50 dark:border-blue-500/30';
       case PayrollStatus.REJECTED:
-        return 'bg-red-100 text-red-800 border-red-300';
+        return 'bg-red-500/20 dark:bg-red-500/30 text-red-700 dark:text-red-400 border-2 border-red-300/50 dark:border-red-500/30';
       case PayrollStatus.PENDING:
       default:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+        return 'bg-yellow-500/20 dark:bg-yellow-500/30 text-yellow-700 dark:text-yellow-400 border-2 border-yellow-300/50 dark:border-yellow-500/30';
     }
   };
 
@@ -152,25 +152,25 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-xl font-bold">Payroll Calendar</CardTitle>
-            <p className="text-xs text-gray-500 mt-1">View your daily earnings and hours</p>
+            <p className="text-xs text-muted-foreground mt-1">View your daily earnings and hours</p>
           </div>
           <div className="flex items-center gap-2">
             <Button 
               variant="outline" 
               size="sm" 
               onClick={handlePreviousMonth}
-              className="hover:bg-gray-100 transition-colors"
+              className="hover:bg-muted/50 dark:hover:bg-muted transition-colors"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm font-semibold min-w-[140px] text-center text-gray-700">
+            <span className="text-sm font-semibold min-w-[140px] text-center text-foreground">
               {format(currentDate, 'MMMM yyyy')}
             </span>
             <Button 
               variant="outline" 
               size="sm" 
               onClick={handleNextMonth}
-              className="hover:bg-gray-100 transition-colors"
+              className="hover:bg-muted/50 dark:hover:bg-muted transition-colors"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -179,10 +179,10 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
       </CardHeader>
       <CardContent>
         {hasHoursButNoEarnings && (
-          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+          <div className="mb-4 p-3 bg-yellow-500/20 dark:bg-yellow-500/30 border-2 border-yellow-300/50 dark:border-yellow-500/30 rounded-md">
             <div className="flex items-start gap-2">
-              <div className="text-yellow-600 font-semibold text-sm">⚠️ Notice:</div>
-              <div className="text-yellow-800 text-sm flex-1">
+              <div className="text-yellow-600 dark:text-yellow-400 font-semibold text-sm">⚠️ Notice:</div>
+              <div className="text-yellow-700 dark:text-yellow-300 text-sm flex-1">
                 Hours are being tracked, but pay amounts are not calculated. This usually means your hourly rate is not set in your employee profile. Please contact your administrator to set your hourly rate so earnings can be calculated.
               </div>
             </div>
@@ -190,7 +190,7 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
         )}
         <div className="grid grid-cols-7 gap-2 mb-3">
           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
-            <div key={day} className="text-center text-xs font-semibold text-gray-600 uppercase tracking-wider py-2">
+            <div key={day} className="text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider py-2">
               {day}
             </div>
           ))}
@@ -235,16 +235,16 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
                 key={date.toISOString()}
                 onClick={() => handleDateClick(date)}
                 className={`
-                  group relative aspect-square p-2 text-sm rounded-lg border transition-all duration-300 ease-in-out
+                  group relative aspect-square p-2 text-sm rounded-lg border-2 transition-all duration-300 ease-in-out
                   flex flex-col items-center justify-center min-h-0 overflow-hidden
                   focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
-                  ${!isCurrentMonth ? 'text-gray-300 border-gray-100 bg-gray-50/50 cursor-not-allowed' : 'text-gray-900'}
+                  ${!isCurrentMonth ? 'text-muted-foreground border-border bg-muted/30 cursor-not-allowed' : 'text-foreground'}
                   ${isToday ? 'ring-2 ring-primary ring-offset-1 shadow-md' : ''}
                   ${payroll 
                     ? getStatusColor(payroll.status) + ' cursor-pointer hover:shadow-lg hover:scale-105 hover:z-10 active:scale-100' 
-                    : 'border-gray-200 bg-white hover:bg-gray-50 hover:shadow-md hover:scale-105 hover:z-10 hover:border-gray-300 active:scale-100'
+                    : 'border-2 border-border bg-card hover:bg-muted/50 dark:hover:bg-muted hover:shadow-md hover:scale-105 hover:z-10 active:scale-100'
                   }
-                  ${hasData ? 'hover:bg-gradient-to-br hover:from-blue-50 hover:to-green-50' : ''}
+                  ${hasData ? 'hover:bg-gradient-to-br hover:from-blue-500/10 hover:to-green-500/10 dark:hover:from-blue-500/20 dark:hover:to-green-500/20' : ''}
                 `}
                 title={
                   displayEarnings > 0
@@ -274,7 +274,7 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
                   `}>
                     {shouldShowHours && (
                       <div className="flex flex-col items-center">
-                        <div className="text-[8px] text-gray-600 font-semibold uppercase tracking-wider mb-0.5 leading-none">
+                        <div className="text-[8px] text-muted-foreground font-semibold uppercase tracking-wider mb-0.5 leading-none">
                           Hours
                         </div>
                         <div className="text-xs sm:text-sm font-bold text-blue-600 leading-tight">
@@ -286,7 +286,7 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
                     )}
                     {shouldShowEarnings && (
                       <div className="flex flex-col items-center">
-                        <div className="text-[8px] text-gray-600 font-semibold uppercase tracking-wider mb-0.5 leading-none">
+                        <div className="text-[8px] text-muted-foreground font-semibold uppercase tracking-wider mb-0.5 leading-none">
                           Pay
                         </div>
                         <div className="text-xs sm:text-sm font-bold text-green-600 leading-tight whitespace-nowrap">
@@ -307,28 +307,28 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
             );
           })}
         </div>
-        <div className="mt-6 pt-4 border-t border-gray-200">
+        <div className="mt-6 pt-4 border-t-2 border-border">
           <div className="flex flex-wrap items-center justify-between gap-4 text-xs">
             <div className="flex flex-wrap gap-4">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded border bg-yellow-100 border-yellow-300 shadow-sm" />
-                <span className="text-gray-600 font-medium">Pending</span>
+                <div className="w-3 h-3 rounded border-2 bg-yellow-500/20 dark:bg-yellow-500/30 border-yellow-300/50 dark:border-yellow-500/30 shadow-sm" />
+                <span className="text-muted-foreground font-medium">Pending</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded border bg-green-100 border-green-300 shadow-sm" />
-                <span className="text-gray-600 font-medium">Approved</span>
+                <div className="w-3 h-3 rounded border-2 bg-green-500/20 dark:bg-green-500/30 border-green-300/50 dark:border-green-500/30 shadow-sm" />
+                <span className="text-muted-foreground font-medium">Approved</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded border bg-blue-100 border-blue-300 shadow-sm" />
-                <span className="text-gray-600 font-medium">Paid</span>
+                <div className="w-3 h-3 rounded border-2 bg-blue-500/20 dark:bg-blue-500/30 border-blue-300/50 dark:border-blue-500/30 shadow-sm" />
+                <span className="text-muted-foreground font-medium">Paid</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded border bg-red-100 border-red-300 shadow-sm" />
-                <span className="text-gray-600 font-medium">Rejected</span>
+                <div className="w-3 h-3 rounded border-2 bg-red-500/20 dark:bg-red-500/30 border-red-300/50 dark:border-red-500/30 shadow-sm" />
+                <span className="text-muted-foreground font-medium">Rejected</span>
               </div>
             </div>
             {dailyEarnings && Object.keys(dailyEarnings).length > 0 && (
-              <div className="flex items-center gap-2 text-gray-500">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
                 <span className="italic text-xs">Hover over dates to view hours & pay</span>
               </div>
