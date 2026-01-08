@@ -822,11 +822,11 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
   const attendanceHistory = getAttendanceHistory();
 
   const getStatusBadgeClass = (status: string) => {
-    if (status === 'On Time') return 'bg-green-100 text-green-800';
-    if (status === 'Leave') return 'bg-red-100 text-red-800';
+    if (status === 'On Time') return 'bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-400';
+    if (status === 'Leave') return 'bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-400';
     if (status === 'Weekend') return 'bg-muted text-muted-foreground';
-    if (status === 'Late') return 'bg-yellow-100 text-yellow-800';
-    if (status === 'Absent') return 'bg-red-100 text-red-800';
+    if (status === 'Late') return 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400';
+    if (status === 'Absent') return 'bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-400';
     return 'bg-muted text-muted-foreground';
   };
 
@@ -843,7 +843,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
         {/* Left Column - 2/3 width */}
         <div className="lg:col-span-2 space-y-6">
           {/* Clock In/Out Card */}
-          <Card className="bg-gradient-to-br from-white to-purple-50">
+          <Card className="bg-card dark:bg-card/90 border-border">
             <CardContent className="p-6">
               <div className="flex items-stretch gap-6 h-full">
                 {/* Left Section - Clock In/Out Controls */}
@@ -859,7 +859,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                         <div>
                           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">CLOCK IN</span>
                           {todayAttendance?.checkInTime ? (
-                            <div className="text-green-600 font-semibold text-base mt-0.5">
+                            <div className="text-green-600 dark:text-green-400 font-semibold text-base mt-0.5">
                               {format(parseISO(todayAttendance.checkInTime), 'dd-MMM h:mm a')}
                             </div>
                           ) : (
@@ -877,7 +877,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                             // Show current checkout time if available
                             if (todayAttendance?.checkOutTime) {
                               return (
-                                <div className="text-red-600 font-semibold text-base mt-0.5">
+                                <div className="text-red-600 dark:text-red-400 font-semibold text-base mt-0.5">
                                   {format(parseISO(todayAttendance.checkOutTime), 'HH:mm')}
                                 </div>
                               );
@@ -889,7 +889,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                                 .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())[0];
                               if (lastCheckout) {
                                 return (
-                                  <div className="text-red-600 font-semibold text-base mt-0.5">
+                                  <div className="text-red-600 dark:text-red-400 font-semibold text-base mt-0.5">
                                     {format(parseISO(lastCheckout.time), 'HH:mm')}
                                   </div>
                                 );
@@ -915,7 +915,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                     {/* Break Time Display */}
                     {breakTime && breakTime.hours + breakTime.minutes + breakTime.seconds > 0 && (
                       <div className="mb-6">
-                        <div className="text-2xl font-bold text-orange-600 mb-1">
+                        <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-1">
                           {breakTime.hours.toString().padStart(2, '0')}:
                           {breakTime.minutes.toString().padStart(2, '0')}:
                           {breakTime.seconds.toString().padStart(2, '0')}
@@ -975,7 +975,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                 {/* Right Section - Stats Visuals */}
                 <div className="hidden md:flex flex-row gap-3 w-96 h-full">
                   {/* Progress Card */}
-                  <div className="bg-card rounded-xl border border-purple-100 p-5 shadow-sm flex-1 flex flex-col h-full">
+                  <div className="bg-card rounded-xl border border-border p-5 shadow-sm flex-1 flex flex-col h-full">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-sm font-bold text-foreground">Progress</h3>
                     </div>
@@ -1020,7 +1020,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                   </div>
                   
                   {/* Time Tracker Card */}
-                  <div className="bg-card rounded-xl border border-purple-100 p-5 shadow-sm flex-1 flex flex-col h-full items-center justify-center">
+                  <div className="bg-card rounded-xl border border-border p-5 shadow-sm flex-1 flex flex-col h-full items-center justify-center">
                     <div className="flex items-center justify-between mb-4 w-full">
                       <h3 className="text-sm font-bold text-foreground">Time tracker</h3>
                     </div>
@@ -1081,7 +1081,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-purple-600" />
+                <Calendar className="h-5 w-5 text-primary" />
                 Time Off
               </CardTitle>
             </CardHeader>
@@ -1208,7 +1208,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  <CalendarDays className="h-5 w-5 text-purple-600" />
+                  <CalendarDays className="h-5 w-5 text-primary" />
                   My Attendance
                 </CardTitle>
                 <div className="flex items-center gap-2">
@@ -1248,14 +1248,14 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                       </TableCell>
                       <TableCell>
                         {record.checkInTime ? (
-                          <span className="text-green-600">→ {formatTime(record.checkInTime)}</span>
+                          <span className="text-green-600 dark:text-green-400">→ {formatTime(record.checkInTime)}</span>
                         ) : (
                           '--'
                         )}
                       </TableCell>
                       <TableCell>
                         {record.checkOutTime ? (
-                          <span className="text-red-600">← {formatTime(record.checkOutTime)}</span>
+                          <span className="text-red-600 dark:text-red-400">← {formatTime(record.checkOutTime)}</span>
                         ) : (
                           '--'
                         )}
@@ -1266,7 +1266,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                             {record.status}
                           </span>
                           {record.isLeave && record.leaveDuration && (
-                            <span className="text-xs text-blue-600">
+                            <span className="text-xs text-blue-600 dark:text-blue-400">
                               {record.leaveDuration}
                             </span>
                           )}
@@ -1292,7 +1292,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-purple-600" />
+                  <FileText className="h-5 w-5 text-primary" />
                   My Tasks
                 </CardTitle>
                 <Select defaultValue="all" onValueChange={(value) => {
@@ -1329,19 +1329,19 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                     const getStatusColor = (status: string) => {
                       switch (status) {
                         case 'PENDING': return 'bg-muted text-foreground';
-                        case 'IN_PROGRESS': return 'bg-blue-100 text-blue-800';
-                        case 'COMPLETED': return 'bg-yellow-100 text-yellow-800';
-                        case 'APPROVED': return 'bg-green-100 text-green-800';
-                        case 'CANCELLED': return 'bg-red-100 text-red-800';
+                        case 'IN_PROGRESS': return 'bg-blue-500/20 text-blue-700 dark:bg-blue-500/30 dark:text-blue-400';
+                        case 'COMPLETED': return 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400';
+                        case 'APPROVED': return 'bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-400';
+                        case 'CANCELLED': return 'bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-400';
                         default: return 'bg-muted text-foreground';
                       }
                     };
 
                     const getPriorityColor = (priority: string) => {
                       switch (priority) {
-                        case 'HIGH': return 'bg-red-100 text-red-800';
-                        case 'MEDIUM': return 'bg-yellow-100 text-yellow-800';
-                        case 'LOW': return 'bg-green-100 text-green-800';
+                        case 'HIGH': return 'bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-400';
+                        case 'MEDIUM': return 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400';
+                        case 'LOW': return 'bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-400';
                         default: return 'bg-muted text-foreground';
                       }
                     };
@@ -1368,7 +1368,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                           <div className="text-xs text-muted-foreground">
                             Due: {format(new Date(task.dueDate), 'MMM dd, yyyy')}
                             {task.approvedBy && (
-                              <span className="ml-2 text-green-600">
+                              <span className="ml-2 text-green-600 dark:text-green-400">
                                 Approved by {task.approver?.name}
                               </span>
                             )}
@@ -1405,7 +1405,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                               </>
                             )}
                             {task.status === 'APPROVED' && (
-                              <span className="text-xs text-green-600 self-center">
+                              <span className="text-xs text-green-600 dark:text-green-400 self-center">
                                 Approved {task.approvedAt && format(new Date(task.approvedAt), 'MMM dd')}
                               </span>
                             )}
@@ -1450,7 +1450,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                           {format(parseISO(employee.startDate), 'MMM dd')} - {format(parseISO(employee.endDate), 'MMM dd')}
                         </div>
                       </div>
-                      <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                      <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-700 dark:bg-blue-500/30 dark:text-blue-400 rounded">
                         {employee.type}
                       </span>
                     </div>

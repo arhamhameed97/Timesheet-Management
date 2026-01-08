@@ -669,8 +669,8 @@ export default function AttendancePage() {
               <div key={index} className="flex items-center gap-2 text-xs">
                 <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-medium ${
                   event.type === 'in' 
-                    ? 'bg-green-100 text-green-700' 
-                    : 'bg-red-100 text-red-700'
+                    ? 'bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-400' 
+                    : 'bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-400'
                 }`}>
                   {event.type === 'in' ? 'IN' : 'OUT'}
                 </span>
@@ -875,54 +875,54 @@ export default function AttendancePage() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-4 gap-2 mb-2 flex-shrink-0">
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 p-2">
+          <Card className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 dark:from-purple-400/20 dark:to-purple-500/10 border-purple-300/50 dark:border-purple-500/30 p-2">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1">
-              <CardTitle className="text-[10px] font-medium text-purple-900">Total Hours</CardTitle>
-              <Clock className="h-3 w-3 text-purple-600" />
+              <CardTitle className="text-[10px] font-medium text-purple-700 dark:text-purple-300">Total Hours</CardTitle>
+              <Clock className="h-3 w-3 text-purple-600 dark:text-purple-400" />
             </CardHeader>
             <CardContent className="p-0 pt-1">
-              <div className="text-lg font-bold text-purple-900">{stats.totalHoursThisMonth.toFixed(1)}</div>
-              <p className="text-[10px] text-purple-700">This month</p>
+              <div className="text-lg font-bold text-purple-700 dark:text-purple-300">{stats.totalHoursThisMonth.toFixed(1)}</div>
+              <p className="text-[10px] text-purple-600 dark:text-purple-400">This month</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 p-2">
+          <Card className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 dark:from-blue-400/20 dark:to-blue-500/10 border-blue-300/50 dark:border-blue-500/30 p-2">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1">
-              <CardTitle className="text-[10px] font-medium text-blue-900">Days Worked</CardTitle>
-              <CalendarDays className="h-3 w-3 text-blue-600" />
+              <CardTitle className="text-[10px] font-medium text-blue-700 dark:text-blue-300">Days Worked</CardTitle>
+              <CalendarDays className="h-3 w-3 text-blue-600 dark:text-blue-400" />
             </CardHeader>
             <CardContent className="p-0 pt-1">
-              <div className="text-lg font-bold text-blue-900">{stats.daysWorkedThisMonth}</div>
-              <p className="text-[10px] text-blue-700">This month</p>
+              <div className="text-lg font-bold text-blue-700 dark:text-blue-300">{stats.daysWorkedThisMonth}</div>
+              <p className="text-[10px] text-blue-600 dark:text-blue-400">This month</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 p-2">
+          <Card className="bg-gradient-to-br from-green-500/20 to-green-600/10 dark:from-green-400/20 dark:to-green-500/10 border-green-300/50 dark:border-green-500/30 p-2">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1">
-              <CardTitle className="text-[10px] font-medium text-green-900">Streak</CardTitle>
-              <Award className="h-3 w-3 text-green-600" />
+              <CardTitle className="text-[10px] font-medium text-green-700 dark:text-green-300">Streak</CardTitle>
+              <Award className="h-3 w-3 text-green-600 dark:text-green-400" />
             </CardHeader>
             <CardContent className="p-0 pt-1">
-              <div className="text-lg font-bold text-green-900">{stats.currentStreak}</div>
-              <p className="text-[10px] text-green-700">Days in a row</p>
+              <div className="text-lg font-bold text-green-700 dark:text-green-300">{stats.currentStreak}</div>
+              <p className="text-[10px] text-green-600 dark:text-green-400">Days in a row</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 p-2">
+          <Card className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 dark:from-orange-400/20 dark:to-orange-500/10 border-orange-300/50 dark:border-orange-500/30 p-2">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-1">
-              <CardTitle className="text-[10px] font-medium text-orange-900">Avg Hours/Day</CardTitle>
-              <TrendingUp className="h-3 w-3 text-orange-600" />
+              <CardTitle className="text-[10px] font-medium text-orange-700 dark:text-orange-300">Avg Hours/Day</CardTitle>
+              <TrendingUp className="h-3 w-3 text-orange-600 dark:text-orange-400" />
             </CardHeader>
             <CardContent className="p-0 pt-1">
-              <div className="text-lg font-bold text-orange-900">{stats.averageHoursPerDay.toFixed(1)}</div>
-              <p className="text-[10px] text-orange-700">Per day</p>
+              <div className="text-lg font-bold text-orange-700 dark:text-orange-300">{stats.averageHoursPerDay.toFixed(1)}</div>
+              <p className="text-[10px] text-orange-600 dark:text-orange-400">Per day</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Today's Attendance Card - Full Width */}
         <Card className="border-2 shadow-lg flex-shrink min-h-0 flex flex-col">
-          <CardHeader className="bg-gradient-to-r from-primary/10 to-purple-100/50 rounded-t-lg p-3 flex-shrink-0">
+          <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 rounded-t-lg p-3 flex-shrink-0">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-bold">
                 {selectedEmployeeId && employees.find(e => e.id === selectedEmployeeId)
@@ -968,7 +968,7 @@ export default function AttendancePage() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
-                      <span className="text-sm font-medium text-green-700">Active Shift</span>
+                      <span className="text-sm font-medium text-green-600 dark:text-green-400">Active Shift</span>
                     </div>
                     <div className="text-sm text-muted-foreground">
                       <span className="font-medium">Checked in at:</span>{' '}
@@ -989,12 +989,12 @@ export default function AttendancePage() {
                 </div>
 
                 {/* Timer Display */}
-                <div className="bg-gradient-to-br from-primary/10 via-purple-50 to-blue-50 rounded-lg p-4 border border-primary/20">
+                <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-primary/10 dark:from-primary/20 dark:via-primary/10 dark:to-primary/20 rounded-lg p-4 border border-primary/20 dark:border-primary/30">
                   <div className="text-center">
                     <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Current Shift Time</div>
                     <div className="flex items-center justify-center gap-2 mb-1">
                       <Clock className="h-6 w-6 text-primary" />
-                      <div className="text-4xl font-mono font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                      <div className="text-4xl font-mono font-bold bg-gradient-to-r from-primary to-purple-600 dark:from-primary dark:to-purple-400 bg-clip-text text-transparent">
                         {elapsedTime}
                       </div>
                     </div>
@@ -1007,13 +1007,13 @@ export default function AttendancePage() {
                 {/* Break Time and Total Shift Time Display */}
                 {attendanceDetails && attendanceDetails.totalBreakTime > 0 && (
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3 border border-purple-200">
-                      <div className="text-xs uppercase tracking-wider text-purple-700 mb-1">Total Shift Time</div>
-                      <div className="text-lg font-bold text-purple-900">{totalShiftTime || '00:00:00'}</div>
+                    <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 dark:from-purple-400/20 dark:to-purple-500/10 rounded-lg p-3 border border-purple-300/50 dark:border-purple-500/30">
+                      <div className="text-xs uppercase tracking-wider text-purple-700 dark:text-purple-300 mb-1">Total Shift Time</div>
+                      <div className="text-lg font-bold text-purple-700 dark:text-purple-300">{totalShiftTime || '00:00:00'}</div>
                     </div>
-                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-3 border border-orange-200">
-                      <div className="text-xs uppercase tracking-wider text-orange-700 mb-1">Break Time</div>
-                      <div className="text-lg font-bold text-orange-900">{breakTime || '00:00:00'}</div>
+                    <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 dark:from-orange-400/20 dark:to-orange-500/10 rounded-lg p-3 border border-orange-300/50 dark:border-orange-500/30">
+                      <div className="text-xs uppercase tracking-wider text-orange-700 dark:text-orange-300 mb-1">Break Time</div>
+                      <div className="text-lg font-bold text-orange-700 dark:text-orange-300">{breakTime || '00:00:00'}</div>
                     </div>
                   </div>
                 )}
@@ -1038,13 +1038,13 @@ export default function AttendancePage() {
               <div className="space-y-2 flex-1 flex flex-col min-h-0">
                 {/* Shift Summary */}
                 <div className="grid grid-cols-2 gap-2 flex-shrink-0">
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-2 border border-purple-200">
-                    <div className="text-[10px] uppercase tracking-wider text-purple-700 mb-0.5">Total Shift Time</div>
-                    <div className="text-sm font-bold text-purple-900">{totalShiftTime || '00:00:00'}</div>
+                  <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 dark:from-purple-400/20 dark:to-purple-500/10 rounded-lg p-2 border border-purple-300/50 dark:border-purple-500/30">
+                    <div className="text-[10px] uppercase tracking-wider text-purple-700 dark:text-purple-300 mb-0.5">Total Shift Time</div>
+                    <div className="text-sm font-bold text-purple-700 dark:text-purple-300">{totalShiftTime || '00:00:00'}</div>
                   </div>
-                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-2 border border-orange-200">
-                    <div className="text-[10px] uppercase tracking-wider text-orange-700 mb-0.5">Break Time</div>
-                    <div className="text-sm font-bold text-orange-900">{breakTime || '00:00:00'}</div>
+                  <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 dark:from-orange-400/20 dark:to-orange-500/10 rounded-lg p-2 border border-orange-300/50 dark:border-orange-500/30">
+                    <div className="text-[10px] uppercase tracking-wider text-orange-700 dark:text-orange-300 mb-0.5">Break Time</div>
+                    <div className="text-sm font-bold text-orange-700 dark:text-orange-300">{breakTime || '00:00:00'}</div>
                   </div>
                 </div>
 
@@ -1179,14 +1179,14 @@ export default function AttendancePage() {
                               isToday
                                 ? 'border-primary bg-primary/10'
                                 : dayLeave
-                                ? 'border-blue-200 bg-blue-50 hover:bg-blue-100'
+                                ? 'border-blue-300/50 dark:border-blue-500/30 bg-blue-500/20 dark:bg-blue-500/30 hover:bg-blue-500/30 dark:hover:bg-blue-500/40'
                                 : dayAttendance
-                                ? 'border-green-200 bg-green-50 hover:bg-green-100'
+                                ? 'border-green-300/50 dark:border-green-500/30 bg-green-500/20 dark:bg-green-500/30 hover:bg-green-500/30 dark:hover:bg-green-500/40'
                                 : isPast
-                                ? 'border-border bg-gray-50 hover:bg-muted'
+                                ? 'border-border bg-muted/50 hover:bg-muted'
                                 : isFuture
-                                ? 'border-gray-100 bg-white opacity-50'
-                                : 'border-gray-100 bg-white'
+                                ? 'border-border bg-card/50 opacity-50'
+                                : 'border-border bg-card'
                             }`}
                           >
                             <div className={`text-[11px] font-bold mb-0.5 ${isToday ? 'text-primary' : 'text-foreground'}`}>
@@ -1194,12 +1194,12 @@ export default function AttendancePage() {
                             </div>
                             {dayLeave ? (
                               <div className="flex-1 flex flex-col justify-center space-y-0.5 min-h-0">
-                                <div className="text-[9px] text-blue-700 font-semibold leading-tight">
+                                <div className="text-[9px] text-blue-700 dark:text-blue-300 font-semibold leading-tight">
                                   {dayLeave.leaveDuration === 'HALF_DAY_MORNING' ? 'Half Day (AM)' :
                                    dayLeave.leaveDuration === 'HALF_DAY_AFTERNOON' ? 'Half Day (PM)' :
                                    'Leave'}
                                 </div>
-                                <div className="text-[8px] text-blue-600 leading-tight">
+                                <div className="text-[8px] text-blue-600 dark:text-blue-400 leading-tight">
                                   {dayLeave.type}
                                 </div>
                               </div>
@@ -1214,12 +1214,12 @@ export default function AttendancePage() {
                                   </div>
                                 )}
                                 {hoursWorked !== '-' && (
-                                  <div className="text-[9px] font-bold text-green-700 mt-0.5 leading-tight">
+                                  <div className="text-[9px] font-bold text-green-700 dark:text-green-400 mt-0.5 leading-tight">
                                     {hoursWorked}
                                   </div>
                                 )}
                                 {!dayAttendance.checkOutTime && (
-                                  <div className="text-[9px] text-green-600 font-semibold mt-0.5 leading-tight">Active</div>
+                                  <div className="text-[9px] text-green-600 dark:text-green-400 font-semibold mt-0.5 leading-tight">Active</div>
                                 )}
                               </div>
                             ) : isPast ? (
@@ -1262,8 +1262,8 @@ export default function AttendancePage() {
                               isToday
                                 ? 'border-primary bg-primary/10'
                                 : dayAttendance
-                                ? 'border-green-200 bg-green-50 hover:bg-green-100'
-                                : 'border-border bg-gray-50 hover:bg-muted'
+                                ? 'border-green-300/50 dark:border-green-500/30 bg-green-500/20 dark:bg-green-500/30 hover:bg-green-500/30 dark:hover:bg-green-500/40'
+                                : 'border-border bg-muted/50 hover:bg-muted'
                             }`}
                           >
                             <div className={`text-lg font-bold mb-2 ${isToday ? 'text-primary' : 'text-foreground'}`}>
@@ -1280,12 +1280,12 @@ export default function AttendancePage() {
                                   </div>
                                 )}
                                 {hoursWorked !== '-' && (
-                                  <div className="text-sm font-bold text-green-700 mt-1">
+                                  <div className="text-sm font-bold text-green-700 dark:text-green-400 mt-1">
                                     {hoursWorked}
                                   </div>
                                 )}
                                 {!dayAttendance.checkOutTime && (
-                                  <div className="text-sm text-green-600 font-semibold mt-1">Active</div>
+                                  <div className="text-sm text-green-600 dark:text-green-400 font-semibold mt-1">Active</div>
                                 )}
                               </div>
                             )}
@@ -1335,7 +1335,7 @@ export default function AttendancePage() {
                             {daysWithAttendance} days
                           </div>
                           {monthAttendance.length > 0 && (
-                            <div className="text-xs font-semibold text-green-700 mt-1">
+                            <div className="text-xs font-semibold text-green-700 dark:text-green-400 mt-1">
                               {(() => {
                                 let totalSeconds = 0;
                                 monthAttendance.forEach((record) => {
@@ -1419,10 +1419,10 @@ export default function AttendancePage() {
                     }
                     
                     const statusColors: Record<string, string> = {
-                      PRESENT: 'bg-green-100 text-green-800',
-                      ABSENT: 'bg-red-100 text-red-800',
-                      LATE: 'bg-yellow-100 text-yellow-800',
-                      HALF_DAY: 'bg-orange-100 text-orange-800',
+                      PRESENT: 'bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-400',
+                      ABSENT: 'bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-400',
+                      LATE: 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400',
+                      HALF_DAY: 'bg-orange-500/20 text-orange-700 dark:bg-orange-500/30 dark:text-orange-400',
                     };
 
                     return (
@@ -1447,7 +1447,7 @@ export default function AttendancePage() {
                               <span className="text-muted-foreground">•</span>
                               <span className="font-medium">Out: <span className="font-semibold">{formatTime(record.checkOutTime)}</span></span>
                               <span className="text-muted-foreground">•</span>
-                              <span className="font-bold text-green-700 text-[10px]">{hours}</span>
+                              <span className="font-bold text-green-700 dark:text-green-400 text-[10px]">{hours}</span>
                             </>
                           )}
                         </div>
@@ -1507,7 +1507,7 @@ export default function AttendancePage() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-sm font-medium text-muted-foreground">Total Hours</label>
-                      <p className="text-base font-semibold text-green-700">
+                      <p className="text-base font-semibold text-green-700 dark:text-green-400">
                         {getHoursWorked(dateAttendance)}
                       </p>
                     </div>
@@ -1515,11 +1515,11 @@ export default function AttendancePage() {
                       <label className="text-sm font-medium text-muted-foreground">Status</label>
                       <p className="text-base font-semibold">
                         <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                          dateAttendance.status === 'PRESENT' ? 'bg-green-100 text-green-800' :
-                          dateAttendance.status === 'ABSENT' ? 'bg-red-100 text-red-800' :
-                          dateAttendance.status === 'LATE' ? 'bg-yellow-100 text-yellow-800' :
-                          dateAttendance.status === 'HALF_DAY' ? 'bg-orange-100 text-orange-800' :
-                          'bg-muted text-gray-800'
+                          dateAttendance.status === 'PRESENT' ? 'bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-400' :
+                          dateAttendance.status === 'ABSENT' ? 'bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-400' :
+                          dateAttendance.status === 'LATE' ? 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400' :
+                          dateAttendance.status === 'HALF_DAY' ? 'bg-orange-500/20 text-orange-700 dark:bg-orange-500/30 dark:text-orange-400' :
+                          'bg-muted text-foreground'
                         }`}>
                           {dateAttendance.status}
                         </span>
@@ -1553,9 +1553,9 @@ export default function AttendancePage() {
                   {/* Break Time and Total Shift Time */}
                   {dateDetails && (dateDetails.totalBreakTime > 0 || dateDetails.totalShiftTime > 0) && (
                     <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                      <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
-                        <div className="text-xs uppercase tracking-wider text-purple-700 mb-1">Total Shift Time</div>
-                        <div className="text-xl font-bold text-purple-900">
+                      <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 dark:from-purple-400/20 dark:to-purple-500/10 rounded-lg p-4 border border-purple-300/50 dark:border-purple-500/30">
+                        <div className="text-xs uppercase tracking-wider text-purple-700 dark:text-purple-300 mb-1">Total Shift Time</div>
+                        <div className="text-xl font-bold text-purple-700 dark:text-purple-300">
                           {(() => {
                             const seconds = dateDetails.totalShiftTime;
                             const hours = Math.floor(seconds / 3600);
@@ -1564,9 +1564,9 @@ export default function AttendancePage() {
                           })()}
                         </div>
                       </div>
-                      <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
-                        <div className="text-xs uppercase tracking-wider text-orange-700 mb-1">Break Time</div>
-                        <div className="text-xl font-bold text-orange-900">
+                      <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/10 dark:from-orange-400/20 dark:to-orange-500/10 rounded-lg p-4 border border-orange-300/50 dark:border-orange-500/30">
+                        <div className="text-xs uppercase tracking-wider text-orange-700 dark:text-orange-300 mb-1">Break Time</div>
+                        <div className="text-xl font-bold text-orange-700 dark:text-orange-300">
                           {(() => {
                             const seconds = dateDetails.totalBreakTime;
                             const hours = Math.floor(seconds / 3600);
