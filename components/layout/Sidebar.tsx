@@ -15,6 +15,7 @@ import {
   BarChart3,
   Calendar,
   Briefcase,
+  Sparkles,
 } from 'lucide-react';
 import { UserRole } from '@prisma/client';
 import { hasPermission } from '@/lib/permission-matrix';
@@ -120,34 +121,46 @@ export function Sidebar({ role }: SidebarProps) {
   const items = getFilteredNavItems();
 
   return (
-    <div className="flex h-screen w-20 flex-col items-center bg-primary dark:bg-primary/90 py-6">
-      <div className="mb-8">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-foreground text-primary font-bold text-xl">
-          T
+    <div className="flex h-screen w-64 flex-col bg-primary dark:bg-primary/90">
+      {/* Logo Section */}
+      <div className="flex items-center gap-3 px-6 py-6 border-b-2 border-primary-foreground/10">
+        <div className="flex items-center justify-center">
+          <Sparkles className="h-6 w-6 text-primary-foreground" />
         </div>
+        <h1 className="text-lg font-semibold text-primary-foreground">Punchin</h1>
       </div>
-      <nav className="flex flex-1 flex-col gap-4">
-        {items.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
-          
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex flex-col items-center justify-center gap-1 rounded-lg w-14 py-2 transition-colors',
-                isActive
-                  ? 'bg-primary/80 dark:bg-primary/70 text-primary-foreground'
-                  : 'text-primary-foreground/70 hover:bg-primary/50 dark:hover:bg-primary/40 hover:text-primary-foreground'
-              )}
-            >
-              <Icon className="h-6 w-6" />
-              <span className="text-[10px] font-medium text-center leading-tight">{item.title}</span>
-            </Link>
-          );
-        })}
-      </nav>
+
+      {/* Menu Section */}
+      <div className="flex-1 overflow-y-auto py-4">
+        <div className="px-6 mb-4">
+          <h2 className="text-xs font-medium text-primary-foreground/60 uppercase tracking-wider">Menu</h2>
+        </div>
+        <nav className="flex flex-col gap-1 px-3">
+          {items.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+            
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 relative',
+                  isActive
+                    ? 'bg-primary-foreground/10 dark:bg-primary-foreground/15 border-l-4 border-primary-foreground text-primary-foreground font-medium'
+                    : 'text-primary-foreground/70 hover:bg-primary-foreground/5 dark:hover:bg-primary-foreground/10 hover:text-primary-foreground'
+                )}
+              >
+                <Icon className={cn(
+                  'h-5 w-5 flex-shrink-0',
+                  isActive ? 'text-primary-foreground' : 'text-primary-foreground/70'
+                )} />
+                <span className="text-sm">{item.title}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
     </div>
   );
 }
