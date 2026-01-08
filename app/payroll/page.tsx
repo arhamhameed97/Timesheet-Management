@@ -522,8 +522,8 @@ export default function PayrollPage() {
       <MainLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Payroll</h1>
-            <p className="text-gray-600 mt-1">View your payroll history and earnings</p>
+            <h1 className="text-3xl font-bold text-foreground">My Payroll</h1>
+            <p className="text-muted-foreground mt-1">View your payroll history and earnings</p>
           </div>
 
           {/* Summary Cards */}
@@ -648,7 +648,7 @@ export default function PayrollPage() {
                         <>
                           <TableRow 
                             key={record.id}
-                            className={canExpand ? 'cursor-pointer hover:bg-gray-50' : ''}
+                            className={canExpand ? 'cursor-pointer hover:bg-muted/50' : ''}
                             onClick={() => {
                               if (canExpand) {
                                 const newExpanded = new Set(expandedRows);
@@ -721,7 +721,7 @@ export default function PayrollPage() {
                           </TableRow>
                           {isExpanded && (hasBonuses || hasDeductions) && (
                             <TableRow>
-                              <TableCell colSpan={10} className="bg-gray-50">
+                              <TableCell colSpan={10} className="bg-muted/50">
                                 <div className="p-4 space-y-4">
                                   {hasBonuses && (
                                     <div>
@@ -858,7 +858,7 @@ export default function PayrollPage() {
                 {selectedPayroll.notes && (
                   <div>
                     <Label>Notes</Label>
-                    <p className="text-sm text-gray-600">{selectedPayroll.notes}</p>
+                    <p className="text-sm text-muted-foreground">{selectedPayroll.notes}</p>
                   </div>
                 )}
               </div>
@@ -875,8 +875,8 @@ export default function PayrollPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Payroll</h1>
-            <p className="text-gray-600 mt-1">Manage employee payroll</p>
+            <h1 className="text-3xl font-bold text-foreground">Payroll</h1>
+            <p className="text-muted-foreground mt-1">Manage employee payroll</p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -966,7 +966,7 @@ export default function PayrollPage() {
                 </div>
 
                 {/* Step 3: Payment Configuration */}
-                <div className="p-4 bg-gray-50 rounded-lg border">
+                <div className="p-4 bg-muted/50 rounded-lg border">
                   <Label className="text-sm font-semibold mb-2 block">Payment Configuration</Label>
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -1233,7 +1233,7 @@ export default function PayrollPage() {
                       <>
                         <TableRow 
                           key={record.id}
-                          className={canExpand ? 'cursor-pointer hover:bg-gray-50' : ''}
+                          className={canExpand ? 'cursor-pointer hover:bg-muted/50' : ''}
                           onClick={() => {
                             if (canExpand) {
                               const newExpanded = new Set(expandedRows);
@@ -1323,7 +1323,7 @@ export default function PayrollPage() {
                         </TableRow>
                         {isExpanded && (hasBonuses || hasDeductions) && (
                           <TableRow>
-                            <TableCell colSpan={10} className="bg-gray-50">
+                            <TableCell colSpan={10} className="bg-muted/50">
                               <div className="p-4 space-y-4">
                                 {hasBonuses && (
                                   <div>

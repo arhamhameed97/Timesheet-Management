@@ -120,9 +120,9 @@ export function Sidebar({ role }: SidebarProps) {
   const items = getFilteredNavItems();
 
   return (
-    <div className="flex h-screen w-20 flex-col items-center bg-[#6B46C1] py-6">
+    <div className="flex h-screen w-20 flex-col items-center bg-primary dark:bg-primary/90 py-6">
       <div className="mb-8">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-[#6B46C1] font-bold text-xl">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-foreground text-primary font-bold text-xl">
           T
         </div>
       </div>
@@ -138,8 +138,8 @@ export function Sidebar({ role }: SidebarProps) {
               className={cn(
                 'flex flex-col items-center justify-center gap-1 rounded-lg w-14 py-2 transition-colors',
                 isActive
-                  ? 'bg-[#8B5CF6] text-white'
-                  : 'text-white/70 hover:bg-[#8B5CF6]/50 hover:text-white'
+                  ? 'bg-primary/80 dark:bg-primary/70 text-primary-foreground'
+                  : 'text-primary-foreground/70 hover:bg-primary/50 dark:hover:bg-primary/40 hover:text-primary-foreground'
               )}
             >
               <Icon className="h-6 w-6" />

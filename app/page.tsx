@@ -23,9 +23,9 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
         <h1 className="text-4xl font-bold">Timesheet Management</h1>
-        <p className="mt-4 text-lg text-gray-600">Redirecting...</p>
+        <p className="mt-4 text-lg text-muted-foreground">Redirecting...</p>
       </div>
     </main>
   );

@@ -110,8 +110,8 @@ export default function TeamsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Teams</h1>
-            <p className="text-gray-600 mt-1">Manage your teams and collaboration</p>
+            <h1 className="text-3xl font-bold text-foreground">Teams</h1>
+            <p className="text-muted-foreground mt-1">Manage your teams and collaboration</p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>

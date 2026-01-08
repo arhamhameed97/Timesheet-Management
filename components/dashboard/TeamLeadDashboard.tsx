@@ -28,11 +28,11 @@ export function TeamLeadDashboard({ stats, user }: TeamLeadDashboardProps) {
     <div className="space-y-6">
       <div>
         <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-3xl font-bold text-gray-900">Team Lead Dashboard</h1>
+          <h1 className="text-3xl font-bold text-foreground">Team Lead Dashboard</h1>
           <RoleBadge role={user.role} />
           {user.designation && <DesignationBadge designation={user.designation} />}
         </div>
-        <p className="text-gray-600 mt-1">Welcome back, {user.name}! Lead your team to success.</p>
+        <p className="text-muted-foreground mt-1">Welcome back, {user.name}! Lead your team to success.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -87,20 +87,20 @@ export function TeamLeadDashboard({ stats, user }: TeamLeadDashboardProps) {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+            <div className="p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
               <Users className="h-6 w-6 text-purple-600 mb-2" />
               <h3 className="font-semibold">Manage Team</h3>
-              <p className="text-sm text-gray-600">View and manage team members</p>
+              <p className="text-sm text-muted-foreground">View and manage team members</p>
             </div>
-            <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+            <div className="p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
               <FileText className="h-6 w-6 text-purple-600 mb-2" />
               <h3 className="font-semibold">Review Timesheets</h3>
-              <p className="text-sm text-gray-600">Approve team timesheets</p>
+              <p className="text-sm text-muted-foreground">Approve team timesheets</p>
             </div>
-            <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
+            <div className="p-4 border rounded-lg hover:bg-muted/50 cursor-pointer">
               <TrendingUp className="h-6 w-6 text-purple-600 mb-2" />
               <h3 className="font-semibold">Team Progress</h3>
-              <p className="text-sm text-gray-600">Track team progress updates</p>
+              <p className="text-sm text-muted-foreground">Track team progress updates</p>
             </div>
           </div>
         </CardContent>

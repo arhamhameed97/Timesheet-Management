@@ -155,7 +155,7 @@ export default function LoginPage() {
 
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Login</CardTitle>
@@ -190,7 +190,7 @@ export default function LoginPage() {
                 <div>Status: {debugInfo.responseStatus} ({debugInfo.responseOk ? 'OK' : 'Failed'})</div>
                 <div>Has Token: {debugInfo.hasToken ? 'Yes' : 'No'}</div>
                 <div>User Role: {debugInfo.userRole || 'None'}</div>
-                <div className="mt-2 text-gray-600">Check console for full details</div>
+                <div className="mt-2 text-muted-foreground">Check console for full details</div>
                 <button 
                   onClick={() => {
                     sessionStorage.removeItem('login_debug');
@@ -236,7 +236,7 @@ export default function LoginPage() {
             >
               {loading ? 'Logging in...' : 'Login'}
             </Button>
-            <div className="text-center text-sm text-gray-600">
+            <div className="text-center text-sm text-muted-foreground">
               Don&apos;t have an account?{' '}
               <Link href="/register" className="text-primary hover:underline">
                 Register

@@ -656,7 +656,7 @@ export default function AttendancePage() {
       
       // If it's not the expected structure, return as-is
       if (!notesData.checkInOutHistory && !notesData.userNotes && !notesData.firstCheckIn) {
-        return <span className="text-gray-600">{notes}</span>;
+        return <span className="text-muted-foreground">{notes}</span>;
       }
 
       const parts: JSX.Element[] = [];
@@ -674,7 +674,7 @@ export default function AttendancePage() {
                 }`}>
                   {event.type === 'in' ? 'IN' : 'OUT'}
                 </span>
-                <span className="text-gray-600">
+                <span className="text-muted-foreground">
                   {format(new Date(event.time), 'HH:mm:ss')}
                 </span>
               </div>
@@ -686,9 +686,9 @@ export default function AttendancePage() {
       // Add user notes if available
       if (notesData.userNotes) {
         parts.push(
-          <div key="userNotes" className="mt-2 pt-2 border-t border-gray-200">
-            <div className="text-xs font-medium text-gray-700 mb-1">User Notes:</div>
-            <div className="text-xs text-gray-600">{notesData.userNotes}</div>
+          <div key="userNotes" className="mt-2 pt-2 border-t border-border">
+            <div className="text-xs font-medium text-foreground mb-1">User Notes:</div>
+            <div className="text-xs text-muted-foreground">{notesData.userNotes}</div>
           </div>
         );
       }
@@ -696,7 +696,7 @@ export default function AttendancePage() {
       return <div className="max-w-md">{parts}</div>;
     } catch {
       // If parsing fails, treat as plain text
-      return <span className="text-gray-600">{notes}</span>;
+      return <span className="text-muted-foreground">{notes}</span>;
     }
   };
 
@@ -838,8 +838,8 @@ export default function AttendancePage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-2 flex-shrink-0">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
-            <p className="text-gray-600 text-xs">
+            <h1 className="text-2xl font-bold text-foreground">Attendance</h1>
+            <p className="text-muted-foreground text-xs">
               {selectedEmployeeId && employees.find(e => e.id === selectedEmployeeId)
                 ? `Viewing: ${employees.find(e => e.id === selectedEmployeeId)?.name}`
                 : 'Track your daily attendance and work hours'}
@@ -849,7 +849,7 @@ export default function AttendancePage() {
             {/* Employee Selector for Managers/Admins */}
             {userInfo && (userInfo.role === 'MANAGER' || userInfo.role === 'COMPANY_ADMIN' || userInfo.role === 'SUPER_ADMIN' || userInfo.role === 'TEAM_LEAD') && employees.length > 0 && (
               <div className="flex items-center gap-2">
-                <Users className="h-3 w-3 text-gray-500" />
+                <Users className="h-3 w-3 text-muted-foreground" />
                 <select
                   value={selectedEmployeeId || ''}
                   onChange={(e) => handleEmployeeChange(e.target.value)}
@@ -929,7 +929,7 @@ export default function AttendancePage() {
                   ? `${employees.find(e => e.id === selectedEmployeeId)?.name}'s Attendance`
                   : 'Today\'s Attendance'}
               </CardTitle>
-              <div className="text-xs text-gray-600 font-medium">
+              <div className="text-xs text-muted-foreground font-medium">
                 {format(new Date(), 'EEEE, MMMM dd, yyyy')}
               </div>
             </div>
@@ -937,19 +937,19 @@ export default function AttendancePage() {
           <CardContent className="pt-3 p-3 flex-1 flex flex-col min-h-0">
             {selectedEmployeeId && !todayAttendance?.checkInTime ? (
               <div className="text-center py-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-3">
-                  <Clock className="h-8 w-8 text-gray-400" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-3">
+                  <Clock className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-base font-semibold text-gray-900 mb-2">Not Checked In</h3>
-                <p className="text-sm text-gray-500">No attendance record for today</p>
+                <h3 className="text-base font-semibold text-foreground mb-2">Not Checked In</h3>
+                <p className="text-sm text-muted-foreground">No attendance record for today</p>
               </div>
             ) : !todayAttendance?.checkInTime ? (
               <div className="text-center py-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-3">
-                  <Clock className="h-8 w-8 text-gray-400" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-3">
+                  <Clock className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <h3 className="text-base font-semibold text-gray-900 mb-2">Not Checked In</h3>
-                <p className="text-sm text-gray-500 mb-4">Start your work day by checking in</p>
+                <h3 className="text-base font-semibold text-foreground mb-2">Not Checked In</h3>
+                <p className="text-sm text-muted-foreground mb-4">Start your work day by checking in</p>
                 {!selectedEmployeeId && (
                   <Button
                     onClick={handleCheckIn}
@@ -970,9 +970,9 @@ export default function AttendancePage() {
                       <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
                       <span className="text-sm font-medium text-green-700">Active Shift</span>
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-muted-foreground">
                       <span className="font-medium">Checked in at:</span>{' '}
-                      <span className="text-gray-900">{formatTime(todayAttendance.checkInTime)}</span>
+                      <span className="text-foreground">{formatTime(todayAttendance.checkInTime)}</span>
                     </div>
                   </div>
                   {!selectedEmployeeId && (
@@ -991,14 +991,14 @@ export default function AttendancePage() {
                 {/* Timer Display */}
                 <div className="bg-gradient-to-br from-primary/10 via-purple-50 to-blue-50 rounded-lg p-4 border border-primary/20">
                   <div className="text-center">
-                    <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">Current Shift Time</div>
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Current Shift Time</div>
                     <div className="flex items-center justify-center gap-2 mb-1">
                       <Clock className="h-6 w-6 text-primary" />
                       <div className="text-4xl font-mono font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
                         {elapsedTime}
                       </div>
                     </div>
-                    <div className="text-xs text-gray-600">
+                    <div className="text-xs text-muted-foreground">
                       Started at {attendanceDetails?.firstCheckIn ? formatTime(attendanceDetails.firstCheckIn.toISOString()) : formatTime(todayAttendance.checkInTime)}
                     </div>
                   </div>
@@ -1021,13 +1021,13 @@ export default function AttendancePage() {
                 {/* Check-in/Check-out History */}
                 {attendanceDetails && attendanceDetails.checkInOutHistory.length > 2 && (
                   <div className="space-y-1 pt-2 border-t">
-                    <h4 className="text-xs font-semibold text-gray-700">Today&apos;s Timeline</h4>
+                    <h4 className="text-xs font-semibold text-foreground">Today&apos;s Timeline</h4>
                     <div className="space-y-1 max-h-24 overflow-y-auto">
                       {attendanceDetails.checkInOutHistory.map((event, index) => (
                         <div key={index} className="flex items-center gap-2 text-xs">
                           <div className={`w-2 h-2 rounded-full ${event.type === 'in' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                          <span className="text-gray-600">{event.type === 'in' ? 'Checked In' : 'Checked Out'}</span>
-                          <span className="text-gray-900 font-medium">{formatTime(event.time)}</span>
+                          <span className="text-muted-foreground">{event.type === 'in' ? 'Checked In' : 'Checked Out'}</span>
+                          <span className="text-foreground font-medium">{formatTime(event.time)}</span>
                         </div>
                       ))}
                     </div>
@@ -1051,13 +1051,13 @@ export default function AttendancePage() {
                 {/* Check-in/Check-out History */}
                 {attendanceDetails && attendanceDetails.checkInOutHistory.length > 0 && (
                   <div className="space-y-1 pt-1.5 border-t flex-shrink-0">
-                    <h4 className="text-[10px] font-semibold text-gray-700 mb-1">Today&apos;s Timeline</h4>
+                    <h4 className="text-[10px] font-semibold text-foreground mb-1">Today&apos;s Timeline</h4>
                     <div className="space-y-0.5">
                       {attendanceDetails.checkInOutHistory.map((event, index) => (
                         <div key={index} className="flex items-center gap-1.5 text-[10px]">
                           <div className={`w-1.5 h-1.5 rounded-full ${event.type === 'in' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                          <span className="text-gray-600">{event.type === 'in' ? 'Checked In' : 'Checked Out'}</span>
-                          <span className="text-gray-900 font-medium">{formatTime(event.time)}</span>
+                          <span className="text-muted-foreground">{event.type === 'in' ? 'Checked In' : 'Checked Out'}</span>
+                          <span className="text-foreground font-medium">{formatTime(event.time)}</span>
                         </div>
                       ))}
                     </div>
@@ -1145,7 +1145,7 @@ export default function AttendancePage() {
                     {/* Day Headers */}
                     <div className="grid grid-cols-7 gap-0 mb-0.5">
                       {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
-                        <div key={day} className="text-center text-[10px] font-semibold text-gray-600 py-0.5">
+                        <div key={day} className="text-center text-[10px] font-semibold text-muted-foreground py-0.5">
                           {day}
                         </div>
                       ))}
@@ -1183,13 +1183,13 @@ export default function AttendancePage() {
                                 : dayAttendance
                                 ? 'border-green-200 bg-green-50 hover:bg-green-100'
                                 : isPast
-                                ? 'border-gray-200 bg-gray-50 hover:bg-gray-100'
+                                ? 'border-border bg-gray-50 hover:bg-muted'
                                 : isFuture
                                 ? 'border-gray-100 bg-white opacity-50'
                                 : 'border-gray-100 bg-white'
                             }`}
                           >
-                            <div className={`text-[11px] font-bold mb-0.5 ${isToday ? 'text-primary' : 'text-gray-900'}`}>
+                            <div className={`text-[11px] font-bold mb-0.5 ${isToday ? 'text-primary' : 'text-foreground'}`}>
                               {format(day, 'd')}
                             </div>
                             {dayLeave ? (
@@ -1205,11 +1205,11 @@ export default function AttendancePage() {
                               </div>
                             ) : dayAttendance?.checkInTime ? (
                               <div className="flex-1 flex flex-col justify-center space-y-0.5 min-h-0">
-                                <div className="text-[9px] text-gray-700 font-medium leading-tight">
+                                <div className="text-[9px] text-foreground font-medium leading-tight">
                                   <span className="font-semibold">In:</span> {formatTime(dayAttendance.checkInTime)}
                                 </div>
                                 {dayAttendance.checkOutTime && (
-                                  <div className="text-[9px] text-gray-700 font-medium leading-tight">
+                                  <div className="text-[9px] text-foreground font-medium leading-tight">
                                     <span className="font-semibold">Out:</span> {formatTime(dayAttendance.checkOutTime)}
                                   </div>
                                 )}
@@ -1224,7 +1224,7 @@ export default function AttendancePage() {
                               </div>
                             ) : isPast ? (
                               <div className="flex-1 flex items-center justify-center min-h-0">
-                                <div className="text-[10px] text-gray-400">-</div>
+                                <div className="text-[10px] text-muted-foreground">-</div>
                               </div>
                             ) : (
                               <div className="flex-1 min-h-0"></div>
@@ -1241,7 +1241,7 @@ export default function AttendancePage() {
                     {/* Day Headers */}
                     <div className="grid grid-cols-7 gap-1 mb-1">
                       {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
-                        <div key={day} className="text-center text-sm font-semibold text-gray-600 py-1">
+                        <div key={day} className="text-center text-sm font-semibold text-muted-foreground py-1">
                           {day}
                         </div>
                       ))}
@@ -1263,19 +1263,19 @@ export default function AttendancePage() {
                                 ? 'border-primary bg-primary/10'
                                 : dayAttendance
                                 ? 'border-green-200 bg-green-50 hover:bg-green-100'
-                                : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
+                                : 'border-border bg-gray-50 hover:bg-muted'
                             }`}
                           >
-                            <div className={`text-lg font-bold mb-2 ${isToday ? 'text-primary' : 'text-gray-900'}`}>
+                            <div className={`text-lg font-bold mb-2 ${isToday ? 'text-primary' : 'text-foreground'}`}>
                               {format(day, 'd')}
                             </div>
                             {dayAttendance?.checkInTime && (
                               <div className="flex-1 flex flex-col justify-center space-y-1">
-                                <div className="text-sm text-gray-700 font-medium">
+                                <div className="text-sm text-foreground font-medium">
                                   <span className="font-semibold">In:</span> {formatTime(dayAttendance.checkInTime)}
                                 </div>
                                 {dayAttendance.checkOutTime && (
-                                  <div className="text-sm text-gray-700 font-medium">
+                                  <div className="text-sm text-foreground font-medium">
                                     <span className="font-semibold">Out:</span> {formatTime(dayAttendance.checkOutTime)}
                                   </div>
                                 )}
@@ -1291,7 +1291,7 @@ export default function AttendancePage() {
                             )}
                             {!dayAttendance && (
                               <div className="flex-1 flex items-center justify-center">
-                                <div className="text-base text-gray-400">-</div>
+                                <div className="text-base text-muted-foreground">-</div>
                               </div>
                             )}
                           </div>
@@ -1325,13 +1325,13 @@ export default function AttendancePage() {
                               ? 'border-primary bg-primary/10'
                               : monthAttendance.length > 0
                               ? 'border-green-200 bg-green-50'
-                              : 'border-gray-200 bg-gray-50'
+                              : 'border-border bg-gray-50'
                           }`}
                         >
-                          <div className={`text-sm font-bold mb-1 ${isCurrentMonth ? 'text-primary' : 'text-gray-900'}`}>
+                          <div className={`text-sm font-bold mb-1 ${isCurrentMonth ? 'text-primary' : 'text-foreground'}`}>
                             {format(month, 'MMM')}
                           </div>
-                          <div className="text-xs text-gray-600">
+                          <div className="text-xs text-muted-foreground">
                             {daysWithAttendance} days
                           </div>
                           {monthAttendance.length > 0 && (
@@ -1370,7 +1370,7 @@ export default function AttendancePage() {
                 </CardTitle>
                 <div className="flex gap-1">
                   <div className="relative">
-                    <Search className="absolute left-1.5 top-1.5 h-3 w-3 text-gray-400" />
+                    <Search className="absolute left-1.5 top-1.5 h-3 w-3 text-muted-foreground" />
                     <input
                       type="text"
                       placeholder="Search..."
@@ -1398,12 +1398,12 @@ export default function AttendancePage() {
               {loading ? (
                 <div className="text-center py-4">
                   <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                  <p className="mt-1 text-xs text-gray-500">Loading...</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Loading...</p>
                 </div>
               ) : filteredAttendance.length === 0 ? (
                 <div className="text-center py-6">
                   <Calendar className="h-6 w-6 text-gray-300 mx-auto mb-2" />
-                  <p className="text-xs text-gray-500">No records found</p>
+                  <p className="text-xs text-muted-foreground">No records found</p>
                 </div>
               ) : (
                 <div className="space-y-1.5">
@@ -1435,18 +1435,18 @@ export default function AttendancePage() {
                         }}
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-bold text-gray-900">{formatDate(record.date)}</span>
-                          <span className={`px-1.5 py-0.5 text-[9px] rounded-full font-semibold ${statusColors[record.status] || 'bg-gray-100 text-gray-800'}`}>
+                          <span className="text-xs font-bold text-foreground">{formatDate(record.date)}</span>
+                          <span className={`px-1.5 py-0.5 text-[9px] rounded-full font-semibold ${statusColors[record.status] || 'bg-muted text-gray-800'}`}>
                             {record.status}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[9px] text-gray-700">
+                        <div className="flex items-center gap-1.5 text-[9px] text-foreground">
                           <span className="font-medium">In: <span className="font-semibold">{formatTime(record.checkInTime)}</span></span>
                           {record.checkOutTime && (
                             <>
-                              <span className="text-gray-400">•</span>
+                              <span className="text-muted-foreground">•</span>
                               <span className="font-medium">Out: <span className="font-semibold">{formatTime(record.checkOutTime)}</span></span>
-                              <span className="text-gray-400">•</span>
+                              <span className="text-muted-foreground">•</span>
                               <span className="font-bold text-green-700 text-[10px]">{hours}</span>
                             </>
                           )}
@@ -1455,7 +1455,7 @@ export default function AttendancePage() {
                     );
                   })}
                   {filteredAttendance.length > 15 && (
-                    <div className="text-center text-[9px] text-gray-500 pt-1">
+                    <div className="text-center text-[9px] text-muted-foreground pt-1">
                       Showing 15 of {filteredAttendance.length}
                     </div>
                   )}
@@ -1484,7 +1484,7 @@ export default function AttendancePage() {
                 return (
                   <div className="py-8 text-center">
                     <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No attendance record for this date</p>
+                    <p className="text-muted-foreground">No attendance record for this date</p>
                   </div>
                 );
               }
@@ -1494,32 +1494,32 @@ export default function AttendancePage() {
                   {/* Basic Info */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-sm font-medium text-gray-500">Check-in Time</label>
+                      <label className="text-sm font-medium text-muted-foreground">Check-in Time</label>
                       <p className="text-base font-semibold">
                         {formatTime(dateAttendance.checkInTime) || 'Not checked in'}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-sm font-medium text-gray-500">Check-out Time</label>
+                      <label className="text-sm font-medium text-muted-foreground">Check-out Time</label>
                       <p className="text-base font-semibold">
                         {formatTime(dateAttendance.checkOutTime) || 'Not checked out'}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-sm font-medium text-gray-500">Total Hours</label>
+                      <label className="text-sm font-medium text-muted-foreground">Total Hours</label>
                       <p className="text-base font-semibold text-green-700">
                         {getHoursWorked(dateAttendance)}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-sm font-medium text-gray-500">Status</label>
+                      <label className="text-sm font-medium text-muted-foreground">Status</label>
                       <p className="text-base font-semibold">
                         <span className={`px-2 py-1 text-xs rounded-full font-medium ${
                           dateAttendance.status === 'PRESENT' ? 'bg-green-100 text-green-800' :
                           dateAttendance.status === 'ABSENT' ? 'bg-red-100 text-red-800' :
                           dateAttendance.status === 'LATE' ? 'bg-yellow-100 text-yellow-800' :
                           dateAttendance.status === 'HALF_DAY' ? 'bg-orange-100 text-orange-800' :
-                          'bg-gray-100 text-gray-800'
+                          'bg-muted text-gray-800'
                         }`}>
                           {dateAttendance.status}
                         </span>
@@ -1530,18 +1530,18 @@ export default function AttendancePage() {
                   {/* Check-in/Check-out History */}
                   {dateDetails && dateDetails.checkInOutHistory.length > 0 && (
                     <div className="space-y-2 pt-4 border-t">
-                      <h4 className="text-sm font-semibold text-gray-700">Check-in/Check-out Timeline</h4>
+                      <h4 className="text-sm font-semibold text-foreground">Check-in/Check-out Timeline</h4>
                       <div className="space-y-2 max-h-64 overflow-y-auto">
                         {dateDetails.checkInOutHistory.map((event, index) => (
                           <div key={index} className="flex items-center gap-3 text-sm p-2 rounded bg-gray-50">
                             <div className={`w-3 h-3 rounded-full ${event.type === 'in' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                            <span className="text-gray-600 font-medium">
+                            <span className="text-muted-foreground font-medium">
                               {event.type === 'in' ? 'Checked In' : 'Checked Out'}
                             </span>
-                            <span className="text-gray-900 font-semibold">
+                            <span className="text-foreground font-semibold">
                               {format(new Date(event.time), 'HH:mm:ss')}
                             </span>
-                            <span className="text-gray-500 text-xs ml-auto">
+                            <span className="text-muted-foreground text-xs ml-auto">
                               {format(new Date(event.time), 'MMM dd, yyyy')}
                             </span>
                           </div>
@@ -1581,8 +1581,8 @@ export default function AttendancePage() {
                   {/* Notes */}
                   {dateAttendance.notes && (
                     <div className="pt-4 border-t">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Notes</h4>
-                      <div className="text-sm text-gray-600">
+                      <h4 className="text-sm font-semibold text-foreground mb-2">Notes</h4>
+                      <div className="text-sm text-muted-foreground">
                         {formatNotes(dateAttendance.notes)}
                       </div>
                     </div>

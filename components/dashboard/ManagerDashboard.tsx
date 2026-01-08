@@ -220,7 +220,7 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
   const getTaskStatusBadgeClass = (status: TaskStatus) => {
     switch (status) {
       case TaskStatus.PENDING:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-gray-800';
       case TaskStatus.IN_PROGRESS:
         return 'bg-blue-100 text-blue-800';
       case TaskStatus.COMPLETED:
@@ -230,7 +230,7 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
       case TaskStatus.CANCELLED:
         return 'bg-red-100 text-red-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-gray-800';
     }
   };
 
@@ -243,7 +243,7 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
       case TaskPriority.LOW:
         return 'text-green-600 font-semibold';
       default:
-        return 'text-gray-600';
+        return 'text-muted-foreground';
     }
   };
 
@@ -366,11 +366,11 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
     <div className="space-y-6">
       <div>
         <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-3xl font-bold text-gray-900">Manager Dashboard</h1>
+          <h1 className="text-3xl font-bold text-foreground">Manager Dashboard</h1>
           <RoleBadge role={user.role} />
           {user.designation && <DesignationBadge designation={user.designation} />}
         </div>
-        <p className="text-gray-600 mt-1">Welcome back, {user.name}! Manage your team effectively.</p>
+        <p className="text-muted-foreground mt-1">Welcome back, {user.name}! Manage your team effectively.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -433,9 +433,9 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
         </CardHeader>
         <CardContent>
           {loadingAttendance ? (
-            <div className="text-center py-4 text-gray-500">Loading...</div>
+            <div className="text-center py-4 text-muted-foreground">Loading...</div>
           ) : recentAttendance.length === 0 ? (
-            <div className="text-center py-4 text-gray-500">
+            <div className="text-center py-4 text-muted-foreground">
               No employees have checked in today yet.
             </div>
           ) : (
@@ -466,7 +466,7 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
                             <span className="text-xs">Checked In</span>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1 text-gray-400">
+                          <div className="flex items-center gap-1 text-muted-foreground">
                             <XCircle className="h-4 w-4" />
                             <span className="text-xs">Not Checked In</span>
                           </div>
@@ -476,7 +476,7 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
                         {employee.attendanceStats?.todayStatus?.checkInTime ? (
                           <div className="flex flex-col">
                             <span className="text-sm font-medium">{formatTime(employee.attendanceStats.todayStatus.checkInTime)}</span>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-muted-foreground">
                               {format(new Date(employee.attendanceStats.todayStatus.checkInTime), 'MMM dd')}
                             </span>
                             <span className="text-xs text-green-600 font-medium mt-0.5">
@@ -487,14 +487,14 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
                             </span>
                           </div>
                         ) : (
-                          <span className="text-gray-400 text-sm">-</span>
+                          <span className="text-muted-foreground text-sm">-</span>
                         )}
                       </TableCell>
                       <TableCell>
                         {employee.attendanceStats?.todayStatus?.checkOutTime ? (
                           <div className="flex flex-col">
                             <span className="text-sm font-medium">{formatTime(employee.attendanceStats.todayStatus.checkOutTime)}</span>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-muted-foreground">
                               {format(new Date(employee.attendanceStats.todayStatus.checkOutTime), 'MMM dd')}
                             </span>
                           </div>
@@ -509,7 +509,7 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
                             </span>
                           </div>
                         ) : (
-                          <span className="text-gray-400 text-sm">-</span>
+                          <span className="text-muted-foreground text-sm">-</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
@@ -676,9 +676,9 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
         </CardHeader>
         <CardContent>
           {loadingAllTasks ? (
-            <div className="text-center py-8 text-gray-500">Loading tasks...</div>
+            <div className="text-center py-8 text-muted-foreground">Loading tasks...</div>
           ) : allTasks.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No tasks found</div>
+            <div className="text-center py-8 text-muted-foreground">No tasks found</div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -706,13 +706,13 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
                           <div className="flex flex-col">
                             <span className="font-medium">{task.title}</span>
                             {task.description && (
-                              <span className="text-xs text-gray-500 mt-1 line-clamp-2">{task.description}</span>
+                              <span className="text-xs text-muted-foreground mt-1 line-clamp-2">{task.description}</span>
                             )}
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">{task.creator.name}</div>
-                          <div className="text-xs text-gray-500">{format(parseISO(task.createdAt), 'MMM dd, yyyy')}</div>
+                          <div className="text-xs text-muted-foreground">{format(parseISO(task.createdAt), 'MMM dd, yyyy')}</div>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-1">
@@ -725,7 +725,7 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
                               </div>
                             ))}
                             {task.assignees.length > 2 && (
-                              <span className="text-xs text-gray-500">+{task.assignees.length - 2} more</span>
+                              <span className="text-xs text-muted-foreground">+{task.assignees.length - 2} more</span>
                             )}
                           </div>
                         </TableCell>
@@ -759,7 +759,7 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
                                 style={{ width: `${progressPercentage}%` }}
                               />
                             </div>
-                            <span className="text-xs text-gray-600 whitespace-nowrap">
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
                               {completedCount}/{totalAssignees}
                             </span>
                           </div>
@@ -809,18 +809,18 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
         </CardHeader>
         <CardContent>
           {loadingTasks ? (
-            <div className="text-center py-8 text-gray-500">Loading tasks...</div>
+            <div className="text-center py-8 text-muted-foreground">Loading tasks...</div>
           ) : pendingTasks.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No tasks pending approval</div>
+            <div className="text-center py-8 text-muted-foreground">No tasks pending approval</div>
           ) : (
             <div className="space-y-3">
               {pendingTasks.slice(0, 5).map((task) => (
                 <div key={task.id} className="p-4 border rounded-lg">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900">{task.title}</h4>
+                      <h4 className="font-semibold text-foreground">{task.title}</h4>
                       {task.description && (
-                        <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
                       )}
                     </div>
                     <span className={`px-2 py-1 text-xs rounded-full ${
@@ -832,7 +832,7 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
                     </span>
                   </div>
                   <div className="flex items-center justify-between mt-3">
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-muted-foreground">
                       <div>Assignees: {task.assignees.map((a: any) => a.user.name).join(', ')}</div>
                       <div>Due: {format(new Date(task.dueDate), 'MMM dd, yyyy')}</div>
                       {task.assignees.some((a: any) => a.completedAt) && (
@@ -882,21 +882,21 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
               <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
                 <Users className="h-6 w-6 text-purple-600 mb-2" />
                 <h3 className="font-semibold">View Team</h3>
-                <p className="text-sm text-gray-600">See all subordinate employees</p>
+                <p className="text-sm text-muted-foreground">See all subordinate employees</p>
               </div>
             </Link>
             <Link href="/timesheets">
               <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
                 <FileText className="h-6 w-6 text-purple-600 mb-2" />
                 <h3 className="font-semibold">Approve Timesheets</h3>
-                <p className="text-sm text-gray-600">Review and approve submissions</p>
+                <p className="text-sm text-muted-foreground">Review and approve submissions</p>
               </div>
             </Link>
             <Link href="/reports">
               <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer">
                 <TrendingUp className="h-6 w-6 text-purple-600 mb-2" />
                 <h3 className="font-semibold">Team Reports</h3>
-                <p className="text-sm text-gray-600">View team performance reports</p>
+                <p className="text-sm text-muted-foreground">View team performance reports</p>
               </div>
             </Link>
           </div>

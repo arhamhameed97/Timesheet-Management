@@ -55,8 +55,8 @@ export default function SuperAdminCompaniesPage() {
     <MainLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Companies</h1>
-          <p className="text-gray-600 mt-1">Manage all registered companies</p>
+          <h1 className="text-3xl font-bold text-foreground">Companies</h1>
+          <p className="text-muted-foreground mt-1">Manage all registered companies</p>
         </div>
 
         <Card>
@@ -67,7 +67,7 @@ export default function SuperAdminCompaniesPage() {
             {loading ? (
               <div className="text-center py-8">Loading...</div>
             ) : companies.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-muted-foreground">
                 No companies found.
               </div>
             ) : (

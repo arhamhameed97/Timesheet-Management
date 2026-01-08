@@ -824,18 +824,18 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
   const getStatusBadgeClass = (status: string) => {
     if (status === 'On Time') return 'bg-green-100 text-green-800';
     if (status === 'Leave') return 'bg-red-100 text-red-800';
-    if (status === 'Weekend') return 'bg-gray-100 text-gray-600';
+    if (status === 'Weekend') return 'bg-muted text-muted-foreground';
     if (status === 'Late') return 'bg-yellow-100 text-yellow-800';
     if (status === 'Absent') return 'bg-red-100 text-red-800';
-    return 'bg-gray-100 text-gray-600';
+    return 'bg-muted text-muted-foreground';
   };
 
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Welcome To {companyName}</h1>
-        <p className="text-gray-600 mt-1">Welcome back, {user.name}!</p>
+        <h1 className="text-2xl font-bold text-foreground">Welcome To {companyName}</h1>
+        <p className="text-muted-foreground mt-1">Welcome back, {user.name}!</p>
       </div>
 
       {/* Two Column Layout */}
@@ -849,30 +849,30 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                 {/* Left Section - Clock In/Out Controls */}
                 <div className="flex-1 flex flex-col justify-between">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-8">CLOCK IN / Clock Out</h2>
+                    <h2 className="text-xl font-bold text-foreground mb-8">CLOCK IN / Clock Out</h2>
                     
                     {/* Status Indicators */}
                     <div className="space-y-5 mb-8">
                       {/* Clock In Status */}
                       <div className="flex items-center gap-3">
-                        <div className={`w-3 h-3 rounded-full ${todayAttendance?.checkInTime ? 'bg-green-500 shadow-lg shadow-green-500/50' : 'bg-gray-300'}`}></div>
+                        <div className={`w-3 h-3 rounded-full ${todayAttendance?.checkInTime ? 'bg-green-500 shadow-lg shadow-green-500/50' : 'bg-muted'}`}></div>
                         <div>
-                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">CLOCK IN</span>
+                          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">CLOCK IN</span>
                           {todayAttendance?.checkInTime ? (
                             <div className="text-green-600 font-semibold text-base mt-0.5">
                               {format(parseISO(todayAttendance.checkInTime), 'dd-MMM h:mm a')}
                             </div>
                           ) : (
-                            <div className="text-gray-400 text-base mt-0.5">-- --</div>
+                            <div className="text-muted-foreground text-base mt-0.5">-- --</div>
                           )}
                         </div>
                       </div>
 
                       {/* Clock Out Status */}
                       <div className="flex items-center gap-3">
-                        <div className={`w-3 h-3 rounded-full ${(todayAttendance?.checkOutTime || (parseAttendanceDetails?.checkInOutHistory && parseAttendanceDetails.checkInOutHistory.some(e => e.type === 'out'))) ? 'bg-red-500 shadow-lg shadow-red-500/50' : 'bg-gray-300'}`}></div>
+                        <div className={`w-3 h-3 rounded-full ${(todayAttendance?.checkOutTime || (parseAttendanceDetails?.checkInOutHistory && parseAttendanceDetails.checkInOutHistory.some(e => e.type === 'out'))) ? 'bg-red-500 shadow-lg shadow-red-500/50' : 'bg-muted'}`}></div>
                         <div>
-                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Clock Out</span>
+                          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Clock Out</span>
                           {(() => {
                             // Show current checkout time if available
                             if (todayAttendance?.checkOutTime) {
@@ -895,7 +895,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                                 );
                               }
                             }
-                            return <div className="text-gray-400 text-base mt-0.5">00:00:00</div>;
+                            return <div className="text-muted-foreground text-base mt-0.5">00:00:00</div>;
                           })()}
                         </div>
                       </div>
@@ -904,11 +904,11 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                     {/* Shift Duration */}
                     {shiftDuration && (
                       <div className="mb-6">
-                        <div className="text-5xl font-bold text-gray-900 mb-1">
+                        <div className="text-5xl font-bold text-foreground mb-1">
                           {shiftDuration.hours.toString().padStart(2, '0')}:
                           {shiftDuration.minutes.toString().padStart(2, '0')} hrs
                         </div>
-                        <div className="text-sm font-medium text-gray-500">Today&apos;s Hours</div>
+                        <div className="text-sm font-medium text-muted-foreground">Today&apos;s Hours</div>
                       </div>
                     )}
 
@@ -920,7 +920,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                           {breakTime.minutes.toString().padStart(2, '0')}:
                           {breakTime.seconds.toString().padStart(2, '0')}
                         </div>
-                        <div className="text-sm font-medium text-gray-500">Break Time</div>
+                        <div className="text-sm font-medium text-muted-foreground">Break Time</div>
                       </div>
                     )}
                   </div>
@@ -952,7 +952,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                         <Button
                           variant="outline"
                           size="lg"
-                          className="border-gray-300 hover:bg-gray-50 shadow-sm hover:shadow-md transition-all"
+                          className="border-border hover:bg-muted/50 shadow-sm hover:shadow-md transition-all"
                         >
                           <Coffee className="h-4 w-4 mr-2" />
                           Break In
@@ -975,13 +975,13 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                 {/* Right Section - Stats Visuals */}
                 <div className="hidden md:flex flex-row gap-3 w-96 h-full">
                   {/* Progress Card */}
-                  <div className="bg-white rounded-xl border border-purple-100 p-5 shadow-sm flex-1 flex flex-col h-full">
+                  <div className="bg-card rounded-xl border border-purple-100 p-5 shadow-sm flex-1 flex flex-col h-full">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-bold text-gray-800">Progress</h3>
+                      <h3 className="text-sm font-bold text-foreground">Progress</h3>
                     </div>
                     <div className="mb-4">
-                      <div className="text-3xl font-bold text-gray-900 mb-1">{weeklyStats.totalHoursDecimal} h</div>
-                      <div className="text-xs font-medium text-gray-500">Work Time this week</div>
+                      <div className="text-3xl font-bold text-foreground mb-1">{weeklyStats.totalHoursDecimal} h</div>
+                      <div className="text-xs font-medium text-muted-foreground">Work Time this week</div>
                     </div>
                     {/* Weekly Bar Chart */}
                     <div className="flex items-end justify-between gap-1 flex-1 min-h-[100px]">
@@ -995,7 +995,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                         return (
                           <div key={index} className="flex flex-col items-center flex-1 h-full justify-end">
                             {hasData && (
-                              <div className="text-xs font-semibold text-gray-700 mb-1.5">
+                              <div className="text-xs font-semibold text-foreground mb-1.5">
                                 {day.hours > 0 ? `${day.hours}h` : day.minutes > 0 ? `${day.minutes}m` : ''}
                               </div>
                             )}
@@ -1004,15 +1004,15 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                                 isToday && hasData
                                   ? 'bg-yellow-500 shadow-md'
                                   : hasData
-                                  ? 'bg-gray-800'
-                                  : 'bg-gray-200 border-2 border-dashed border-gray-300'
+                                  ? 'bg-foreground'
+                                  : 'bg-muted border-2 border-dashed border-border'
                               }`}
                               style={{ height: hasData ? `${Math.max(heightPercent, 15)}%` : '25%' }}
                             />
                             <div className={`mt-2 w-1.5 h-1.5 rounded-full ${
-                              hasData ? 'bg-gray-800' : 'bg-gray-300'
+                              hasData ? 'bg-foreground' : 'bg-muted'
                             }`} />
-                            <div className="text-[10px] font-medium text-gray-500 mt-1.5">{day.day}</div>
+                            <div className="text-[10px] font-medium text-muted-foreground mt-1.5">{day.day}</div>
                           </div>
                         );
                       })}
@@ -1020,9 +1020,9 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                   </div>
                   
                   {/* Time Tracker Card */}
-                  <div className="bg-white rounded-xl border border-purple-100 p-5 shadow-sm flex-1 flex flex-col h-full items-center justify-center">
+                  <div className="bg-card rounded-xl border border-purple-100 p-5 shadow-sm flex-1 flex flex-col h-full items-center justify-center">
                     <div className="flex items-center justify-between mb-4 w-full">
-                      <h3 className="text-sm font-bold text-gray-800">Time tracker</h3>
+                      <h3 className="text-sm font-bold text-foreground">Time tracker</h3>
                     </div>
                     {/* Circular Timer */}
                     <div className="relative w-32 h-32 mx-auto flex-shrink-0">
@@ -1057,16 +1057,16 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
                         {shiftDuration ? (
                           <>
-                            <div className="text-2xl font-bold text-gray-900">
+                            <div className="text-2xl font-bold text-foreground">
                               {shiftDuration.hours.toString().padStart(2, '0')}:
                               {shiftDuration.minutes.toString().padStart(2, '0')}
                             </div>
-                            <div className="text-xs font-medium text-gray-500 mt-1">Work Time</div>
+                            <div className="text-xs font-medium text-muted-foreground mt-1">Work Time</div>
                           </>
                         ) : (
                           <>
-                            <div className="text-2xl font-bold text-gray-400">00:00</div>
-                            <div className="text-xs font-medium text-gray-400 mt-1">Work Time</div>
+                            <div className="text-2xl font-bold text-muted-foreground">00:00</div>
+                            <div className="text-xs font-medium text-muted-foreground mt-1">Work Time</div>
                           </>
                         )}
                       </div>
@@ -1088,8 +1088,8 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-sm text-gray-600 mb-1">Annual Leave</div>
-                  <div className="text-2xl font-bold text-gray-900">
+                  <div className="text-sm text-muted-foreground mb-1">Annual Leave</div>
+                  <div className="text-2xl font-bold text-foreground">
                     {annualLeave.taken} / {annualLeave.total} Days
                   </div>
                 </div>
@@ -1151,7 +1151,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                           disabled={leaveForm.leaveDuration !== 'FULL_DAY'}
                         />
                         {leaveForm.leaveDuration !== 'FULL_DAY' && (
-                          <p className="text-xs text-gray-500">End date is automatically set to start date for half-day leaves</p>
+                          <p className="text-xs text-muted-foreground">End date is automatically set to start date for half-day leaves</p>
                         )}
                       </div>
                       <div className="space-y-2">
@@ -1271,7 +1271,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                             </span>
                           )}
                           {record.isLeave && record.leaveType && (
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-muted-foreground">
                               {record.leaveType}
                             </span>
                           )}
@@ -1314,12 +1314,12 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
             </CardHeader>
             <CardContent>
               {loadingTasks ? (
-                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                   <Search className="h-12 w-12 mb-4 opacity-50" />
                   <p className="text-sm">Loading tasks...</p>
                 </div>
               ) : tasks.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                   <Search className="h-12 w-12 mb-4 opacity-50" />
                   <p className="text-sm">No Tasks Available</p>
                 </div>
@@ -1328,12 +1328,12 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                   {tasks.map((task) => {
                     const getStatusColor = (status: string) => {
                       switch (status) {
-                        case 'PENDING': return 'bg-gray-100 text-gray-800';
+                        case 'PENDING': return 'bg-muted text-foreground';
                         case 'IN_PROGRESS': return 'bg-blue-100 text-blue-800';
                         case 'COMPLETED': return 'bg-yellow-100 text-yellow-800';
                         case 'APPROVED': return 'bg-green-100 text-green-800';
                         case 'CANCELLED': return 'bg-red-100 text-red-800';
-                        default: return 'bg-gray-100 text-gray-800';
+                        default: return 'bg-muted text-foreground';
                       }
                     };
 
@@ -1342,17 +1342,17 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                         case 'HIGH': return 'bg-red-100 text-red-800';
                         case 'MEDIUM': return 'bg-yellow-100 text-yellow-800';
                         case 'LOW': return 'bg-green-100 text-green-800';
-                        default: return 'bg-gray-100 text-gray-800';
+                        default: return 'bg-muted text-foreground';
                       }
                     };
 
                     return (
-                      <div key={task.id} className="p-4 border rounded-lg hover:bg-gray-50">
+                      <div key={task.id} className="p-4 border rounded-lg hover:bg-muted/50">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900">{task.title}</h4>
+                            <h4 className="font-semibold text-foreground">{task.title}</h4>
                             {task.description && (
-                              <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                              <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
                             )}
                           </div>
                           <div className="flex gap-2 ml-4">
@@ -1365,7 +1365,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                           </div>
                         </div>
                         <div className="flex items-center justify-between mt-3">
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-muted-foreground">
                             Due: {format(new Date(task.dueDate), 'MMM dd, yyyy')}
                             {task.approvedBy && (
                               <span className="ml-2 text-green-600">
@@ -1432,11 +1432,11 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
           <Card>
             <CardHeader>
               <CardTitle>Who is OFF</CardTitle>
-              <p className="text-sm text-gray-500 mt-1">Employee ({employeesOnLeave.length})</p>
+              <p className="text-sm text-muted-foreground mt-1">Employee ({employeesOnLeave.length})</p>
             </CardHeader>
             <CardContent>
               {employeesOnLeave.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                   <User className="h-12 w-12 mb-4 opacity-50" />
                   <p className="text-sm">No Employee Leave Data</p>
                 </div>
@@ -1446,7 +1446,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                     <div key={employee.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
                         <div className="font-medium text-sm">{employee.name}</div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-muted-foreground">
                           {format(parseISO(employee.startDate), 'MMM dd')} - {format(parseISO(employee.endDate), 'MMM dd')}
                         </div>
                       </div>

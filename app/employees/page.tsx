@@ -416,8 +416,8 @@ export default function EmployeesPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Employees</h1>
-            <p className="text-gray-600 mt-1">Manage your team members</p>
+            <h1 className="text-3xl font-bold text-foreground">Employees</h1>
+            <p className="text-muted-foreground mt-1">Manage your team members</p>
           </div>
           <div className="flex gap-2">
             {(user?.role === UserRole.MANAGER || user?.role === UserRole.COMPANY_ADMIN || user?.role === UserRole.SUPER_ADMIN) && (
@@ -624,10 +624,10 @@ export default function EmployeesPage() {
                       </>
                     ) : (
                       <>
-                        <div className="p-2 bg-white rounded border">
+                        <div className="p-2 bg-card rounded border">
                           <div className="flex items-center gap-2">
                             <CompanyBadge company={user?.company || null} />
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                               Employee will be assigned to your company
                             </span>
                           </div>
@@ -689,8 +689,8 @@ export default function EmployeesPage() {
                 </div>
                 
                 {/* Payment Type Section */}
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <Label className="text-sm font-semibold text-gray-900 mb-2 block">Payment Information</Label>
+                <div className="p-4 bg-muted/50 rounded-lg border border-border">
+                  <Label className="text-sm font-semibold text-foreground mb-2 block">Payment Information</Label>
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="paymentType">Payment Type</Label>
@@ -893,7 +893,7 @@ export default function EmployeesPage() {
                       <TableCell>
                         {employee.attendanceStats?.todayStatus?.checkInTime ? (
                           <div className="flex flex-col gap-0.5">
-                            <span className="text-xs font-medium text-gray-900">
+                            <span className="text-xs font-medium text-foreground">
                               {formatTime(employee.attendanceStats.todayStatus.checkInTime)}
                             </span>
                             <span className="text-xs text-gray-500">
@@ -907,7 +907,7 @@ export default function EmployeesPage() {
                       <TableCell>
                         {employee.attendanceStats?.todayStatus?.checkOutTime ? (
                           <div className="flex flex-col gap-0.5">
-                            <span className="text-xs font-medium text-gray-900">
+                            <span className="text-xs font-medium text-foreground">
                               {formatTime(employee.attendanceStats.todayStatus.checkOutTime)}
                             </span>
                             <span className="text-xs text-gray-500">
@@ -938,7 +938,7 @@ export default function EmployeesPage() {
                       <TableCell>
                         {employee.attendanceStats ? (
                           <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-1 text-xs text-gray-600">
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               <Clock className="h-3 w-3" />
                               <span>{employee.attendanceStats.daysWorkedThisMonth} days</span>
                             </div>
@@ -1036,7 +1036,7 @@ export default function EmployeesPage() {
                     </CardHeader>
                     <CardContent className="space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Status:</span>
+                        <span className="text-sm text-muted-foreground">Status:</span>
                         <span className={`text-sm font-medium ${
                           selectedEmployee.attendanceStats?.todayStatus?.checkedIn 
                             ? 'text-green-600' 
@@ -1052,21 +1052,21 @@ export default function EmployeesPage() {
                       {selectedEmployee.attendanceStats?.todayStatus?.checkInTime && (
                         <>
                           <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Check-In:</span>
+                            <span className="text-sm text-muted-foreground">Check-In:</span>
                             <span className="text-sm font-medium">
                               {formatDateTime(selectedEmployee.attendanceStats.todayStatus.checkInTime)}
                             </span>
                           </div>
                           {selectedEmployee.attendanceStats.todayStatus.checkOutTime && (
                             <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">Check-Out:</span>
+                              <span className="text-sm text-muted-foreground">Check-Out:</span>
                               <span className="text-sm font-medium">
                                 {formatDateTime(selectedEmployee.attendanceStats.todayStatus.checkOutTime)}
                               </span>
                             </div>
                           )}
                           <div className="flex justify-between pt-2 border-t">
-                            <span className="text-sm text-gray-600">Total Work Time:</span>
+                            <span className="text-sm text-muted-foreground">Total Work Time:</span>
                             <span className="text-sm font-bold text-primary">
                               {calculateWorkTime(
                                 selectedEmployee.attendanceStats.todayStatus.checkInTime,
@@ -1084,13 +1084,13 @@ export default function EmployeesPage() {
                     </CardHeader>
                     <CardContent className="space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Days Worked:</span>
+                        <span className="text-sm text-muted-foreground">Days Worked:</span>
                         <span className="text-sm font-medium">
                           {selectedEmployee.attendanceStats?.daysWorkedThisMonth || 0} days
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Pending Timesheets:</span>
+                        <span className="text-sm text-muted-foreground">Pending Timesheets:</span>
                         <span className="text-sm font-medium text-orange-600">
                           {selectedEmployee.attendanceStats?.pendingTimesheets || 0}
                         </span>
@@ -1147,31 +1147,31 @@ export default function EmployeesPage() {
             </DialogHeader>
             {selectedEmployee && (
               <div className="space-y-4">
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="p-4 bg-muted/50 rounded-lg border border-border">
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Name:</span>
+                      <span className="text-sm text-muted-foreground">Name:</span>
                       <span className="text-sm font-medium">{selectedEmployee.name}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Email:</span>
+                      <span className="text-sm text-muted-foreground">Email:</span>
                       <span className="text-sm font-medium">{selectedEmployee.email}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Role:</span>
+                      <span className="text-sm text-muted-foreground">Role:</span>
                       <span className="text-sm font-medium">{selectedEmployee.role.replace('_', ' ')}</span>
                     </div>
                     {selectedEmployee.designation && (
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Designation:</span>
+                        <span className="text-sm text-muted-foreground">Designation:</span>
                         <span className="text-sm font-medium">{selectedEmployee.designation.name}</span>
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <Label className="text-sm font-semibold text-gray-900 mb-2 block">Payment Information</Label>
+                <div className="p-4 bg-muted/50 rounded-lg border border-border">
+                  <Label className="text-sm font-semibold text-foreground mb-2 block">Payment Information</Label>
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="profilePaymentType">Payment Type</Label>

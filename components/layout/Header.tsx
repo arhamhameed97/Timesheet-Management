@@ -86,10 +86,10 @@ export function Header() {
     .slice(0, 2);
 
   return (
-    <header className="sticky top-0 z-10 border-b bg-white">
+    <header className="sticky top-0 z-10 border-b bg-background">
       <div className="flex h-16 items-center justify-between px-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">
+          <h1 className="text-xl font-semibold text-foreground">
             {user.company?.name || 'Timesheet Management'}
           </h1>
         </div>

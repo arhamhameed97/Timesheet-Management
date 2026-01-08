@@ -76,7 +76,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
       <Card className="w-full max-w-2xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Register Company</CardTitle>
@@ -166,7 +166,7 @@ export default function RegisterPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Registering...' : 'Register Company'}
             </Button>
-            <div className="text-center text-sm text-gray-600">
+            <div className="text-center text-sm text-muted-foreground">
               Already have an account?{' '}
               <Link href="/login" className="text-primary hover:underline">
                 Login

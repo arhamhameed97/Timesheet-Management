@@ -174,7 +174,7 @@ export default function LeavesPage() {
       case 'REJECTED':
         return 'bg-red-100 text-red-800';
       case 'CANCELLED':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-foreground';
       default:
         return 'bg-yellow-100 text-yellow-800';
     }
@@ -185,8 +185,8 @@ export default function LeavesPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Leave Management</h1>
-            <p className="text-gray-600 mt-1">Request and manage leaves</p>
+            <h1 className="text-3xl font-bold text-foreground">Leave Management</h1>
+            <p className="text-muted-foreground mt-1">Request and manage leaves</p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -249,7 +249,7 @@ export default function LeavesPage() {
                     disabled={formData.leaveDuration !== 'FULL_DAY'}
                   />
                   {formData.leaveDuration !== 'FULL_DAY' && (
-                    <p className="text-xs text-gray-500">End date is automatically set to start date for half-day leaves</p>
+                    <p className="text-xs text-muted-foreground">End date is automatically set to start date for half-day leaves</p>
                   )}
                 </div>
                 <div className="space-y-2">
@@ -297,7 +297,7 @@ export default function LeavesPage() {
             {loading ? (
               <div className="text-center py-8">Loading...</div>
             ) : leaves.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-muted-foreground">
                 No leave requests found.
               </div>
             ) : (

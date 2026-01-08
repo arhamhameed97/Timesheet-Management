@@ -9,8 +9,8 @@ export default function ReportsPage() {
     <MainLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Reports</h1>
-          <p className="text-gray-600 mt-1">View analytics and insights</p>
+          <h1 className="text-3xl font-bold text-foreground">Reports</h1>
+          <p className="text-muted-foreground mt-1">View analytics and insights</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -65,7 +65,7 @@ export default function ReportsPage() {
               <CardTitle>Attendance Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600">Attendance reports coming soon...</p>
+              <p className="text-sm text-muted-foreground">Attendance reports coming soon...</p>
             </CardContent>
           </Card>
 
@@ -74,7 +74,7 @@ export default function ReportsPage() {
               <CardTitle>Timesheet Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600">Timesheet reports coming soon...</p>
+              <p className="text-sm text-muted-foreground">Timesheet reports coming soon...</p>
             </CardContent>
           </Card>
         </div>

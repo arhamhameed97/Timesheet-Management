@@ -9,8 +9,8 @@ export default function SuperAdminDashboardPage() {
     <MainLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
-          <p className="text-gray-600 mt-1">System-wide overview and analytics</p>
+          <h1 className="text-3xl font-bold text-foreground">Super Admin Dashboard</h1>
+          <p className="text-muted-foreground mt-1">System-wide overview and analytics</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -64,7 +64,7 @@ export default function SuperAdminDashboardPage() {
             <CardTitle>System Overview</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-600">System-wide analytics and management tools coming soon...</p>
+            <p className="text-sm text-muted-foreground">System-wide analytics and management tools coming soon...</p>
           </CardContent>
         </Card>
       </div>
