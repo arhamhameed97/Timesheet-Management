@@ -966,9 +966,9 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                 </div>
                 
                 {/* Stats Visuals */}
-                <div className="hidden md:flex flex-col gap-4 w-48">
+                <div className="hidden md:flex flex-row gap-3 w-96">
                   {/* Progress Card */}
-                  <div className="bg-white rounded-lg border border-purple-100 p-4 shadow-sm">
+                  <div className="bg-white rounded-lg border border-purple-100 p-4 shadow-sm flex-1">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-sm font-semibold text-gray-700">Progress</h3>
                     </div>
@@ -1013,14 +1013,14 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                   </div>
                   
                   {/* Time Tracker Card */}
-                  <div className="bg-white rounded-lg border border-purple-100 p-4 shadow-sm">
+                  <div className="bg-white rounded-lg border border-purple-100 p-4 shadow-sm flex-1">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-sm font-semibold text-gray-700">Time tracker</h3>
                     </div>
                     {/* Circular Timer */}
-                    <div className="relative w-32 h-32 mx-auto mb-3">
+                    <div className="relative w-28 h-28 mx-auto mb-3">
                       {/* Outer ring */}
-                      <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+                      <svg className="w-28 h-28 transform -rotate-90" viewBox="0 0 100 100">
                         {/* Background circle */}
                         <circle
                           cx="50"
@@ -1050,16 +1050,16 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
                         {shiftDuration ? (
                           <>
-                            <div className="text-2xl font-bold text-gray-900">
+                            <div className="text-xl font-bold text-gray-900">
                               {shiftDuration.hours.toString().padStart(2, '0')}:
                               {shiftDuration.minutes.toString().padStart(2, '0')}
                             </div>
-                            <div className="text-xs text-gray-500">Work Time</div>
+                            <div className="text-[10px] text-gray-500">Work Time</div>
                           </>
                         ) : (
                           <>
-                            <div className="text-2xl font-bold text-gray-400">00:00</div>
-                            <div className="text-xs text-gray-400">Work Time</div>
+                            <div className="text-xl font-bold text-gray-400">00:00</div>
+                            <div className="text-[10px] text-gray-400">Work Time</div>
                           </>
                         )}
                       </div>
