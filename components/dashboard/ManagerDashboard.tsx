@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Clock, FileText, TrendingUp, CheckCircle, XCircle, Eye, CheckSquare, Filter, Plus } from 'lucide-react';
+import { Users, Clock, FileText, TrendingUp, CheckCircle, XCircle, Eye, CheckSquare, Filter, Plus, AlertCircle } from 'lucide-react';
 import { DesignationBadge } from '@/components/common/DesignationBadge';
 import { RoleBadge } from '@/components/common/RoleBadge';
 import { UserRole } from '@prisma/client';
@@ -477,110 +477,185 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
         </Card>
       </div>
 
-      {/* Clocked In Users Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-blue-600" />
-              Currently Clocked In
-            </CardTitle>
-            <Button variant="outline" size="sm" onClick={fetchClockedInUsers} disabled={loadingClockedIn}>
-              Refresh
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loadingClockedIn ? (
-            <div className="text-center py-4 text-muted-foreground">Loading...</div>
-          ) : clockedInUsers.length === 0 ? (
-            <div className="text-center py-4 text-muted-foreground">No team members currently clocked in</div>
-          ) : (
-            <div className="space-y-3">
-              {clockedInUsers.map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <div>
-                      <div className="font-medium">{user.name}</div>
-                      <div className="text-sm text-muted-foreground">{user.email}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-blue-600">{user.timeSinceCheckIn}</div>
-                    <div className="text-xs text-muted-foreground">
-                      Checked in: {formatTime(user.checkInTime)}
-                    </div>
-                  </div>
-                </div>
-              ))}
+      {/* Clocked In Users and Pending Tasks - Side by Side */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Clocked In Users Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-blue-600" />
+                Currently Clocked In
+              </CardTitle>
+              <Button variant="outline" size="sm" onClick={fetchClockedInUsers} disabled={loadingClockedIn}>
+                Refresh
+              </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent>
+            {loadingClockedIn ? (
+              <div className="text-center py-4 text-muted-foreground">Loading...</div>
+            ) : clockedInUsers.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">No team members currently clocked in</div>
+            ) : (
+              <div className="space-y-2">
+                {clockedInUsers.map((user) => {
+                  const checkInDate = new Date(user.checkInTime);
+                  const shiftDuration = calculateShiftTime(user.checkInTime, null);
+                  
+                  return (
+                    <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="flex flex-col gap-1 flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground truncate">{user.name}</span>
+                            {user.role && (
+                              <span className="px-2 py-0.5 text-xs rounded-full bg-muted text-muted-foreground whitespace-nowrap">
+                                {user.role.replace('_', ' ')}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
+                            <span className="text-blue-600 font-medium">Checked In</span>
+                            <span className="text-muted-foreground">•</span>
+                            <span className="text-muted-foreground">
+                              {formatTime(user.checkInTime)} {format(checkInDate, 'MMM dd')}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm mt-1">
+                            <span className="text-blue-600 font-medium">In Progress</span>
+                            <span className="text-green-600 font-medium">
+                              Shift: {shiftDuration}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="ml-2 flex-shrink-0">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Pending Tasks Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <CheckSquare className="h-5 w-5 text-yellow-600" />
-              Pending Tasks
-              {pendingTasksData.counts.total > 0 && (
-                <span className="ml-2 px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full">
-                  {pendingTasksData.counts.total}
-                </span>
-              )}
-            </CardTitle>
-            <Link href="/tasks">
-              <Button variant="outline" size="sm">View All</Button>
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loadingPendingTasks ? (
-            <div className="text-center py-4 text-muted-foreground">Loading...</div>
-          ) : pendingTasksData.tasks.length === 0 ? (
-            <div className="text-center py-4 text-muted-foreground">No pending tasks</div>
-          ) : (
-            <div className="space-y-3">
-              {pendingTasksData.tasks.slice(0, 5).map((task: Task) => (
-                <div key={task.id} className="p-3 border rounded-lg hover:bg-muted/50">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="font-medium">{task.title}</div>
-                      {task.description && (
-                        <div className="text-sm text-muted-foreground mt-1 line-clamp-2">{task.description}</div>
-                      )}
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className={`text-xs px-2 py-1 rounded ${getTaskStatusBadgeClass(task.status)}`}>
-                          {task.status}
-                        </span>
-                        {task.type === TaskType.PAYROLL_EDIT && (
-                          <span className="text-xs px-2 py-1 rounded bg-purple-100 text-purple-800">
-                            Payroll Edit
-                          </span>
+        {/* Pending Tasks Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <CheckSquare className="h-5 w-5 text-yellow-600" />
+                Pending Tasks
+                {pendingTasksData.counts.total > 0 && (
+                  <span className="ml-2 px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full">
+                    {pendingTasksData.counts.total}
+                  </span>
+                )}
+              </CardTitle>
+              <Link href="/tasks">
+                <Button variant="outline" size="sm">View All</Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loadingPendingTasks ? (
+              <div className="text-center py-4 text-muted-foreground">Loading...</div>
+            ) : pendingTasksData.tasks.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">No pending tasks</div>
+            ) : (
+              <div className="space-y-2">
+                {pendingTasksData.tasks.slice(0, 5).map((task: Task) => {
+                  const completedCount = task.assignees.filter(a => a.completedAt).length;
+                  const totalAssignees = task.assignees.length;
+                  const progressPercentage = totalAssignees > 0 ? Math.round((completedCount / totalAssignees) * 100) : 0;
+                  const dueDate = new Date(task.dueDate);
+                  const isOverdue = dueDate < new Date() && task.status !== TaskStatus.APPROVED;
+                  const getPriorityColor = (priority: TaskPriority) => {
+                    switch (priority) {
+                      case TaskPriority.HIGH: return 'text-red-600';
+                      case TaskPriority.MEDIUM: return 'text-orange-600';
+                      case TaskPriority.LOW: return 'text-green-600';
+                      default: return 'text-muted-foreground';
+                    }
+                  };
+                  
+                  return (
+                    <div key={task.id} className="p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-foreground mb-1">{task.title}</div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                            <span>{task.creator.name}</span>
+                            <span>•</span>
+                            <span>{format(parseISO(task.createdAt), 'MMM dd, yyyy')}</span>
+                          </div>
+                          {task.assignees.length > 0 && (
+                            <div className="flex flex-col gap-1 mb-2">
+                              {task.assignees.slice(0, 2).map((assignee) => (
+                                <div key={assignee.id} className="text-sm text-muted-foreground">
+                                  {assignee.user.name}
+                                </div>
+                              ))}
+                              {task.assignees.length > 2 && (
+                                <span className="text-xs text-muted-foreground">+{task.assignees.length - 2} more</span>
+                              )}
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 flex-wrap mt-2">
+                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${getTaskStatusBadgeClass(task.status)}`}>
+                              {task.status.replace('_', ' ')}
+                            </span>
+                            <span className={`text-xs font-semibold ${getPriorityColor(task.priority)}`}>
+                              {task.priority}
+                            </span>
+                            <div className="flex flex-col">
+                              <span className="text-xs text-muted-foreground">{format(parseISO(task.dueDate), 'MMM dd, yyyy')}</span>
+                              {isOverdue && (
+                                <span className="text-xs text-red-600 font-medium">Overdue</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 mt-2">
+                            <div className="flex-1 bg-muted rounded-full h-2 min-w-[60px]">
+                              <div
+                                className={`h-2 rounded-full ${
+                                  progressPercentage === 100
+                                    ? 'bg-green-600'
+                                    : progressPercentage > 0
+                                    ? 'bg-blue-600'
+                                    : 'bg-muted'
+                                }`}
+                                style={{ width: `${progressPercentage}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {completedCount}/{totalAssignees}
+                            </span>
+                          </div>
+                        </div>
+                        {task.status === TaskStatus.COMPLETED && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleApproveTask(task.id)}
+                            className="flex-shrink-0"
+                          >
+                            Approve
+                          </Button>
                         )}
                       </div>
                     </div>
-                    <div className="ml-4">
-                      {task.status === TaskStatus.COMPLETED && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleApproveTask(task.id)}
-                          className="mr-2"
-                        >
-                          Approve
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Today's Team Attendance */}
       <Card>
