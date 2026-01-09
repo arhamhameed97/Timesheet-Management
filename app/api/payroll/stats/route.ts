@@ -91,8 +91,8 @@ export async function GET(request: NextRequest) {
     try {
       // Calculate hours for each month from January up to and including the current month
       for (let month = 1; month <= currentMonth; month++) {
-        const hours = await calculateHoursWorked(userId, month, currentYear);
-        const hoursValue = hours ?? 0;
+        const hoursBreakdown = await calculateHoursWorked(userId, month, currentYear);
+        const hoursValue = hoursBreakdown?.totalHours ?? 0;
         console.log(`[payroll-stats] Hours for ${month}/${currentYear}: ${hoursValue.toFixed(2)}h`);
         yearToDateHours += hoursValue;
       }
