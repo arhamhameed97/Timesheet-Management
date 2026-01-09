@@ -180,11 +180,45 @@ export async function GET(request: NextRequest) {
       monthlyPayroll = monthlyPayrollRecord?.netSalary || 0;
     }
 
+    // Get pending tasks count for admins/managers
+    let pendingTasks = 0;
+    if (context.role === UserRole.SUPER_ADMIN || 
+        context.role === UserRole.COMPANY_ADMIN || 
+        context.role === UserRole.MANAGER) {
+      const taskWhere: any = {
+        status: {
+          in: ['PENDING', 'COMPLETED'],
+        },
+      };
+
+      if (context.role !== UserRole.SUPER_ADMIN && context.companyId) {
+        taskWhere.OR = [
+          {
+            creator: {
+              companyId: context.companyId,
+            },
+          },
+          {
+            assignees: {
+              some: {
+                userId: context.userId,
+              },
+            },
+          },
+        ];
+      }
+
+      pendingTasks = await prisma.task.count({
+        where: taskWhere,
+      });
+    }
+
     return NextResponse.json({
       totalEmployees,
       todayAttendance,
       pendingTimesheets,
       monthlyPayroll,
+      pendingTasks,
     });
   } catch (error) {
     console.error('Get dashboard stats error:', error);

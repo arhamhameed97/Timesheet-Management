@@ -11,6 +11,9 @@ import {
   calculateTotalDeductions,
   calculateNetSalary,
   getEmployeePaymentInfo,
+  getHourlyRateForDate,
+  getOvertimeConfig,
+  calculateOvertimePay,
 } from '@/lib/payroll-helpers';
 
 export async function GET(request: NextRequest) {
@@ -213,21 +216,38 @@ export async function POST(request: NextRequest) {
     let baseSalary = validatedData.baseSalary;
     let hoursWorked: number | null = null;
     let hourlyRate: number | null = null;
+    let hoursBreakdown: { totalHours: number; regularHours: number; overtimeHours: number; dailyHours: Array<{ date: string; hours: number; overtimeHours: number }> } | null = null;
+    let overtimePay: number = 0;
 
     if (paymentType === PaymentType.HOURLY) {
       // For hourly, calculate hours if not provided
       if (!validatedData.hoursWorked) {
-        hoursWorked = await calculateHoursWorked(
+        hoursBreakdown = await calculateHoursWorked(
           validatedData.userId,
           validatedData.month,
           validatedData.year
         );
+        hoursWorked = hoursBreakdown.totalHours;
       } else {
         hoursWorked = validatedData.hoursWorked;
+        // If hours are provided manually, we still need to calculate breakdown for overtime
+        hoursBreakdown = await calculateHoursWorked(
+          validatedData.userId,
+          validatedData.month,
+          validatedData.year
+        );
+        // Adjust breakdown proportionally if manual hours differ
+        if (hoursBreakdown.totalHours > 0 && hoursWorked !== hoursBreakdown.totalHours) {
+          const ratio = hoursWorked / hoursBreakdown.totalHours;
+          hoursBreakdown.regularHours *= ratio;
+          hoursBreakdown.overtimeHours *= ratio;
+        }
       }
 
-      // Use provided hourly rate or employee's hourly rate
-      hourlyRate = validatedData.hourlyRate || employeeInfo.hourlyRate || null;
+      // Use provided hourly rate or get from time-period rates or employee's default rate
+      // For payroll, use the first day of the month to determine rate
+      const firstDayOfMonth = new Date(validatedData.year, validatedData.month - 1, 1);
+      hourlyRate = validatedData.hourlyRate || await getHourlyRateForDate(validatedData.userId, firstDayOfMonth) || employeeInfo.hourlyRate || null;
       
       if (!hourlyRate || hourlyRate <= 0) {
         return NextResponse.json(
@@ -239,13 +259,31 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Calculate base salary from hours (ensure hours are positive)
-      const positiveHours = hoursWorked > 0 ? hoursWorked : Math.abs(hoursWorked);
-      baseSalary = calculateHourlyPay(positiveHours, hourlyRate);
-      
-      // Update hoursWorked to be positive if it was negative
-      if (hoursWorked < 0) {
-        hoursWorked = positiveHours;
+      // Calculate overtime pay
+      if (hoursBreakdown) {
+        const overtimeConfig = await getOvertimeConfig(validatedData.userId);
+        overtimePay = calculateOvertimePay(
+          hoursBreakdown.overtimeHours,
+          hourlyRate,
+          overtimeConfig?.overtimeMultiplier || 1.5
+        );
+
+        // Calculate base salary from regular hours + overtime pay
+        const positiveHours = hoursWorked > 0 ? hoursWorked : Math.abs(hoursWorked);
+        const regularPay = calculateHourlyPay(hoursBreakdown.regularHours, hourlyRate);
+        baseSalary = regularPay + overtimePay;
+        
+        // Update hoursWorked to be positive if it was negative
+        if (hoursWorked < 0) {
+          hoursWorked = positiveHours;
+        }
+      } else {
+        // Fallback if breakdown calculation fails
+        const positiveHours = hoursWorked > 0 ? hoursWorked : Math.abs(hoursWorked);
+        baseSalary = calculateHourlyPay(positiveHours, hourlyRate);
+        if (hoursWorked < 0) {
+          hoursWorked = positiveHours;
+        }
       }
     } else {
       // For salary, use provided base salary or employee's monthly salary
@@ -270,23 +308,39 @@ export async function POST(request: NextRequest) {
     // Calculate net salary
     const netSalary = calculateNetSalary(baseSalary, bonuses, deductions);
 
+    const payrollData: any = {
+      userId: validatedData.userId,
+      month: validatedData.month,
+      year: validatedData.year,
+      paymentType,
+      hoursWorked,
+      hourlyRate,
+      baseSalary,
+      bonuses: bonuses.length > 0 ? bonuses : Prisma.JsonNull,
+      deductions: deductions.length > 0 ? deductions : Prisma.JsonNull,
+      totalBonuses,
+      totalDeductions,
+      netSalary,
+      status: PayrollStatus.PENDING,
+      notes: validatedData.notes || undefined,
+    };
+
+    // Add overtime fields if hourly
+    if (paymentType === PaymentType.HOURLY && hoursBreakdown) {
+      payrollData.regularHours = hoursBreakdown.regularHours;
+      payrollData.overtimeHours = hoursBreakdown.overtimeHours;
+      payrollData.overtimePay = overtimePay;
+      payrollData.dailyHours = hoursBreakdown.dailyHours.length > 0 ? hoursBreakdown.dailyHours : Prisma.JsonNull;
+    } else if (paymentType === PaymentType.HOURLY) {
+      // Set defaults if breakdown not available
+      payrollData.regularHours = hoursWorked || 0;
+      payrollData.overtimeHours = 0;
+      payrollData.overtimePay = 0;
+      payrollData.dailyHours = Prisma.JsonNull;
+    }
+
     const payroll = await prisma.payroll.create({
-      data: {
-        userId: validatedData.userId,
-        month: validatedData.month,
-        year: validatedData.year,
-        paymentType,
-        hoursWorked,
-        hourlyRate,
-        baseSalary,
-        bonuses: bonuses.length > 0 ? bonuses : Prisma.JsonNull,
-        deductions: deductions.length > 0 ? deductions : Prisma.JsonNull,
-        totalBonuses,
-        totalDeductions,
-        netSalary,
-        status: PayrollStatus.PENDING,
-        notes: validatedData.notes || undefined,
-      },
+      data: payrollData,
       include: {
         user: {
           select: {

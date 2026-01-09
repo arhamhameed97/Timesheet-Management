@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     // Get number of days in the month
     const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
-    const dailyEarnings: Record<string, { hours: number; earnings: number }> = {};
+    const dailyEarnings: Record<string, { hours: number; earnings: number; hourlyRate: number | null; overtimeHours: number; regularHours: number }> = {};
 
     // Get user payment info for debugging
     const { getEmployeePaymentInfo } = await import('@/lib/payroll-helpers');
@@ -52,11 +52,17 @@ export async function GET(request: NextRequest) {
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(yearNum, monthNum - 1, day);
       const result = await calculateDailyHoursAndEarnings(userId, date);
-      dailyEarnings[day.toString()] = result;
+      dailyEarnings[day.toString()] = {
+        hours: result.hours,
+        earnings: result.earnings,
+        hourlyRate: result.hourlyRate,
+        overtimeHours: result.overtimeHours,
+        regularHours: result.regularHours,
+      };
       
       // Debug: Log days with hours or earnings
       if (result.hours > 0) {
-        console.log(`Day ${day}: ${result.hours}h - $${result.earnings} (hourlyRate: ${paymentInfo?.hourlyRate || 'not set'})`);
+        console.log(`Day ${day}: ${result.hours}h (${result.regularHours}h reg + ${result.overtimeHours}h OT) - $${result.earnings} (hourlyRate: ${result.hourlyRate || paymentInfo?.hourlyRate || 'not set'})`);
       }
     }
 

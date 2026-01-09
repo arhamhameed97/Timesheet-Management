@@ -18,6 +18,9 @@ interface PayrollRecord {
 interface DailyEarnings {
   hours: number;
   earnings: number;
+  hourlyRate?: number | null;
+  overtimeHours?: number;
+  regularHours?: number;
 }
 
 interface PayrollCalendarProps {
@@ -213,6 +216,9 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
             const hasDailyData = dayEarnings !== undefined && dayEarnings !== null;
             const dailyEarningsValue = hasDailyData ? (dayEarnings?.earnings ?? 0) : 0;
             const dailyHoursValue = hasDailyData ? (dayEarnings?.hours ?? 0) : 0;
+            const hourlyRate = hasDailyData ? (dayEarnings?.hourlyRate ?? null) : null;
+            const overtimeHours = hasDailyData ? (dayEarnings?.overtimeHours ?? 0) : 0;
+            const regularHours = hasDailyData ? (dayEarnings?.regularHours ?? dailyHoursValue) : 0;
             
             // Show hours and earnings if they exist (even if earnings is 0, show hours)
             const displayEarnings = dailyEarningsValue;
@@ -222,6 +228,7 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
             const shouldShowHours = displayHours > 0;
             // Show earnings if there are any earnings (should be calculated for hourly employees)
             const shouldShowEarnings = displayEarnings > 0;
+            const hasOvertime = overtimeHours > 0;
             
             // Debug: Log when hours exist but earnings don't (might indicate missing hourly rate)
             if (shouldShowHours && !shouldShowEarnings && hasDailyData) {
@@ -248,7 +255,7 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
                 `}
                 title={
                   displayEarnings > 0
-                    ? `${format(date, 'MMM d, yyyy')}: ${displayHours > 0 ? `${displayHours.toFixed(2)}h - ` : ''}$${displayEarnings.toFixed(2)}${payroll ? ` (${payroll.status})` : ''}`
+                    ? `${format(date, 'MMM d, yyyy')}: ${displayHours > 0 ? `${displayHours.toFixed(2)}h` : ''}${hasOvertime ? ` (${regularHours.toFixed(2)}h reg + ${overtimeHours.toFixed(2)}h OT)` : ''}${hourlyRate ? ` @ $${hourlyRate.toFixed(2)}/hr` : ''} - $${displayEarnings.toFixed(2)}${payroll ? ` (${payroll.status})` : ''}`
                     : hasDailyData && displayHours === 0
                     ? `${format(date, 'MMM d, yyyy')}: No attendance${payroll ? ` - Monthly payroll: $${Math.abs(payroll.netSalary).toFixed(2)} (${payroll.status})` : ''}`
                     : payroll
@@ -282,6 +289,16 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
                             ? `${displayHours.toFixed(0)}h` 
                             : `${displayHours.toFixed(1)}h`}
                         </div>
+                        {hasOvertime && (
+                          <div className="text-[7px] text-orange-600 font-semibold mt-0.5">
+                            {overtimeHours.toFixed(1)}h OT
+                          </div>
+                        )}
+                        {hourlyRate && (
+                          <div className="text-[7px] text-muted-foreground mt-0.5">
+                            ${hourlyRate.toFixed(2)}/hr
+                          </div>
+                        )}
                       </div>
                     )}
                     {shouldShowEarnings && (
@@ -301,7 +318,12 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
                 
                 {/* Subtle indicator for days with data */}
                 {hasData && (
-                  <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 opacity-70 group-hover:opacity-0 transition-opacity duration-300 shadow-sm" />
+                  <div className="absolute top-1.5 right-1.5 flex gap-0.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 opacity-70 group-hover:opacity-0 transition-opacity duration-300 shadow-sm" />
+                    {hasOvertime && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-orange-500 opacity-70 group-hover:opacity-0 transition-opacity duration-300 shadow-sm" />
+                    )}
+                  </div>
                 )}
               </button>
             );

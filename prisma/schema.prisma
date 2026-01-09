@@ -76,6 +76,17 @@ enum LeaveDuration {
   HALF_DAY_AFTERNOON
 }
 
+enum PayrollEditRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TaskType {
+  GENERAL
+  PAYROLL_EDIT
+}
+
 model Company {
   id        String   @id @default(cuid())
   name      String
@@ -124,6 +135,13 @@ model User {
   assignedTasks      TaskAssignee[]
   createdTasks       Task[]         @relation("TaskCreator")
   approvedTasks      Task[]         @relation("TaskApprover")
+  hourlyRatePeriods  HourlyRatePeriod[]
+  overtimeConfigs    OvertimeConfig[]
+  payrollEditRequestsRequested PayrollEditRequest[] @relation("PayrollEditRequestRequester")
+  payrollEditRequestsAssigned  PayrollEditRequest[] @relation("PayrollEditRequestAssignee")
+  payrollEditRequestsApproved PayrollEditRequest[] @relation("PayrollEditRequestApprover")
+  createdHourlyRatePeriods HourlyRatePeriod[] @relation("HourlyRatePeriodCreator")
+  createdOvertimeConfigs   OvertimeConfig[] @relation("OvertimeConfigCreator")
 }
 
 model Designation {
@@ -260,10 +278,16 @@ model Payroll {
   approvedAt      DateTime?
   paidAt          DateTime?
   notes           String?
+  overtimeHours   Float?
+  overtimePay     Float?
+  regularHours    Float?
+  dailyHours      Json? // Array of { date: string, hours: number, overtimeHours: number }
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  editRequests    PayrollEditRequest[]
+  relatedTasks    Task[]
 
   @@unique([userId, month, year])
   @@index([userId, month, year])
@@ -292,25 +316,33 @@ model Leave {
 }
 
 model Task {
-  id          String       @id @default(cuid())
-  title       String
-  description String?
-  assignedBy  String
-  dueDate     DateTime
-  priority    TaskPriority @default(MEDIUM)
-  status      TaskStatus   @default(PENDING)
-  approvedBy  String?
-  approvedAt  DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                        String       @id @default(cuid())
+  title                     String
+  description               String?
+  assignedBy                String
+  dueDate                   DateTime
+  priority                  TaskPriority @default(MEDIUM)
+  status                    TaskStatus   @default(PENDING)
+  approvedBy                String?
+  approvedAt                DateTime?
+  type                      TaskType     @default(GENERAL)
+  relatedPayrollId          String?
+  relatedPayrollEditRequestId String?     @unique
+  createdAt                 DateTime     @default(now())
+  updatedAt                 DateTime     @updatedAt
 
-  creator   User           @relation("TaskCreator", fields: [assignedBy], references: [id], onDelete: Cascade)
-  approver  User?          @relation("TaskApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
-  assignees TaskAssignee[]
+  creator                   User           @relation("TaskCreator", fields: [assignedBy], references: [id], onDelete: Cascade)
+  approver                  User?          @relation("TaskApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+  assignees                 TaskAssignee[]
+  relatedPayroll            Payroll?       @relation(fields: [relatedPayrollId], references: [id], onDelete: SetNull)
+  relatedPayrollEditRequest PayrollEditRequest? @relation(fields: [relatedPayrollEditRequestId], references: [id], onDelete: SetNull)
 
   @@index([assignedBy])
   @@index([status])
   @@index([dueDate])
+  @@index([type])
+  @@index([relatedPayrollId])
+  @@index([relatedPayrollEditRequestId])
 }
 
 model TaskAssignee {
@@ -326,4 +358,62 @@ model TaskAssignee {
   @@unique([taskId, userId])
   @@index([taskId])
   @@index([userId])
+}
+
+model HourlyRatePeriod {
+  id          String   @id @default(cuid())
+  userId      String
+  startDate   DateTime @db.Date
+  endDate     DateTime @db.Date
+  hourlyRate  Float
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creator   User   @relation("HourlyRatePeriodCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+model OvertimeConfig {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  weeklyThresholdHours Float   @default(40)
+  overtimeMultiplier  Float   @default(1.5)
+  createdBy           String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user    User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creator User @relation("OvertimeConfigCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PayrollEditRequest {
+  id            String                 @id @default(cuid())
+  payrollId     String
+  requestedBy   String
+  assignedTo    String
+  status        PayrollEditRequestStatus @default(PENDING)
+  changes       Json // Object with changed fields
+  originalData  Json // Original payroll data before changes
+  requestedAt   DateTime                @default(now())
+  approvedAt   DateTime?
+  approvedBy   String?
+  notes         String?
+
+  payroll    Payroll @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  requester  User    @relation("PayrollEditRequestRequester", fields: [requestedBy], references: [id], onDelete: Cascade)
+  assignee   User    @relation("PayrollEditRequestAssignee", fields: [assignedTo], references: [id], onDelete: Cascade)
+  approver   User?   @relation("PayrollEditRequestApprover", fields: [approvedBy], references: [id], onDelete: SetNull)
+  task       Task?
+
+  @@index([payrollId])
+  @@index([requestedBy])
+  @@index([assignedTo])
+  @@index([status])
 }

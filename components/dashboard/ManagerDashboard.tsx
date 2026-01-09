@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
-import { TaskStatus, TaskPriority } from '@prisma/client';
+import { TaskStatus, TaskPriority, TaskType } from '@prisma/client';
 import {
   Table,
   TableBody,
@@ -106,12 +106,27 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
   });
   const [creatingTask, setCreatingTask] = useState(false);
   const [employeesList, setEmployeesList] = useState<EmployeeAttendance[]>([]);
+  const [clockedInUsers, setClockedInUsers] = useState<any[]>([]);
+  const [loadingClockedIn, setLoadingClockedIn] = useState(false);
+  const [pendingTasksData, setPendingTasksData] = useState<any>({ tasks: [], counts: { pending: 0, completedPendingApproval: 0, total: 0 } });
+  const [loadingPendingTasks, setLoadingPendingTasks] = useState(false);
 
   useEffect(() => {
     fetchRecentAttendance();
     fetchPendingTasks();
     fetchAllTasks();
     fetchEmployeesList();
+    fetchClockedInUsers();
+    fetchPendingTasksData();
+  }, []);
+
+  // Refresh clocked-in users every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchClockedInUsers();
+    }, 60000); // Every minute
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -362,6 +377,48 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
     return `${minutes}m`;
   };
 
+  const fetchClockedInUsers = async () => {
+    try {
+      setLoadingClockedIn(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/dashboard/clocked-in', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setClockedInUsers(data.clockedInUsers || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch clocked-in users:', error);
+    } finally {
+      setLoadingClockedIn(false);
+    }
+  };
+
+  const fetchPendingTasksData = async () => {
+    try {
+      setLoadingPendingTasks(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/dashboard/pending-tasks?limit=5&includePayrollEdits=true', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPendingTasksData(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending tasks:', error);
+    } finally {
+      setLoadingPendingTasks(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -418,6 +475,111 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Clocked In Users Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-blue-600" />
+              Currently Clocked In
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={fetchClockedInUsers} disabled={loadingClockedIn}>
+              Refresh
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingClockedIn ? (
+            <div className="text-center py-4 text-muted-foreground">Loading...</div>
+          ) : clockedInUsers.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">No team members currently clocked in</div>
+          ) : (
+            <div className="space-y-3">
+              {clockedInUsers.map((user) => (
+                <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50">
+                  <div className="flex items-center gap-3">
+                    <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <div>
+                      <div className="font-medium">{user.name}</div>
+                      <div className="text-sm text-muted-foreground">{user.email}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-blue-600">{user.timeSinceCheckIn}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Checked in: {formatTime(user.checkInTime)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Pending Tasks Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <CheckSquare className="h-5 w-5 text-yellow-600" />
+              Pending Tasks
+              {pendingTasksData.counts.total > 0 && (
+                <span className="ml-2 px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full">
+                  {pendingTasksData.counts.total}
+                </span>
+              )}
+            </CardTitle>
+            <Link href="/tasks">
+              <Button variant="outline" size="sm">View All</Button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingPendingTasks ? (
+            <div className="text-center py-4 text-muted-foreground">Loading...</div>
+          ) : pendingTasksData.tasks.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">No pending tasks</div>
+          ) : (
+            <div className="space-y-3">
+              {pendingTasksData.tasks.slice(0, 5).map((task: Task) => (
+                <div key={task.id} className="p-3 border rounded-lg hover:bg-muted/50">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="font-medium">{task.title}</div>
+                      {task.description && (
+                        <div className="text-sm text-muted-foreground mt-1 line-clamp-2">{task.description}</div>
+                      )}
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className={`text-xs px-2 py-1 rounded ${getTaskStatusBadgeClass(task.status)}`}>
+                          {task.status}
+                        </span>
+                        {task.type === TaskType.PAYROLL_EDIT && (
+                          <span className="text-xs px-2 py-1 rounded bg-purple-100 text-purple-800">
+                            Payroll Edit
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="ml-4">
+                      {task.status === TaskStatus.COMPLETED && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleApproveTask(task.id)}
+                          className="mr-2"
+                        >
+                          Approve
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Today's Team Attendance */}
       <Card>

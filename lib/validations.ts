@@ -193,6 +193,70 @@ export const updateLeaveSchema = z.object({
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED']).optional(),
 });
 
+export const createHourlyRatePeriodSchema = z.object({
+  userId: z.string(),
+  startDate: z.string(), // ISO date string
+  endDate: z.string(), // ISO date string
+  hourlyRate: z.number().min(0, 'Hourly rate must be positive'),
+}).refine((data) => {
+  const start = new Date(data.startDate);
+  const end = new Date(data.endDate);
+  return end >= start;
+}, {
+  message: 'End date must be after or equal to start date',
+});
+
+export const updateHourlyRatePeriodSchema = z.object({
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  hourlyRate: z.number().min(0).optional(),
+}).refine((data) => {
+  if (data.startDate && data.endDate) {
+    const start = new Date(data.startDate);
+    const end = new Date(data.endDate);
+    return end >= start;
+  }
+  return true;
+}, {
+  message: 'End date must be after or equal to start date',
+});
+
+export const createOvertimeConfigSchema = z.object({
+  userId: z.string(),
+  weeklyThresholdHours: z.number().min(0).max(168).default(40), // Max 168 hours per week
+  overtimeMultiplier: z.number().min(1).default(1.5),
+});
+
+export const updateOvertimeConfigSchema = z.object({
+  weeklyThresholdHours: z.number().min(0).max(168).optional(),
+  overtimeMultiplier: z.number().min(1).optional(),
+});
+
+export const createPayrollEditRequestSchema = z.object({
+  payrollId: z.string(),
+  changes: z.object({
+    hoursWorked: z.number().min(0).optional(),
+    hourlyRate: z.number().min(0).optional(),
+    baseSalary: z.number().min(0).optional(),
+    overtimeHours: z.number().min(0).optional(),
+    bonuses: z.array(z.object({
+      name: z.string().min(1),
+      amount: z.number().min(0),
+    })).optional(),
+    deductions: z.array(z.object({
+      name: z.string().min(1),
+      amount: z.number().min(0),
+    })).optional(),
+    notes: z.string().optional(),
+  }),
+  notes: z.string().optional(),
+});
+
+export const updatePayrollEditRequestSchema = z.object({
+  status: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
+  notes: z.string().optional(),
+});
+
 
 
 
