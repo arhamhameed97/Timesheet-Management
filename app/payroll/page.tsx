@@ -430,8 +430,25 @@ export default function PayrollPage() {
   };
 
   const calculateNetSalary = () => {
-    const base = parseFloat(formData.baseSalary) || 0;
+    let base = 0;
+    if (formData.paymentType === 'HOURLY') {
+      const hours = parseFloat(formData.hoursWorked) || 0;
+      const rate = parseFloat(formData.hourlyRate) || 0;
+      base = hours * rate;
+    } else {
+      base = parseFloat(formData.baseSalary) || 0;
+    }
     return base + calculateTotalBonuses() - calculateTotalDeductions();
+  };
+
+  const calculateBaseSalary = () => {
+    if (formData.paymentType === 'HOURLY') {
+      const hours = parseFloat(formData.hoursWorked) || 0;
+      const rate = parseFloat(formData.hourlyRate) || 0;
+      return hours * rate;
+    } else {
+      return parseFloat(formData.baseSalary) || 0;
+    }
   };
 
   const handleApprove = async (id: string) => {
@@ -915,17 +932,33 @@ export default function PayrollPage() {
                   {selectedEmployee && (
                     <div className="p-2 bg-blue-500/20 dark:bg-blue-500/30 rounded border-2 border-blue-300/50 dark:border-blue-500/30 text-sm">
                       <p>
-                        <strong>Payment Type:</strong> {selectedEmployee.paymentType || 'Not set'}
+                        <strong>Payment Type:</strong> {formData.paymentType || selectedEmployee.paymentType || 'Not set'}
                       </p>
-                      {selectedEmployee.paymentType === 'HOURLY' && selectedEmployee.hourlyRate && (
-                        <p>
-                          <strong>Hourly Rate:</strong> {formatCurrency(selectedEmployee.hourlyRate)}
-                        </p>
+                      {(formData.paymentType === 'HOURLY' || (!formData.paymentType && selectedEmployee.paymentType === 'HOURLY')) && (
+                        <>
+                          {formData.hourlyRate ? (
+                            <p>
+                              <strong>Hourly Rate:</strong> {formatCurrency(parseFloat(formData.hourlyRate))}
+                            </p>
+                          ) : selectedEmployee.hourlyRate && (
+                            <p>
+                              <strong>Default Hourly Rate:</strong> {formatCurrency(selectedEmployee.hourlyRate)}
+                            </p>
+                          )}
+                        </>
                       )}
-                      {selectedEmployee.paymentType === 'SALARY' && selectedEmployee.monthlySalary && (
-                        <p>
-                          <strong>Monthly Salary:</strong> {formatCurrency(selectedEmployee.monthlySalary)}
-                        </p>
+                      {(formData.paymentType === 'SALARY' || (!formData.paymentType && selectedEmployee.paymentType === 'SALARY')) && (
+                        <>
+                          {formData.baseSalary ? (
+                            <p>
+                              <strong>Base Salary:</strong> {formatCurrency(parseFloat(formData.baseSalary))}
+                            </p>
+                          ) : selectedEmployee.monthlySalary && (
+                            <p>
+                              <strong>Default Monthly Salary:</strong> {formatCurrency(selectedEmployee.monthlySalary)}
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
                   )}
@@ -1152,22 +1185,20 @@ export default function PayrollPage() {
                     <div className="flex justify-between">
                       <span>{formData.paymentType === 'HOURLY' ? 'Hourly Pay' : 'Base Salary'}:</span>
                       <span className="font-semibold">
-                        {formData.paymentType === 'HOURLY' && formData.hoursWorked && formData.hourlyRate
-                          ? formatCurrency(Math.abs(parseFloat(formData.hoursWorked) || 0) * parseFloat(formData.hourlyRate))
-                          : formatCurrency(parseFloat(formData.baseSalary) || 0)}
+                        {formatCurrency(calculateBaseSalary())}
                       </span>
                     </div>
-                    <div className="flex justify-between text-green-600 dark:text-green-400 dark:text-green-400">
+                    <div className="flex justify-between text-green-600 dark:text-green-400">
                       <span>Total Bonuses:</span>
                       <span className="font-semibold">{formatCurrency(calculateTotalBonuses())}</span>
                     </div>
-                    <div className="flex justify-between text-red-600 dark:text-red-400 dark:text-red-400">
+                    <div className="flex justify-between text-red-600 dark:text-red-400">
                       <span>Total Deductions:</span>
                       <span className="font-semibold">{formatCurrency(calculateTotalDeductions())}</span>
                     </div>
                     <div className="flex justify-between pt-2 border-t-2 border-border font-bold text-lg">
                       <span>Net Salary:</span>
-                      <span className="text-green-600 dark:text-green-400 dark:text-green-400">{formatCurrency(calculateNetSalary())}</span>
+                      <span className="text-green-600 dark:text-green-400">{formatCurrency(calculateNetSalary())}</span>
                     </div>
                   </div>
                 </div>
