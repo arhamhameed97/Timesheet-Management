@@ -65,6 +65,7 @@ interface Task {
   dueDate: string;
   priority: TaskPriority;
   status: TaskStatus;
+  type?: TaskType;
   creator: {
     id: string;
     name: string;
