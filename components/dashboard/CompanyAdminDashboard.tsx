@@ -541,37 +541,48 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
                       const shiftDuration = calculateShiftTime(user.checkInTime, null);
                       
                       return (
-                        <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="flex flex-col gap-1 flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-foreground truncate">{user.name}</span>
-                                {user.role && (
-                                  <span className="px-2 py-0.5 text-xs rounded-full bg-muted text-muted-foreground whitespace-nowrap">
-                                    {user.role.replace('_', ' ')}
-                                  </span>
-                                )}
+                        <div key={user.id} className="p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center justify-between gap-4">
+                            {/* Left Section: Name and Role */}
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse flex-shrink-0"></div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-foreground truncate">{user.name}</span>
+                                  {user.role && (
+                                    <span className="px-2 py-0.5 text-xs rounded-full bg-muted text-muted-foreground whitespace-nowrap flex-shrink-0">
+                                      {user.role.replace('_', ' ')}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2 text-sm">
+                            </div>
+                            
+                            {/* Middle Section: Status and Time Info */}
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                              <div className="flex items-center gap-1.5">
                                 <Clock className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
-                                <span className="text-blue-600 font-medium">Checked In</span>
-                                <span className="text-muted-foreground">•</span>
-                                <span className="text-muted-foreground">
-                                  {formatTime(user.checkInTime)} {format(checkInDate, 'MMM dd')}
-                                </span>
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-blue-600 font-medium">Checked In</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {formatTime(user.checkInTime)} {format(checkInDate, 'MMM dd')}
+                                  </span>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2 text-sm mt-1">
-                                <span className="text-blue-600 font-medium">In Progress</span>
-                                <span className="text-green-600 font-medium">
+                            </div>
+                            
+                            {/* Right Section: Progress and Duration */}
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                              <div className="flex flex-col items-end">
+                                <span className="text-xs text-blue-600 font-medium">In Progress</span>
+                                <span className="text-xs text-green-600 font-medium">
                                   Shift: {shiftDuration}
                                 </span>
                               </div>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0">
+                                <Eye className="h-4 w-4" />
+                              </Button>
                             </div>
-                          </div>
-                          <div className="ml-2 flex-shrink-0">
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <Eye className="h-4 w-4" />
-                            </Button>
                           </div>
                         </div>
                       );
@@ -623,56 +634,14 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
                       
                       return (
                         <div key={task.id} className="p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                          <div className="flex items-start justify-between gap-3">
+                          {/* Top Row: Title and Creator Info */}
+                          <div className="flex items-start justify-between gap-3 mb-2">
                             <div className="flex-1 min-w-0">
-                              <div className="font-medium text-foreground mb-1">{task.title}</div>
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                              <div className="font-medium text-foreground truncate">{task.title}</div>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                                 <span>{task.creator.name}</span>
                                 <span>•</span>
                                 <span>{format(parseISO(task.createdAt), 'MMM dd, yyyy')}</span>
-                              </div>
-                              {task.assignees.length > 0 && (
-                                <div className="flex flex-col gap-1 mb-2">
-                                  {task.assignees.slice(0, 2).map((assignee) => (
-                                    <div key={assignee.id} className="text-sm text-muted-foreground">
-                                      {assignee.user.name}
-                                    </div>
-                                  ))}
-                                  {task.assignees.length > 2 && (
-                                    <span className="text-xs text-muted-foreground">+{task.assignees.length - 2} more</span>
-                                  )}
-                                </div>
-                              )}
-                              <div className="flex items-center gap-2 flex-wrap mt-2">
-                                <span className={`px-2 py-1 text-xs rounded-full font-medium ${getTaskStatusBadgeClass(task.status)}`}>
-                                  {task.status.replace('_', ' ')}
-                                </span>
-                                <span className={`text-xs font-semibold ${getPriorityColor(task.priority)}`}>
-                                  {task.priority}
-                                </span>
-                                <div className="flex flex-col">
-                                  <span className="text-xs text-muted-foreground">{format(parseISO(task.dueDate), 'MMM dd, yyyy')}</span>
-                                  {isOverdue && (
-                                    <span className="text-xs text-red-600 font-medium">Overdue</span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 mt-2">
-                                <div className="flex-1 bg-muted rounded-full h-2 min-w-[60px]">
-                                  <div
-                                    className={`h-2 rounded-full ${
-                                      progressPercentage === 100
-                                        ? 'bg-green-600'
-                                        : progressPercentage > 0
-                                        ? 'bg-blue-600'
-                                        : 'bg-muted'
-                                    }`}
-                                    style={{ width: `${progressPercentage}%` }}
-                                  />
-                                </div>
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                  {completedCount}/{totalAssignees}
-                                </span>
                               </div>
                             </div>
                             {task.status === TaskStatus.COMPLETED && (
@@ -684,6 +653,65 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
                                 Approve
                               </Button>
                             )}
+                          </div>
+                          
+                          {/* Middle Row: Assignees, Status, Priority, Due Date */}
+                          <div className="flex items-center justify-between gap-3 mb-2">
+                            {/* Assignees */}
+                            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                              {task.assignees.length > 0 ? (
+                                <>
+                                  <span className="text-xs text-muted-foreground whitespace-nowrap">Assigned:</span>
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    {task.assignees.slice(0, 2).map((assignee) => (
+                                      <span key={assignee.id} className="text-xs text-muted-foreground">
+                                        {assignee.user.name}
+                                      </span>
+                                    ))}
+                                    {task.assignees.length > 2 && (
+                                      <span className="text-xs text-muted-foreground">+{task.assignees.length - 2}</span>
+                                    )}
+                                  </div>
+                                </>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">No assignees</span>
+                              )}
+                            </div>
+                            
+                            {/* Status, Priority, Due Date */}
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className={`px-2 py-0.5 text-xs rounded-full font-medium whitespace-nowrap ${getTaskStatusBadgeClass(task.status)}`}>
+                                {task.status.replace('_', ' ')}
+                              </span>
+                              <span className={`text-xs font-semibold whitespace-nowrap ${getPriorityColor(task.priority)}`}>
+                                {task.priority}
+                              </span>
+                              <div className="flex flex-col items-end">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">{format(parseISO(task.dueDate), 'MMM dd, yyyy')}</span>
+                                {isOverdue && (
+                                  <span className="text-xs text-red-600 font-medium">Overdue</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Bottom Row: Progress Bar */}
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-muted rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all ${
+                                  progressPercentage === 100
+                                    ? 'bg-green-600'
+                                    : progressPercentage > 0
+                                    ? 'bg-blue-600'
+                                    : 'bg-muted'
+                                }`}
+                                style={{ width: `${progressPercentage}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+                              {completedCount}/{totalAssignees}
+                            </span>
                           </div>
                         </div>
                       );
