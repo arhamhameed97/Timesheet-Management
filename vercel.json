@@ -3,7 +3,13 @@
   "devCommand": "npm run dev",
   "installCommand": "npm ci",
   "framework": "nextjs",
-  "regions": ["iad1"]
+  "regions": ["iad1"],
+  "crons": [
+    {
+      "path": "/api/cron/generate-timesheets",
+      "schedule": "0 0 1 * *"
+    }
+  ]
 }
 
 
