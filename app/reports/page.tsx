@@ -74,6 +74,7 @@ export default function ReportsPage() {
 
   useEffect(() => {
     fetchReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period, customStartDate, customEndDate]);
 
   const fetchReports = async () => {

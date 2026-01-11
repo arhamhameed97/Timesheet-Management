@@ -57,7 +57,7 @@ export function EmployeePerformanceTable({
   };
 
   const filteredAndSortedData = useMemo(() => {
-    let data = type === 'attendance' 
+    let data: Array<any> = type === 'attendance' 
       ? employeeBreakdown 
       : timesheetData.map(ts => ({
           employeeId: ts.employeeId,
@@ -71,13 +71,13 @@ export function EmployeePerformanceTable({
 
     // Filter by search query
     if (searchQuery) {
-      data = data.filter(emp => 
+      data = data.filter((emp: any) => 
         emp.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     // Sort data
-    data.sort((a, b) => {
+    data.sort((a: any, b: any) => {
       let aValue: number | string = a[sortField as keyof typeof a] as number | string;
       let bValue: number | string = b[sortField as keyof typeof b] as number | string;
 
