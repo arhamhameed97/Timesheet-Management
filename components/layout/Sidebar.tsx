@@ -121,9 +121,9 @@ export function Sidebar({ role }: SidebarProps) {
   const items = getFilteredNavItems();
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-primary dark:bg-primary/90">
+    <div className="flex h-screen w-64 flex-col bg-primary dark:bg-[hsl(262.1,65%,38%)]">
       {/* Logo Section */}
-      <div className="flex items-center gap-3 px-6 py-6 border-b-2 border-primary-foreground/10">
+      <div className="flex items-center gap-3 px-6 py-6 border-b-2 border-primary-foreground/15">
         <div className="flex items-center justify-center">
           <Sparkles className="h-6 w-6 text-primary-foreground" />
         </div>
