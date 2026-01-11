@@ -1,34 +1,51 @@
 'use client';
 
 import { useEffect } from 'react';
+import { Navbar } from '@/components/landing/Navbar';
+import { Hero } from '@/components/landing/Hero';
+import { Features } from '@/components/landing/Features';
+import { HowItWorks } from '@/components/landing/HowItWorks';
+import { Stats } from '@/components/landing/Stats';
+import { Testimonials } from '@/components/landing/Testimonials';
+import { Pricing } from '@/components/landing/Pricing';
+import { ValueProposition } from '@/components/landing/ValueProposition';
+import { FAQ } from '@/components/landing/FAQ';
+import { CTASection } from '@/components/landing/CTASection';
+import { Footer } from '@/components/landing/Footer';
+import { LiveChat } from '@/components/landing/LiveChat';
+import { ScrollProgress } from '@/components/landing/ScrollProgress';
 
 export default function Home() {
   useEffect(() => {
     // Check if user has a token
     const token = localStorage.getItem('token');
     
-    // Use window.location.href for a full page redirect
-    // This ensures middleware runs and can verify the token from cookies
+    // If token exists, redirect to dashboard
+    // The middleware will verify the token and redirect to login if invalid
     if (token) {
-      // If token exists, redirect to dashboard
-      // The middleware will verify the token and redirect to login if invalid
       window.location.href = '/dashboard';
-    } else {
-      // If no token, redirect to login
-      window.location.href = '/login';
+      return;
     }
+
+    // Add smooth scroll behavior
+    document.documentElement.style.scrollBehavior = 'smooth';
   }, []);
 
-  // Show loading state while redirecting
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-        <h1 className="text-4xl font-bold">Timesheet Management</h1>
-        <p className="mt-4 text-lg text-muted-foreground">Redirecting...</p>
-      </div>
+    <main className="min-h-screen bg-background">
+      <ScrollProgress />
+      <Navbar />
+      <Hero />
+      <Features />
+      <HowItWorks />
+      <Stats />
+      <ValueProposition />
+      <Testimonials />
+      <Pricing />
+      <FAQ />
+      <CTASection />
+      <Footer />
+      <LiveChat />
     </main>
   );
 }
-
-
