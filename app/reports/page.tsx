@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/table';
 
 type PeriodType = 'currentMonth' | 'lastMonth' | 'last3Months' | 'last6Months' | 'thisYear' | 'custom';
+type TimesheetPeriodType = 'month' | 'custom';
 
 interface ReportsData {
   summary: {
@@ -119,7 +120,7 @@ export default function ReportsPage() {
     totalOvertimeHours: 0,
     totalEarnings: 0,
   });
-  const [timesheetPeriod, setTimesheetPeriod] = useState<PeriodType>('currentMonth');
+  const [timesheetPeriod, setTimesheetPeriod] = useState<TimesheetPeriodType>('month');
   const [timesheetCustomStartDate, setTimesheetCustomStartDate] = useState('');
   const [timesheetCustomEndDate, setTimesheetCustomEndDate] = useState('');
 
@@ -256,7 +257,7 @@ export default function ReportsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, timesheetPeriod, timesheetCustomStartDate, timesheetCustomEndDate]);
 
-  const handleTimesheetPeriodChange = (value: PeriodType) => {
+  const handleTimesheetPeriodChange = (value: TimesheetPeriodType) => {
     setTimesheetPeriod(value);
     if (value !== 'custom' && value !== 'month') {
       setTimesheetCustomStartDate('');
