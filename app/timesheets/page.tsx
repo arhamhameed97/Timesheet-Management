@@ -98,7 +98,7 @@ export default function TimesheetsPage() {
     const now = new Date();
     return format(endOfMonth(now), 'yyyy-MM-dd');
   });
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('all');
 
   useEffect(() => {
     fetchCurrentUser();
@@ -203,7 +203,7 @@ export default function TimesheetsPage() {
         url += `&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`;
       }
 
-      if (selectedEmployeeId && canViewOthers) {
+      if (selectedEmployeeId && selectedEmployeeId !== 'all' && canViewOthers) {
         url += `&userId=${selectedEmployeeId}`;
       }
 
@@ -256,7 +256,7 @@ export default function TimesheetsPage() {
         body.endDate = dateRange.endDate;
       }
 
-      if (selectedEmployeeId && canViewOthers) {
+      if (selectedEmployeeId && selectedEmployeeId !== 'all' && canViewOthers) {
         body.userId = selectedEmployeeId;
       }
 
@@ -301,7 +301,7 @@ export default function TimesheetsPage() {
       const token = localStorage.getItem('token');
       const dateRange = getDateRange();
       
-      const userId = selectedEmployeeId && canViewOthers ? selectedEmployeeId : undefined;
+      const userId = selectedEmployeeId && selectedEmployeeId !== 'all' && canViewOthers ? selectedEmployeeId : undefined;
       let url = `/api/timesheets/export/period?type=${type}&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`;
       if (userId) {
         url += `&userId=${userId}`;
@@ -516,7 +516,7 @@ export default function TimesheetsPage() {
                       <SelectValue placeholder="All Employees" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Employees</SelectItem>
+                      <SelectItem value="all">All Employees</SelectItem>
                       {employees.map((emp) => (
                         <SelectItem key={emp.id} value={emp.id}>
                           {emp.name}
