@@ -120,8 +120,9 @@ export async function GET(
       }
 
       const pdfBuffer = await renderToBuffer(pdfDoc as any);
+      const uint8Array = new Uint8Array(pdfBuffer);
 
-      return new NextResponse(pdfBuffer, {
+      return new NextResponse(uint8Array, {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="timesheet-${type}-${startDate}-${endDate}.pdf"`,
@@ -195,8 +196,9 @@ export async function GET(
     }
 
     const pdfBuffer = await renderToBuffer(pdfDoc as any);
+    const uint8Array = new Uint8Array(pdfBuffer);
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(uint8Array, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="timesheet-${type}-${dateStr}.pdf"`,
