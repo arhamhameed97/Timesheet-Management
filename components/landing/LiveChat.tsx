@@ -115,7 +115,7 @@ export function LiveChat() {
                 <div className="p-4 h-[calc(100%-140px)] overflow-y-auto">
                   <div className="mb-4 p-4 bg-muted rounded-lg">
                     <p className="text-sm text-muted-foreground">
-                      We're here to help! Leave us a message and we'll get back to you within 24 hours.
+                      We&apos;re here to help! Leave us a message and we&apos;ll get back to you within 24 hours.
                     </p>
                   </div>
 

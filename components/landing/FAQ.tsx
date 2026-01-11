@@ -56,7 +56,7 @@ const faqs = [
     id: 7,
     category: 'pricing',
     question: 'Can I change plans later?',
-    answer: 'Absolutely! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we\'ll prorate any charges. No long-term contracts required.',
+    answer: 'Absolutely! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we&apos;ll prorate any charges. No long-term contracts required.',
   },
   {
     id: 8,
@@ -204,7 +204,7 @@ export function FAQ() {
             }}
           >
             <p className="text-muted-foreground mb-4">
-              Can't find your answer?
+              Can&apos;t find your answer?
             </p>
             <button
               onClick={() => (window.location.href = 'mailto:support@timesheetpro.com')}

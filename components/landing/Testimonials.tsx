@@ -121,7 +121,7 @@ export function Testimonials() {
                       ))}
                     </div>
                     <p className="text-lg md:text-xl text-foreground mb-8 italic text-center">
-                      "{currentTestimonial.text}"
+                      &ldquo;{currentTestimonial.text}&rdquo;
                     </p>
                     <div className="flex items-center justify-center space-x-4">
                       <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary-medium flex items-center justify-center text-white font-bold text-xl">
