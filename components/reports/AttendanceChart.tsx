@@ -4,15 +4,13 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Calendar, TrendingUp } from 'lucide-react';
+import { Calendar, Clock } from 'lucide-react';
 
 interface AttendanceChartProps {
   dailyBreakdown: Array<{
     date: string;
-    present: number;
-    absent: number;
-    late: number;
-    total: number;
+    totalHours: number;
+    averageHours: number;
   }>;
   trends: Array<{
     period: string;
@@ -26,16 +24,13 @@ export function AttendanceChart({ dailyBreakdown, trends }: AttendanceChartProps
 
   const dailyData = dailyBreakdown.map(item => ({
     date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    present: item.present,
-    absent: item.absent,
-    late: item.late,
-    attendanceRate: item.total > 0 ? ((item.present / item.total) * 100).toFixed(1) : 0,
+    totalHours: parseFloat(item.totalHours.toFixed(2)),
+    averageHours: parseFloat(item.averageHours.toFixed(2)),
   }));
 
   const weeklyData = trends.map(item => ({
     period: item.period,
-    attendanceRate: parseFloat(item.attendanceRate.toFixed(1)),
-    totalHours: parseFloat(item.totalHours.toFixed(1)),
+    totalHours: parseFloat(item.totalHours.toFixed(2)),
   }));
 
   const chartData = viewMode === 'daily' ? dailyData : weeklyData;
@@ -45,8 +40,8 @@ export function AttendanceChart({ dailyBreakdown, trends }: AttendanceChartProps
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Attendance Trends
+            <Clock className="h-5 w-5" />
+            Hourly Trends
           </CardTitle>
           <div className="flex gap-2">
             <Button
@@ -70,7 +65,7 @@ export function AttendanceChart({ dailyBreakdown, trends }: AttendanceChartProps
       <CardContent>
         {chartData.length === 0 ? (
           <div className="flex items-center justify-center h-64 text-muted-foreground">
-            No attendance data available for the selected period
+            No hourly data available for the selected period
           </div>
         ) : viewMode === 'daily' ? (
           <ResponsiveContainer width="100%" height={300}>
@@ -86,17 +81,16 @@ export function AttendanceChart({ dailyBreakdown, trends }: AttendanceChartProps
               <YAxis />
               <Tooltip 
                 formatter={(value: number, name: string) => {
-                  if (name === 'attendanceRate') {
-                    return [`${value}%`, 'Attendance Rate'];
+                  if (name === 'totalHours') {
+                    return [`${value.toFixed(2)}h`, 'Total Hours'];
                   }
-                  return [value, name.charAt(0).toUpperCase() + name.slice(1)];
+                  return [`${value.toFixed(2)}h`, 'Average Hours'];
                 }}
                 labelStyle={{ color: '#000' }}
               />
               <Legend />
-              <Bar dataKey="present" stackId="a" fill="#22c55e" name="Present" />
-              <Bar dataKey="late" stackId="a" fill="#f59e0b" name="Late" />
-              <Bar dataKey="absent" stackId="a" fill="#ef4444" name="Absent" />
+              <Bar dataKey="totalHours" fill="#3b82f6" name="Total Hours" />
+              <Bar dataKey="averageHours" fill="#8b5cf6" name="Average Hours" />
             </BarChart>
           </ResponsiveContainer>
         ) : (
@@ -104,32 +98,16 @@ export function AttendanceChart({ dailyBreakdown, trends }: AttendanceChartProps
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
               <XAxis dataKey="period" />
-              <YAxis yAxisId="left" />
-              <YAxis yAxisId="right" orientation="right" />
+              <YAxis />
               <Tooltip 
-                formatter={(value: number, name: string) => {
-                  if (name === 'attendanceRate') {
-                    return [`${value}%`, 'Attendance Rate'];
-                  }
-                  return [`${value}h`, 'Total Hours'];
-                }}
+                formatter={(value: number) => [`${value.toFixed(2)}h`, 'Total Hours']}
                 labelStyle={{ color: '#000' }}
               />
               <Legend />
               <Line 
-                yAxisId="left"
-                type="monotone" 
-                dataKey="attendanceRate" 
-                stroke="#3b82f6" 
-                strokeWidth={2}
-                name="Attendance Rate (%)"
-                dot={{ r: 4 }}
-              />
-              <Line 
-                yAxisId="right"
                 type="monotone" 
                 dataKey="totalHours" 
-                stroke="#8b5cf6" 
+                stroke="#3b82f6" 
                 strokeWidth={2}
                 name="Total Hours"
                 dot={{ r: 4 }}

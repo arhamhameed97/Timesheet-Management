@@ -213,33 +213,33 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Calculate daily attendance breakdown
-    const dailyBreakdownMap = new Map<string, { present: number; absent: number; late: number; total: number }>();
+    // Calculate daily hours breakdown (for hourly trends)
+    const dailyHoursMap = new Map<string, { totalHours: number; employeeCount: number }>();
     const allDays = eachDayOfInterval({ start: startDate, end: endDate });
     
     allDays.forEach(day => {
       const dayKey = format(day, 'yyyy-MM-dd');
-      dailyBreakdownMap.set(dayKey, { present: 0, absent: 0, late: 0, total: employeeIds.length });
+      dailyHoursMap.set(dayKey, { totalHours: 0, employeeCount: 0 });
     });
 
     attendanceRecords.forEach(record => {
       const dayKey = format(record.date, 'yyyy-MM-dd');
-      const breakdown = dailyBreakdownMap.get(dayKey) || { present: 0, absent: 0, late: 0, total: employeeIds.length };
+      const breakdown = dailyHoursMap.get(dayKey) || { totalHours: 0, employeeCount: 0 };
       
-      if (record.checkInTime) {
-        if (record.status === AttendanceStatus.LATE) {
-          breakdown.late++;
-        }
-        breakdown.present++;
-      } else {
-        breakdown.absent++;
+      if (record.checkInTime && record.checkOutTime) {
+        const checkIn = new Date(record.checkInTime);
+        const checkOut = new Date(record.checkOutTime);
+        const seconds = differenceInSeconds(checkOut, checkIn);
+        breakdown.totalHours += Math.abs(seconds) / 3600;
+        breakdown.employeeCount++;
       }
-      dailyBreakdownMap.set(dayKey, breakdown);
+      dailyHoursMap.set(dayKey, breakdown);
     });
 
-    const dailyBreakdown = Array.from(dailyBreakdownMap.entries()).map(([date, data]) => ({
+    const dailyBreakdown = Array.from(dailyHoursMap.entries()).map(([date, data]) => ({
       date,
-      ...data,
+      totalHours: Math.round(data.totalHours * 100) / 100,
+      averageHours: data.employeeCount > 0 ? Math.round((data.totalHours / data.employeeCount) * 100) / 100 : 0,
     }));
 
     // Calculate employee attendance breakdown
@@ -515,7 +515,11 @@ export async function GET(request: NextRequest) {
         totalEarnings: Math.round(totalEarnings * 100) / 100,
       },
       attendance: {
-        dailyBreakdown,
+        dailyBreakdown: dailyBreakdown.map(item => ({
+          date: item.date,
+          totalHours: item.totalHours,
+          averageHours: item.averageHours,
+        })),
         employeeBreakdown,
         trends,
         patterns: {
