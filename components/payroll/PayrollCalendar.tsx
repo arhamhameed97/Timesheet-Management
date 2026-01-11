@@ -242,14 +242,14 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
                 key={date.toISOString()}
                 onClick={() => handleDateClick(date)}
                 className={`
-                  group relative aspect-square p-2 text-sm rounded-lg border-2 transition-all duration-300 ease-in-out
+                  group relative aspect-square p-1.5 text-sm rounded-lg border-2 transition-all duration-300 ease-in-out
                   flex flex-col items-center justify-center min-h-0 overflow-hidden
                   focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2
                   ${!isCurrentMonth ? 'text-muted-foreground border-border bg-muted/30 cursor-not-allowed' : 'text-foreground'}
                   ${isToday ? 'ring-2 ring-primary ring-offset-1 shadow-md' : ''}
                   ${payroll 
-                    ? getStatusColor(payroll.status) + ' cursor-pointer hover:shadow-lg hover:scale-105 hover:z-10 active:scale-100' 
-                    : 'border-2 border-border bg-card hover:bg-muted/50 dark:hover:bg-muted hover:shadow-md hover:scale-105 hover:z-10 active:scale-100'
+                    ? getStatusColor(payroll.status) + ' cursor-pointer hover:shadow-xl hover:z-20 active:scale-100' 
+                    : 'border-2 border-border bg-card hover:bg-muted/50 dark:hover:bg-muted hover:shadow-xl hover:z-20 active:scale-100'
                   }
                   ${hasData ? 'hover:bg-gradient-to-br hover:from-blue-500/10 hover:to-green-500/10 dark:hover:from-blue-500/20 dark:hover:to-green-500/20' : ''}
                 `}
@@ -275,38 +275,45 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
                 {/* Hours and Earnings - Revealed on Hover */}
                 {(shouldShowHours || shouldShowEarnings) && (
                   <div className={`
-                    absolute inset-0 flex flex-col items-center justify-center gap-2 px-1.5
-                    opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100
+                    absolute inset-0 flex flex-col items-center justify-between px-1.5 py-1.5
+                    opacity-0 group-hover:opacity-100
                     transition-all duration-300 ease-in-out
+                    overflow-hidden
+                    bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-green-500/10 
+                    dark:from-blue-500/20 dark:via-purple-500/20 dark:to-green-500/20
+                    backdrop-blur-sm rounded-lg border-2 border-primary/30 dark:border-primary/50
+                    shadow-lg
                   `}>
+                    {/* Top Section - Hours */}
                     {shouldShowHours && (
-                      <div className="flex flex-col items-center">
-                        <div className="text-[8px] text-muted-foreground font-semibold uppercase tracking-wider mb-0.5 leading-none">
-                          Hours
-                        </div>
-                        <div className="text-xs sm:text-sm font-bold text-blue-600 leading-tight">
+                      <div className="flex flex-col items-center w-full min-w-0 flex-shrink-0">
+                        <div className="text-xs font-bold text-blue-500 dark:text-blue-400 leading-none">
                           {displayHours % 1 === 0 
                             ? `${displayHours.toFixed(0)}h` 
                             : `${displayHours.toFixed(1)}h`}
                         </div>
                         {hasOvertime && (
-                          <div className="text-[7px] text-orange-600 font-semibold mt-0.5">
+                          <div className="text-[9px] text-orange-500 dark:text-orange-400 font-semibold leading-tight mt-0.5">
                             {overtimeHours.toFixed(1)}h OT
-                          </div>
-                        )}
-                        {hourlyRate && (
-                          <div className="text-[7px] text-muted-foreground mt-0.5">
-                            ${hourlyRate.toFixed(2)}/hr
                           </div>
                         )}
                       </div>
                     )}
+                    
+                    {/* Middle Section - Hourly Rate */}
+                    {hourlyRate && (
+                      <div className="text-[9px] text-muted-foreground leading-tight flex-shrink-0 my-0.5 px-1">
+                        ${hourlyRate.toFixed(2)}/hr
+                      </div>
+                    )}
+                    
+                    {/* Bottom Section - Total Pay */}
                     {shouldShowEarnings && (
-                      <div className="flex flex-col items-center">
-                        <div className="text-[8px] text-muted-foreground font-semibold uppercase tracking-wider mb-0.5 leading-none">
-                          Pay
+                      <div className="flex flex-col items-center w-full min-w-0 flex-shrink-0 mt-auto">
+                        <div className="text-[8px] text-muted-foreground font-medium uppercase tracking-wide mb-0.5 leading-tight">
+                          PAY
                         </div>
-                        <div className="text-xs sm:text-sm font-bold text-green-600 leading-tight whitespace-nowrap">
+                        <div className="text-xs font-bold text-green-500 dark:text-green-400 leading-none">
                           {displayEarnings % 1 === 0 
                             ? `$${displayEarnings.toFixed(0)}` 
                             : `$${displayEarnings.toFixed(2)}`}
