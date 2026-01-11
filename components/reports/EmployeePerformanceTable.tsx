@@ -279,8 +279,9 @@ export function EmployeePerformanceTable({
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2 flex-wrap">
-                            {Object.entries(employee.statusCounts).map(([status, count]) => (
-                              count > 0 && (
+                            {Object.entries(employee.statusCounts).map(([status, count]) => {
+                              const countValue = count as number;
+                              return countValue > 0 && (
                                 <span
                                   key={status}
                                   className={`px-2 py-1 text-xs rounded-full ${
@@ -290,10 +291,10 @@ export function EmployeePerformanceTable({
                                     'bg-red-100 text-red-800'
                                   }`}
                                 >
-                                  {status}: {count}
+                                  {status}: {countValue}
                                 </span>
-                              )
-                            ))}
+                              );
+                            })}
                           </div>
                         </TableCell>
                       </>
