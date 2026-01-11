@@ -1,6 +1,6 @@
-# Timesheet Management Application
+# PunchIn
 
-A comprehensive timesheet management application built with Next.js, TypeScript, and PostgreSQL. This application allows companies to register, manage employees, track attendance, log timesheets, manage teams, process payroll, and more.
+A comprehensive workforce management application built with Next.js, TypeScript, and PostgreSQL. PunchIn allows companies to register, manage employees, track attendance, log timesheets, manage teams, process payroll, and more.
 
 ## Features
 

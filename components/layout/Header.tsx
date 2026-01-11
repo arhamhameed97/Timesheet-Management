@@ -90,7 +90,7 @@ export function Header() {
       <div className="flex h-16 items-center justify-between px-6">
         <div>
           <h1 className="text-xl font-semibold text-foreground">
-            {user.company?.name || 'Timesheet Management'}
+            {user.company?.name || 'PunchIn'}
           </h1>
         </div>
         <div className="flex items-center gap-4">

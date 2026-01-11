@@ -53,7 +53,7 @@ export function Navbar() {
             className="flex items-center space-x-2"
           >
             <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-medium bg-clip-text text-transparent">
-              TimeSheet Pro
+              PunchIn
             </Link>
           </motion.div>
 

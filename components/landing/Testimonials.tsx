@@ -14,7 +14,7 @@ const testimonials = [
     company: 'TechCorp Inc.',
     image: 'SJ',
     rating: 5,
-    text: 'TimeSheet Pro has revolutionized how we manage our workforce. The automated payroll processing alone saves us 20 hours per week.',
+    text: 'PunchIn has revolutionized how we manage our workforce. The automated payroll processing alone saves us 20 hours per week.',
   },
   {
     id: 2,
@@ -32,7 +32,7 @@ const testimonials = [
     company: 'GrowthLabs',
     image: 'ER',
     rating: 5,
-    text: 'As a growing company, we needed a scalable solution. TimeSheet Pro has been the cornerstone of our workforce management.',
+    text: 'As a growing company, we needed a scalable solution. PunchIn has been the cornerstone of our workforce management.',
   },
   {
     id: 4,
@@ -92,7 +92,7 @@ export function Testimonials() {
             transition={{ delay: 0.1 }}
             className="text-lg text-muted-foreground max-w-2xl mx-auto"
           >
-            Join thousands of companies that trust TimeSheet Pro for their workforce management.
+            Join thousands of companies that trust PunchIn for their workforce management.
           </motion.p>
         </ScrollReveal>
 

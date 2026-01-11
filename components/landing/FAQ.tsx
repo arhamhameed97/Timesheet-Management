@@ -26,7 +26,7 @@ const faqs = [
     id: 2,
     category: 'getting-started',
     question: 'Do I need to install any software?',
-    answer: 'No installation required! TimeSheet Pro is a cloud-based platform accessible from any device with an internet connection. Works on desktop, tablet, and mobile browsers.',
+    answer: 'No installation required! PunchIn is a cloud-based platform accessible from any device with an internet connection. Works on desktop, tablet, and mobile browsers.',
   },
   {
     id: 3,
@@ -107,7 +107,7 @@ export function FAQ() {
             transition={{ delay: 0.1 }}
             className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8"
           >
-            Find answers to common questions about TimeSheet Pro.
+            Find answers to common questions about PunchIn.
           </motion.p>
         </ScrollReveal>
 
@@ -207,7 +207,7 @@ export function FAQ() {
               Can&apos;t find your answer?
             </p>
             <button
-              onClick={() => (window.location.href = 'mailto:support@timesheetpro.com')}
+              onClick={() => (window.location.href = 'mailto:support@punchin.com')}
               className="text-primary hover:text-primary-medium font-semibold underline"
             >
               Contact our support team

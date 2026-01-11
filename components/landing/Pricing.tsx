@@ -182,7 +182,7 @@ export function Pricing() {
                         onClick={() => {
                           if (plan.name === 'Enterprise') {
                             // Contact sales
-                            window.location.href = 'mailto:sales@timesheetpro.com';
+                            window.location.href = 'mailto:sales@punchin.com';
                           } else {
                             window.location.href = '/register';
                           }

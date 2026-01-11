@@ -16,7 +16,7 @@ const footerLinks = {
     { label: 'About Us', href: '#' },
     { label: 'Blog', href: '#' },
     { label: 'Careers', href: '#' },
-    { label: 'Contact', href: 'mailto:support@timesheetpro.com' },
+    { label: 'Contact', href: 'mailto:support@punchin.com' },
   ],
   legal: [
     { label: 'Privacy Policy', href: '#' },
@@ -28,7 +28,7 @@ const footerLinks = {
     { label: 'Documentation', href: '#' },
     { label: 'API', href: '#' },
     { label: 'Integrations', href: '#' },
-    { label: 'Support', href: 'mailto:support@timesheetpro.com' },
+    { label: 'Support', href: 'mailto:support@punchin.com' },
   ],
 };
 
@@ -55,7 +55,7 @@ export function Footer() {
               viewport={{ once: true }}
             >
               <h3 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary-medium bg-clip-text text-transparent mb-4">
-                TimeSheet Pro
+                PunchIn
               </h3>
               <p className="text-muted-foreground mb-4 max-w-md">
                 The cornerstone solution for modern workforce management. Streamline your operations with our comprehensive platform.
@@ -148,7 +148,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="border-t pt-8 flex flex-col md:flex-row items-center justify-between">
           <p className="text-muted-foreground text-sm mb-4 md:mb-0">
-            © {new Date().getFullYear()} TimeSheet Pro. All rights reserved.
+            © {new Date().getFullYear()} PunchIn. All rights reserved.
           </p>
           <Button
             onClick={scrollToTop}

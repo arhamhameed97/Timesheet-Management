@@ -39,7 +39,7 @@ export function CTASection() {
             transition={{ delay: 0.1 }}
             className="text-xl text-white/90 mb-8 max-w-2xl mx-auto"
           >
-            Join thousands of companies using TimeSheet Pro to streamline their operations and boost productivity.
+            Join thousands of companies using PunchIn to streamline their operations and boost productivity.
           </motion.p>
 
           <motion.div
