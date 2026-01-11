@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext, unauthorizedResponse, forbiddenResponse } from '@/lib/middleware-helpers';
 import { canManageUser } from '@/lib/permissions';
 import { getEnrichedTimesheetData, getEnrichedTimesheetDataForPeriod } from '@/lib/timesheet-helpers';
-import { renderToBuffer } from '@react-pdf/renderer';
+import { renderToBuffer, Document } from '@react-pdf/renderer';
 import { TimesheetPDFSummary } from '@/components/timesheets/TimesheetPDFSummary';
 import { TimesheetPDFDetailed } from '@/components/timesheets/TimesheetPDFDetailed';
 import React from 'react';
@@ -86,7 +86,7 @@ export async function GET(
       const approver = approvedTimesheet?.approver || null;
       const approvedAt = approvedTimesheet?.approvedAt?.toISOString() || null;
 
-      let pdfDoc;
+      let pdfDoc: React.ReactElement;
       if (type === 'summary') {
         pdfDoc = React.createElement(TimesheetPDFSummary, {
           employee: user,
@@ -96,7 +96,7 @@ export async function GET(
           status,
           approver,
           approvedAt,
-        });
+        }) as React.ReactElement;
       } else {
         pdfDoc = React.createElement(TimesheetPDFDetailed, {
           employee: user,
@@ -116,10 +116,10 @@ export async function GET(
           status,
           approver,
           approvedAt,
-        });
+        }) as React.ReactElement;
       }
 
-      const pdfBuffer = await renderToBuffer(pdfDoc);
+      const pdfBuffer = await renderToBuffer(pdfDoc as any);
 
       return new NextResponse(pdfBuffer, {
         headers: {
@@ -151,7 +151,7 @@ export async function GET(
     // Get date range for single timesheet (just that date)
     const dateStr = enrichedData.date.toISOString().split('T')[0];
 
-    let pdfDoc;
+    let pdfDoc: React.ReactElement;
     if (type === 'summary') {
       pdfDoc = React.createElement(TimesheetPDFSummary, {
         employee: enrichedData.user,
@@ -166,7 +166,7 @@ export async function GET(
         status: enrichedData.status,
         approver: enrichedData.approver || null,
         approvedAt: enrichedData.approvedAt?.toISOString() || null,
-      });
+      }) as React.ReactElement;
     } else {
       pdfDoc = React.createElement(TimesheetPDFDetailed, {
         employee: enrichedData.user,
@@ -191,10 +191,10 @@ export async function GET(
         status: enrichedData.status,
         approver: enrichedData.approver || null,
         approvedAt: enrichedData.approvedAt?.toISOString() || null,
-      });
+      }) as React.ReactElement;
     }
 
-    const pdfBuffer = await renderToBuffer(pdfDoc);
+    const pdfBuffer = await renderToBuffer(pdfDoc as any);
 
     return new NextResponse(pdfBuffer, {
       headers: {
