@@ -843,7 +843,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
         {/* Left Column - 2/3 width */}
         <div className="lg:col-span-2 space-y-6">
           {/* Clock In/Out Card */}
-          <Card className="bg-card dark:bg-card/90 border-border">
+          <Card>
             <CardContent className="p-6">
               <div className="flex items-stretch gap-6 h-full">
                 {/* Left Section - Clock In/Out Controls */}
@@ -974,7 +974,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                 {/* Right Section - Stats Visuals */}
                 <div className="hidden md:flex flex-row gap-3 w-96 h-full">
                   {/* Progress Card */}
-                  <div className="bg-card rounded-xl border border-border p-5 shadow-sm flex-1 flex flex-col h-full">
+                  <div className="bg-card rounded-xl border border-border p-5 shadow-md transition-shadow duration-200 hover:shadow-lg flex-1 flex flex-col h-full">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-sm font-bold text-foreground">Progress</h3>
                     </div>
@@ -1019,7 +1019,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                   </div>
                   
                   {/* Time Tracker Card */}
-                  <div className="bg-card rounded-xl border border-border p-5 shadow-sm flex-1 flex flex-col h-full items-center justify-center">
+                  <div className="bg-card rounded-xl border border-border p-5 shadow-md transition-shadow duration-200 hover:shadow-lg flex-1 flex flex-col h-full items-center justify-center">
                     <div className="flex items-center justify-between mb-4 w-full">
                       <h3 className="text-sm font-bold text-foreground">Time tracker</h3>
                     </div>
