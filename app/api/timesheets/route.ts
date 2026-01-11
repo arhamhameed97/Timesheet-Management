@@ -5,6 +5,7 @@ import { createTimesheetSchema, updateTimesheetSchema } from '@/lib/validations'
 import { UserRole, TimesheetStatus } from '@prisma/client';
 import { canManageUser } from '@/lib/permissions';
 import { getEnrichedTimesheetDataForPeriod } from '@/lib/timesheet-helpers';
+import { startOfMonth, endOfMonth } from 'date-fns';
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,8 +41,12 @@ export async function GET(request: NextRequest) {
     if (month && year) {
       const monthNum = parseInt(month, 10);
       const yearNum = parseInt(year, 10);
-      dateStart = new Date(Date.UTC(yearNum, monthNum - 1, 1, 0, 0, 0, 0));
-      dateEnd = new Date(Date.UTC(yearNum, monthNum, 0, 23, 59, 59, 999));
+      // Create date for the first day of the month
+      const monthDate = new Date(yearNum, monthNum - 1, 1);
+      dateStart = startOfMonth(monthDate);
+      dateEnd = endOfMonth(monthDate);
+      // Set end date to end of day
+      dateEnd.setHours(23, 59, 59, 999);
     } else if (startDate && endDate) {
       dateStart = new Date(startDate);
       dateEnd = new Date(endDate);

@@ -140,8 +140,11 @@ export async function generateMonthlyTimesheets(
   year: number
 ): Promise<TimesheetGenerationResult> {
   // month is 1-indexed (1-12)
-  const monthStart = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
-  const monthEnd = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+  const monthDate = new Date(year, month - 1, 1);
+  const monthStart = startOfMonth(monthDate);
+  const monthEnd = endOfMonth(monthDate);
+  // Set end date to end of day
+  monthEnd.setHours(23, 59, 59, 999);
 
   return generateTimesheetsForPeriod(userId, monthStart, monthEnd);
 }
