@@ -104,6 +104,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
   const [tasks, setTasks] = useState<any[]>([]);
   const [loadingTasks, setLoadingTasks] = useState(false);
   const [breakTime, setBreakTime] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // Leave form state
   const [leaveForm, setLeaveForm] = useState({
@@ -202,6 +203,9 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
         const data = await response.json();
         if (data.user?.company?.name) {
           setCompanyName(data.user.company.name);
+        }
+        if (data.user?.id) {
+          setCurrentUserId(data.user.id);
         }
       }
     } catch (error) {
@@ -1382,27 +1386,42 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                                 Start Task
                               </Button>
                             )}
-                            {task.status === 'IN_PROGRESS' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleTaskStatusUpdate(task.id, 'COMPLETED')}
-                              >
-                                Mark Complete
-                              </Button>
-                            )}
-                            {task.status === 'COMPLETED' && !task.approvedBy && (
-                              <>
-                                <span className="text-xs text-yellow-600 self-center">Awaiting Approval</span>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleTaskStatusUpdate(task.id, 'IN_PROGRESS')}
-                                >
-                                  Mark Incomplete
-                                </Button>
-                              </>
-                            )}
+                            {task.status !== 'PENDING' && task.status !== 'APPROVED' && (() => {
+                              // Find current employee's assignee record
+                              const currentUserAssignee = task.assignees?.find((a: any) => 
+                                a.userId === currentUserId || a.user?.id === currentUserId
+                              );
+                              const hasCompleted = currentUserAssignee?.completedAt !== null && currentUserAssignee?.completedAt !== undefined;
+                              
+                              if (!hasCompleted) {
+                                // Employee hasn't completed yet - show Mark Complete button
+                                return (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleTaskStatusUpdate(task.id, 'COMPLETED')}
+                                  >
+                                    Mark Complete
+                                  </Button>
+                                );
+                              } else {
+                                // Employee has completed - show Mark Incomplete button
+                                return (
+                                  <>
+                                    {task.status === 'COMPLETED' && (
+                                      <span className="text-xs text-yellow-600 self-center">Awaiting Approval</span>
+                                    )}
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleTaskStatusUpdate(task.id, 'IN_PROGRESS')}
+                                    >
+                                      Mark Incomplete
+                                    </Button>
+                                  </>
+                                );
+                              }
+                            })()}
                             {task.status === 'APPROVED' && (
                               <span className="text-xs text-green-600 dark:text-green-400 self-center">
                                 Approved {task.approvedAt && format(new Date(task.approvedAt), 'MMM dd')}

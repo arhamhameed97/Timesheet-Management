@@ -183,13 +183,66 @@ export async function PATCH(
 
     // Update task
     const updateData: any = {};
+    
+    // Handle status updates differently for employees vs managers
     if (validatedData.status) {
-      updateData.status = validatedData.status;
-      if (validatedData.status === TaskStatus.APPROVED) {
-        updateData.approvedBy = context.userId;
-        updateData.approvedAt = new Date();
+      // For employees marking completion: only update their individual completion, 
+      // then check if all assignees completed to set task status
+      if (!isManager && validatedData.status === TaskStatus.COMPLETED && isAssignee) {
+        // Update individual assignee completion first
+        await prisma.taskAssignee.updateMany({
+          where: {
+            taskId: params.id,
+            userId: context.userId,
+          },
+          data: {
+            completedAt: new Date(),
+          },
+        });
+        
+        // Fetch updated task to check all assignees
+        const updatedTaskWithAssignees = await prisma.task.findUnique({
+          where: { id: params.id },
+          include: { assignees: true },
+        });
+        
+        // Check if all assignees have completed
+        if (updatedTaskWithAssignees && updatedTaskWithAssignees.assignees.length > 0) {
+          const allAssigneesCompleted = updatedTaskWithAssignees.assignees.every(
+            assignee => assignee.completedAt !== null
+          );
+          
+          // Only set task status to COMPLETED if all assignees completed
+          if (allAssigneesCompleted) {
+            updateData.status = TaskStatus.COMPLETED;
+          }
+          // Otherwise, keep task status as IN_PROGRESS (don't change it)
+        }
+      } else if (!isManager && validatedData.status !== TaskStatus.COMPLETED && isAssignee) {
+        // Employee changing status from COMPLETED to something else
+        // Clear their completedAt
+        await prisma.taskAssignee.updateMany({
+          where: {
+            taskId: params.id,
+            userId: context.userId,
+          },
+          data: {
+            completedAt: null,
+          },
+        });
+        
+        // Set task status back to IN_PROGRESS since not all are complete
+        updateData.status = validatedData.status;
+      } else {
+        // Managers/admins can set status directly
+        updateData.status = validatedData.status;
+        if (validatedData.status === TaskStatus.APPROVED) {
+          updateData.approvedBy = context.userId;
+          updateData.approvedAt = new Date();
+        }
       }
     }
+    
     if (validatedData.title !== undefined) {
       updateData.title = validatedData.title;
     }
@@ -246,30 +299,6 @@ export async function PATCH(
           },
         });
       }
-    }
-
-    // Update assignee completion status
-    if (validatedData.status === TaskStatus.COMPLETED && isAssignee) {
-      await prisma.taskAssignee.updateMany({
-        where: {
-          taskId: params.id,
-          userId: context.userId,
-        },
-        data: {
-          completedAt: new Date(),
-        },
-      });
-    } else if (validatedData.status && validatedData.status !== TaskStatus.COMPLETED && isAssignee) {
-      // If changing from COMPLETED to something else, clear completedAt
-      await prisma.taskAssignee.updateMany({
-        where: {
-          taskId: params.id,
-          userId: context.userId,
-        },
-        data: {
-          completedAt: null,
-        },
-      });
     }
 
     const updated = await prisma.task.update({
