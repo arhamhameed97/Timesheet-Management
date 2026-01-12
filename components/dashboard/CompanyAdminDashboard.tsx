@@ -1251,19 +1251,20 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
                                 <Pencil className="h-3 w-3" />
                               </Button>
                             )}
-                            {task.status !== TaskStatus.APPROVED && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  if (confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
-                                    handleDeleteTask(task.id);
-                                  }
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3 text-red-600" />
-                              </Button>
-                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const confirmMessage = task.status === TaskStatus.APPROVED 
+                                  ? 'Are you sure you want to delete this approved task? This action cannot be undone.'
+                                  : 'Are you sure you want to delete this task? This action cannot be undone.';
+                                if (confirm(confirmMessage)) {
+                                  handleDeleteTask(task.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3 text-red-600" />
+                            </Button>
                             {task.status === TaskStatus.COMPLETED && (() => {
                               const allAssigneesCompleted = task.assignees.length > 0 && task.assignees.every(a => a.completedAt !== null);
                               return (

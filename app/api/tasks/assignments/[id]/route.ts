@@ -352,14 +352,7 @@ export async function DELETE(
       );
     }
 
-    // Cannot delete approved tasks
-    if (task.status === TaskStatus.APPROVED) {
-      return NextResponse.json(
-        { error: 'Cannot delete approved tasks' },
-        { status: 400 }
-      );
-    }
-
+    // Managers and admins can delete any task, including approved ones
     await prisma.task.delete({
       where: { id: params.id },
     });
