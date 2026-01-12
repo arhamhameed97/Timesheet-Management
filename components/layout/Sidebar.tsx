@@ -16,6 +16,7 @@ import {
   Calendar,
   Briefcase,
   Sparkles,
+  CheckSquare,
 } from 'lucide-react';
 import { UserRole } from '@prisma/client';
 import { hasPermission } from '@/lib/permission-matrix';
@@ -47,6 +48,12 @@ const allNavItems: NavItem[] = [
     href: '/timesheets', 
     icon: FileText,
     feature: 'view_all_timesheets',
+  },
+  { 
+    title: 'Tasks', 
+    href: '/tasks', 
+    icon: CheckSquare,
+    roles: [UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN, UserRole.MANAGER, UserRole.EMPLOYEE, UserRole.TEAM_LEAD],
   },
   { 
     title: 'Teams', 
