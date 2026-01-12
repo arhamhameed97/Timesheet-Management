@@ -847,9 +847,9 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
         {/* Left Column - 2/3 width */}
         <div className="lg:col-span-2 space-y-6">
           {/* Clock In/Out Card */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-stretch gap-6 h-full">
+          <Card className="h-full">
+            <CardContent className="p-6 h-full">
+              <div className="flex items-stretch gap-6 h-full min-h-[400px]">
                 {/* Left Section - Clock In/Out Controls */}
                 <div className="flex-1 flex flex-col justify-between">
                   <div>
@@ -978,7 +978,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                 {/* Right Section - Stats Visuals */}
                 <div className="hidden md:flex flex-row gap-3 w-96 h-full">
                   {/* Progress Card */}
-                  <div className="bg-card rounded-xl border border-border p-5 shadow-md transition-shadow duration-200 hover:shadow-lg flex-1 flex flex-col h-full">
+                  <div className="bg-card rounded-xl border border-border p-5 shadow-md transition-shadow duration-200 hover:shadow-lg flex-1 flex flex-col h-full min-h-[400px]">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-sm font-bold text-foreground">Progress</h3>
                     </div>
@@ -987,13 +987,18 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                       <div className="text-xs font-medium text-muted-foreground">Work Time this week</div>
                     </div>
                     {/* Weekly Bar Chart */}
-                    <div className="flex items-end justify-between gap-1 flex-1 min-h-[100px]">
+                    <div className="flex items-end justify-between gap-1 flex-1 min-h-[200px]">
                       {weeklyStats.dailyHours.map((day, index) => {
+                        const dayHours = day.hours + day.minutes / 60;
                         const heightPercent = weeklyStats.maxHours > 0 
-                          ? (day.hours + day.minutes / 60) / weeklyStats.maxHours * 100 
+                          ? (dayHours / weeklyStats.maxHours) * 100 
                           : 0;
                         const isToday = isSameDay(day.date, new Date());
                         const hasData = day.hours > 0 || day.minutes > 0;
+                        // Calculate actual height in pixels (min 20px, max based on container)
+                        const barHeight = hasData 
+                          ? Math.max((heightPercent / 100) * 200, 20) 
+                          : 20;
                         
                         return (
                           <div key={index} className="flex flex-col items-center flex-1 h-full justify-end">
@@ -1010,7 +1015,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                                   ? 'bg-foreground'
                                   : 'bg-muted border-2 border-dashed border-border'
                               }`}
-                              style={{ height: hasData ? `${Math.max(heightPercent, 15)}%` : '25%' }}
+                              style={{ height: `${barHeight}px` }}
                             />
                             <div className={`mt-2 w-1.5 h-1.5 rounded-full ${
                               hasData ? 'bg-foreground' : 'bg-muted'
@@ -1023,7 +1028,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                   </div>
                   
                   {/* Time Tracker Card */}
-                  <div className="bg-card rounded-xl border border-border p-5 shadow-md transition-shadow duration-200 hover:shadow-lg flex-1 flex flex-col h-full items-center justify-center">
+                  <div className="bg-card rounded-xl border border-border p-5 shadow-md transition-shadow duration-200 hover:shadow-lg flex-1 flex flex-col h-full min-h-[400px] items-center justify-center">
                     <div className="flex items-center justify-between mb-4 w-full">
                       <h3 className="text-sm font-bold text-foreground">Time tracker</h3>
                     </div>
