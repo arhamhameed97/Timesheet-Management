@@ -175,9 +175,11 @@ export const createTaskSchema = z.object({
 
 export const updateTaskSchema = z.object({
   status: z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'APPROVED', 'CANCELLED']).optional(),
+  title: z.string().min(1).optional(),
   description: z.string().optional(),
   dueDate: z.string().optional(), // ISO date string
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
+  assigneeIds: z.array(z.string()).optional(),
   approve: z.boolean().optional(), // If true, manager/admin approves the task
 });
 

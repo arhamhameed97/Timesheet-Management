@@ -130,13 +130,25 @@ export async function PATCH(
               { status: 400 }
             );
           }
+          
+          // Check that all assignees have completed the task
+          const allAssigneesCompleted = task.assignees.length > 0 && task.assignees.every(
+            assignee => assignee.completedAt !== null
+          );
+          
+          if (!allAssigneesCompleted) {
+            return NextResponse.json(
+              { error: 'All assignees must complete the task before approval' },
+              { status: 400 }
+            );
+          }
         }
         // Managers can change APPROVED back to COMPLETED
       }
     }
 
     // Handle approval
-    if (validatedData.approve === true) {
+    if (validatedData.approve === true || validatedData.status === TaskStatus.APPROVED) {
       if (!isManager) {
         return forbiddenResponse('Only managers and admins can approve tasks');
       }
@@ -146,7 +158,27 @@ export async function PATCH(
           { status: 400 }
         );
       }
+      
+      // Check that all assignees have completed the task
+      const allAssigneesCompleted = task.assignees.length > 0 && task.assignees.every(
+        assignee => assignee.completedAt !== null
+      );
+      
+      if (!allAssigneesCompleted) {
+        return NextResponse.json(
+          { error: 'All assignees must complete the task before approval' },
+          { status: 400 }
+        );
+      }
+      
       validatedData.status = TaskStatus.APPROVED;
+    }
+
+    // Permission check for editing title and assignees - only managers/admins can edit these
+    if (validatedData.title !== undefined || validatedData.assigneeIds !== undefined) {
+      if (!isManager) {
+        return forbiddenResponse('Only managers and admins can edit task title and assignees');
+      }
     }
 
     // Update task
@@ -158,6 +190,9 @@ export async function PATCH(
         updateData.approvedAt = new Date();
       }
     }
+    if (validatedData.title !== undefined) {
+      updateData.title = validatedData.title;
+    }
     if (validatedData.description !== undefined) {
       updateData.description = validatedData.description;
     }
@@ -166,6 +201,51 @@ export async function PATCH(
     }
     if (validatedData.priority) {
       updateData.priority = validatedData.priority;
+    }
+
+    // Handle assignee updates
+    if (validatedData.assigneeIds !== undefined) {
+      const currentAssigneeIds = task.assignees.map(ta => ta.userId);
+      const newAssigneeIds = validatedData.assigneeIds;
+      
+      // Find assignees to remove (in current but not in new)
+      const assigneesToRemove = currentAssigneeIds.filter(id => !newAssigneeIds.includes(id));
+      
+      // Find assignees to add (in new but not in current)
+      const assigneesToAdd = newAssigneeIds.filter(id => !currentAssigneeIds.includes(id));
+      
+      // Remove assignees
+      if (assigneesToRemove.length > 0) {
+        await prisma.taskAssignee.deleteMany({
+          where: {
+            taskId: params.id,
+            userId: { in: assigneesToRemove },
+          },
+        });
+      }
+      
+      // Add new assignees
+      if (assigneesToAdd.length > 0) {
+        await prisma.taskAssignee.createMany({
+          data: assigneesToAdd.map(userId => ({
+            taskId: params.id,
+            userId,
+          })),
+        });
+      }
+      
+      // If status changed from COMPLETED, clear completedAt for remaining assignees
+      if (validatedData.status && validatedData.status !== TaskStatus.COMPLETED && task.status === TaskStatus.COMPLETED) {
+        await prisma.taskAssignee.updateMany({
+          where: {
+            taskId: params.id,
+            userId: { in: newAssigneeIds },
+          },
+          data: {
+            completedAt: null,
+          },
+        });
+      }
     }
 
     // Update assignee completion status

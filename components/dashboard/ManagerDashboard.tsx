@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Clock, FileText, TrendingUp, CheckCircle, XCircle, Eye, CheckSquare, Filter, Plus, AlertCircle } from 'lucide-react';
+import { Users, Clock, FileText, TrendingUp, CheckCircle, XCircle, Eye, CheckSquare, Filter, Plus, AlertCircle, Pencil, Trash2 } from 'lucide-react';
 import { DesignationBadge } from '@/components/common/DesignationBadge';
 import { RoleBadge } from '@/components/common/RoleBadge';
 import { UserRole } from '@prisma/client';
@@ -111,6 +111,16 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
   const [loadingClockedIn, setLoadingClockedIn] = useState(false);
   const [pendingTasksData, setPendingTasksData] = useState<any>({ tasks: [], counts: { pending: 0, completedPendingApproval: 0, total: 0 } });
   const [loadingPendingTasks, setLoadingPendingTasks] = useState(false);
+  const [editTaskDialogOpen, setEditTaskDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editTaskFormData, setEditTaskFormData] = useState({
+    title: '',
+    description: '',
+    dueDate: '',
+    priority: 'MEDIUM' as 'LOW' | 'MEDIUM' | 'HIGH',
+    assigneeIds: [] as string[],
+  });
+  const [updatingTask, setUpdatingTask] = useState(false);
 
   useEffect(() => {
     fetchRecentAttendance();
@@ -170,6 +180,7 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
       if (response.ok) {
         await fetchPendingTasks();
         await fetchAllTasks();
+        await fetchPendingTasksData();
         alert('Task approved successfully');
       } else {
         const data = await response.json();
@@ -196,6 +207,7 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
       if (response.ok) {
         await fetchPendingTasks();
         await fetchAllTasks();
+        await fetchPendingTasksData();
         alert('Task rejected and set back to In Progress');
       } else {
         const data = await response.json();
@@ -204,6 +216,74 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
     } catch (error) {
       console.error('Failed to reject task:', error);
       alert('Failed to reject task');
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/tasks/assignments/${taskId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        await fetchPendingTasks();
+        await fetchAllTasks();
+        await fetchPendingTasksData();
+        alert('Task deleted successfully');
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to delete task');
+      }
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+      alert('Failed to delete task');
+    }
+  };
+
+  const handleUpdateTask = async () => {
+    if (!editingTask || !editTaskFormData.title || !editTaskFormData.dueDate || editTaskFormData.assigneeIds.length === 0) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    try {
+      setUpdatingTask(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/tasks/assignments/${editingTask.id}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editTaskFormData),
+      });
+
+      if (response.ok) {
+        await fetchPendingTasks();
+        await fetchAllTasks();
+        await fetchPendingTasksData();
+        setEditTaskDialogOpen(false);
+        setEditingTask(null);
+        setEditTaskFormData({
+          title: '',
+          description: '',
+          dueDate: '',
+          priority: 'MEDIUM',
+          assigneeIds: [],
+        });
+        alert('Task updated successfully');
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to update task');
+      }
+    } catch (error) {
+      console.error('Failed to update task:', error);
+      alert('Failed to update task');
+    } finally {
+      setUpdatingTask(false);
     }
   };
 
@@ -607,15 +687,28 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
                             <span>{format(parseISO(task.createdAt), 'MMM dd, yyyy')}</span>
                           </div>
                         </div>
-                        {task.status === TaskStatus.COMPLETED && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleApproveTask(task.id)}
-                            className="flex-shrink-0"
-                          >
-                            Approve
-                          </Button>
-                        )}
+                        {task.status === TaskStatus.COMPLETED && (() => {
+                          const allAssigneesCompleted = task.assignees.length > 0 && task.assignees.every(a => a.completedAt !== null);
+                          return allAssigneesCompleted ? (
+                            <Button
+                              size="sm"
+                              onClick={() => handleApproveTask(task.id)}
+                              className="flex-shrink-0"
+                            >
+                              Approve
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled
+                              className="flex-shrink-0"
+                              title="All assignees must complete the task before approval"
+                            >
+                              Approve
+                            </Button>
+                          );
+                        })()}
                       </div>
                       
                       {/* Middle Row: Assignees, Status, Priority, Due Date */}
@@ -1036,24 +1129,63 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {task.status === TaskStatus.COMPLETED && (
-                            <div className="flex gap-1 justify-end">
+                          <div className="flex gap-1 justify-end">
+                            {task.status !== TaskStatus.APPROVED && (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleRejectTask(task.id)}
+                                onClick={() => {
+                                  setEditingTask(task);
+                                  setEditTaskFormData({
+                                    title: task.title,
+                                    description: task.description || '',
+                                    dueDate: format(parseISO(task.dueDate), 'yyyy-MM-dd'),
+                                    priority: task.priority,
+                                    assigneeIds: task.assignees.map(a => a.userId),
+                                  });
+                                  setEditTaskDialogOpen(true);
+                                }}
                               >
-                                Reject
+                                <Pencil className="h-3 w-3" />
                               </Button>
+                            )}
+                            {task.status !== TaskStatus.APPROVED && (
                               <Button
                                 size="sm"
-                                className="bg-green-600 hover:bg-green-700"
-                                onClick={() => handleApproveTask(task.id)}
+                                variant="outline"
+                                onClick={() => {
+                                  if (confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+                                    handleDeleteTask(task.id);
+                                  }
+                                }}
                               >
-                                Approve
+                                <Trash2 className="h-3 w-3 text-red-600" />
                               </Button>
-                            </div>
-                          )}
+                            )}
+                            {task.status === TaskStatus.COMPLETED && (() => {
+                              const allAssigneesCompleted = task.assignees.length > 0 && task.assignees.every(a => a.completedAt !== null);
+                              return (
+                                <div className="flex gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleRejectTask(task.id)}
+                                  >
+                                    Reject
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700"
+                                    onClick={() => handleApproveTask(task.id)}
+                                    disabled={!allAssigneesCompleted}
+                                    title={!allAssigneesCompleted ? 'All assignees must complete the task before approval' : ''}
+                                  >
+                                    Approve
+                                  </Button>
+                                </div>
+                              );
+                            })()}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -1108,20 +1240,29 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleRejectTask(task.id)}
-                      >
-                        Reject
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700"
-                        onClick={() => handleApproveTask(task.id)}
-                      >
-                        Approve
-                      </Button>
+                      {(() => {
+                        const allAssigneesCompleted = task.assignees.length > 0 && task.assignees.every((a: any) => a.completedAt !== null);
+                        return (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRejectTask(task.id)}
+                            >
+                              Reject
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={() => handleApproveTask(task.id)}
+                              disabled={!allAssigneesCompleted}
+                              title={!allAssigneesCompleted ? 'All assignees must complete the task before approval' : ''}
+                            >
+                              Approve
+                            </Button>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -1168,6 +1309,123 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Task Dialog */}
+      <Dialog open={editTaskDialogOpen} onOpenChange={setEditTaskDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Task</DialogTitle>
+            <DialogDescription>
+              Update task details and assignees
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="editTaskTitle">Title *</Label>
+              <Input
+                id="editTaskTitle"
+                value={editTaskFormData.title}
+                onChange={(e) => setEditTaskFormData({ ...editTaskFormData, title: e.target.value })}
+                placeholder="Enter task title"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editTaskDescription">Description</Label>
+              <Textarea
+                id="editTaskDescription"
+                value={editTaskFormData.description}
+                onChange={(e) => setEditTaskFormData({ ...editTaskFormData, description: e.target.value })}
+                placeholder="Enter task description"
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editTaskDueDate">Due Date *</Label>
+                <Input
+                  id="editTaskDueDate"
+                  type="date"
+                  value={editTaskFormData.dueDate}
+                  onChange={(e) => setEditTaskFormData({ ...editTaskFormData, dueDate: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editTaskPriority">Priority</Label>
+                <Select
+                  value={editTaskFormData.priority}
+                  onValueChange={(value) => setEditTaskFormData({ ...editTaskFormData, priority: value as 'LOW' | 'MEDIUM' | 'HIGH' })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="LOW">Low</SelectItem>
+                    <SelectItem value="MEDIUM">Medium</SelectItem>
+                    <SelectItem value="HIGH">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Assign To *</Label>
+              <div className="max-h-48 overflow-y-auto border rounded p-2 space-y-2">
+                {employeesList.map((emp) => (
+                  <div key={emp.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`editAssignee-${emp.id}`}
+                      checked={editTaskFormData.assigneeIds.includes(emp.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setEditTaskFormData({
+                            ...editTaskFormData,
+                            assigneeIds: [...editTaskFormData.assigneeIds, emp.id],
+                          });
+                        } else {
+                          setEditTaskFormData({
+                            ...editTaskFormData,
+                            assigneeIds: editTaskFormData.assigneeIds.filter(id => id !== emp.id),
+                          });
+                        }
+                      }}
+                    />
+                    <label htmlFor={`editAssignee-${emp.id}`} className="text-sm cursor-pointer">
+                      {emp.name} ({emp.email})
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditTaskDialogOpen(false);
+                setEditingTask(null);
+                setEditTaskFormData({
+                  title: '',
+                  description: '',
+                  dueDate: '',
+                  priority: 'MEDIUM',
+                  assigneeIds: [],
+                });
+              }}
+              disabled={updatingTask}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateTask}
+              disabled={updatingTask || !editTaskFormData.title || !editTaskFormData.dueDate || editTaskFormData.assigneeIds.length === 0}
+            >
+              {updatingTask ? 'Updating...' : 'Update Task'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
