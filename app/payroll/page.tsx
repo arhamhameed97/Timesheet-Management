@@ -34,7 +34,7 @@ import { UserRole, PayrollStatus } from '@prisma/client';
 
 type PaymentType = 'HOURLY' | 'SALARY';
 import { PayrollCalendar } from '@/components/payroll/PayrollCalendar';
-import { EmployeeSearchSelector } from '@/components/payroll/EmployeeSearchSelector';
+import { PayrollSearchBar } from '@/components/payroll/PayrollSearchBar';
 import { EarningsChart } from '@/components/payroll/EarningsChart';
 import { DailyPayrollEditDialog } from '@/components/payroll/DailyPayrollEditDialog';
 
@@ -108,6 +108,25 @@ export default function PayrollPage() {
   const [editPanelRegularHours, setEditPanelRegularHours] = useState<string>('');
   const [editPanelOvertimeHours, setEditPanelOvertimeHours] = useState<string>('');
   const [editPanelEarnings, setEditPanelEarnings] = useState<string>('');
+  const [payrollFilters, setPayrollFilters] = useState<{
+    paymentType: string | null;
+    status: string | null;
+    month: string | null;
+    year: string | null;
+  }>({
+    paymentType: null,
+    status: null,
+    month: null,
+    year: null,
+  });
+  const [filteredPayroll, setFilteredPayroll] = useState<Payroll[]>([]);
+
+  // Initialize filteredPayroll when payroll changes
+  useEffect(() => {
+    if (payroll.length > 0 && filteredPayroll.length === 0 && Object.values(payrollFilters).every(v => v === null)) {
+      setFilteredPayroll(payroll);
+    }
+  }, [payroll]);
   const [formData, setFormData] = useState({
     userId: '',
     month: new Date().getMonth() + 1,
@@ -224,7 +243,9 @@ export default function PayrollPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setPayroll(data.payroll || []);
+        const payrollData = data.payroll || [];
+        setPayroll(payrollData);
+        setFilteredPayroll(payrollData);
       } else {
         console.error('Failed to fetch payroll:', response.status, response.statusText);
       }
@@ -309,6 +330,43 @@ export default function PayrollPage() {
     } catch (error) {
       console.error('Failed to fetch daily earnings:', error);
     }
+  };
+
+  useEffect(() => {
+    let filtered = [...payroll];
+
+    if (payrollFilters.paymentType) {
+      filtered = filtered.filter(
+        (p) => p.paymentType === payrollFilters.paymentType
+      );
+    }
+
+    if (payrollFilters.status) {
+      filtered = filtered.filter((p) => p.status === payrollFilters.status);
+    }
+
+    if (payrollFilters.month) {
+      filtered = filtered.filter(
+        (p) => p.month === parseInt(payrollFilters.month!)
+      );
+    }
+
+    if (payrollFilters.year) {
+      filtered = filtered.filter(
+        (p) => p.year === parseInt(payrollFilters.year!)
+      );
+    }
+
+    setFilteredPayroll(filtered);
+  }, [payrollFilters, payroll]);
+
+  const handleFilterChange = (filters: {
+    paymentType: string | null;
+    status: string | null;
+    month: string | null;
+    year: string | null;
+  }) => {
+    setPayrollFilters(filters);
   };
 
   const handleEmployeeSelect = (employeeId: string) => {
@@ -1060,30 +1118,13 @@ export default function PayrollPage() {
   return (
     <MainLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Payroll</h1>
             <p className="text-muted-foreground mt-1">Manage employee payroll</p>
           </div>
           <div className="flex items-center gap-3">
-            {/* Modern Employee Search Selector */}
-            {employees.length > 0 && (
-              <EmployeeSearchSelector
-                employees={employees}
-                selectedEmployeeId={selectedEmployeeId}
-                onSelect={(employeeId) => {
-                  if (employeeId) {
-                    handleEmployeeSelect(employeeId);
-                  } else {
-                    setSelectedEmployeeId(null);
-                    setSelectedEmployee(null);
-                    setViewMode('table');
-                  }
-                }}
-                placeholder="Search employees..."
-                className="min-w-[280px]"
-              />
-            )}
             {/* View Mode Toggle */}
             {selectedEmployeeId && (
               <div className="flex items-center gap-1 border rounded-md p-1">
@@ -1105,7 +1146,34 @@ export default function PayrollPage() {
                 </Button>
               </div>
             )}
-            </div>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary hover:bg-primary/90" onClick={resetForm}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Payroll
+                </Button>
+              </DialogTrigger>
+            </Dialog>
+          </div>
+        </div>
+
+        {/* Full-Width Search Bar with Filters */}
+        {employees.length > 0 && (
+          <PayrollSearchBar
+            employees={employees}
+            selectedEmployeeId={selectedEmployeeId}
+            onSelect={(employeeId) => {
+              if (employeeId) {
+                handleEmployeeSelect(employeeId);
+              } else {
+                setSelectedEmployeeId(null);
+                setSelectedEmployee(null);
+                setViewMode('table');
+              }
+            }}
+            onFilterChange={handleFilterChange}
+          />
+        )}
             <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90" onClick={resetForm}>
@@ -1794,9 +1862,11 @@ export default function PayrollPage() {
           <CardContent>
             {loading ? (
               <div className="text-center py-8">Loading...</div>
-            ) : payroll.length === 0 ? (
+            ) : filteredPayroll.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No payroll records found.
+                {payroll.length === 0 
+                  ? 'No payroll records found.'
+                  : 'No payroll records match the selected filters.'}
               </div>
             ) : (
               <Table>
@@ -1815,7 +1885,7 @@ export default function PayrollPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {payroll.map((record) => {
+                  {filteredPayroll.map((record) => {
                     const isExpanded = expandedRows.has(record.id);
                     const hasBonuses = record.bonuses && record.bonuses.length > 0;
                     const hasDeductions = record.deductions && record.deductions.length > 0;
