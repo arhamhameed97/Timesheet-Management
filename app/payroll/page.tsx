@@ -1068,6 +1068,7 @@ export default function PayrollPage() {
                 </Button>
               </div>
             )}
+            </div>
             <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90" onClick={resetForm}>
