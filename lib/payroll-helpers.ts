@@ -1,6 +1,6 @@
 import { prisma } from './db';
 import { differenceInSeconds, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
-import { PaymentType } from '@prisma/client';
+import { PaymentType, Prisma } from '@prisma/client';
 
 export interface EmployeePaymentInfo {
   paymentType: PaymentType | null;
@@ -599,7 +599,7 @@ export async function recalculateMonthlyPayroll(payrollId: string): Promise<{
       overtimePay: totalEarnings - (totalRegularHours * (payroll.hourlyRate || 0)),
       baseSalary,
       netSalary,
-      dailyHours: dailyHours.length > 0 ? dailyHours : null,
+      dailyHours: dailyHours.length > 0 ? dailyHours : Prisma.JsonNull,
       // If payroll was approved, mark as pending for review after recalculation
       status: payroll.status === 'APPROVED' || payroll.status === 'PAID' ? 'PENDING' : payroll.status,
     },
