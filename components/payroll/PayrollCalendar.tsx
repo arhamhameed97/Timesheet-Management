@@ -148,6 +148,15 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
       return;
     }
     
+    // In non-edit mode, also trigger edit callback if provided (for showing data in panel)
+    if (onDayEdit) {
+      const dayNumber = date.getDate();
+      const dayEarnings = dailyEarnings?.[dayNumber.toString()] || dailyEarnings?.[dayNumber];
+      if (dayEarnings) {
+        onDayEdit(date, dayEarnings);
+      }
+    }
+    
     if (onDateClick) {
       onDateClick(payroll, date);
     }

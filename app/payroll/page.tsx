@@ -101,6 +101,7 @@ export default function PayrollPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editDialogDate, setEditDialogDate] = useState<Date | null>(null);
   const [editDialogData, setEditDialogData] = useState<any>(null);
+  const [employeeStats, setEmployeeStats] = useState<any>(null);
   const [formData, setFormData] = useState({
     userId: '',
     month: new Date().getMonth() + 1,
@@ -134,8 +135,29 @@ export default function PayrollPage() {
     // Fetch daily earnings when employee is selected in admin/manager view
     if (user && user.role !== UserRole.EMPLOYEE && selectedEmployeeId && viewMode === 'calendar') {
       fetchDailyEarnings(calendarMonth, calendarYear, selectedEmployeeId);
+      fetchEmployeeStats(selectedEmployeeId);
     }
   }, [user, selectedEmployeeId, calendarMonth, calendarYear, viewMode]);
+
+  const fetchEmployeeStats = async (userId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      
+      const response = await fetch(`/api/payroll/stats?userId=${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEmployeeStats(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch employee stats:', error);
+    }
+  };
 
   const fetchUser = async () => {
     try {
@@ -280,22 +302,6 @@ export default function PayrollPage() {
   const handleDayEdit = async (date: Date, data: any) => {
     setEditDialogDate(date);
     setEditDialogData(data);
-    
-    // Fetch original attendance data if override exists
-    let originalData = null;
-    if (data.isOverride && selectedEmployeeId) {
-      try {
-        const token = localStorage.getItem('token');
-        if (token) {
-          // Fetch original data by temporarily removing override (we'll get it from API)
-          // For now, we'll pass null and let the dialog handle it
-          // The API should return both override and original data
-        }
-      } catch (error) {
-        console.error('Error fetching original data:', error);
-      }
-    }
-    
     setEditDialogOpen(true);
   };
 
@@ -1402,40 +1408,170 @@ export default function PayrollPage() {
         {/* Calendar View for Selected Employee */}
         {selectedEmployeeId && viewMode === 'calendar' && (
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {selectedEmployee ? `${selectedEmployee.name}'s Payroll Calendar` : 'Payroll Calendar'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <PayrollCalendar
-                  payrollRecords={payroll
-                    .filter((p) => p.user.id === selectedEmployeeId)
-                    .map((p) => ({
-                      id: p.id,
-                      month: p.month,
-                      year: p.year,
-                      netSalary: Math.abs(p.netSalary),
-                      status: p.status,
-                    }))}
-                  dailyEarnings={dailyEarnings}
-                  onDateClick={(payrollRecord, date) => {
-                    if (payrollRecord) {
-                      const found = payroll.find((p: Payroll) => p.id === payrollRecord.id);
-                      if (found) setSelectedPayroll(found);
-                    }
-                  }}
-                  onMonthChange={(month, year) => {
-                    setCalendarMonth(month);
-                    setCalendarYear(year);
-                  }}
-                  isEditable={true}
-                  employeeId={selectedEmployeeId}
-                  onDayEdit={handleDayEdit}
-                />
-              </CardContent>
-            </Card>
+            {/* Employee Summary Stats */}
+            {selectedEmployee && employeeStats && (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Employee</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{selectedEmployee.name}</div>
+                    <p className="text-xs text-muted-foreground">{selectedEmployee.email}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {((employeeStats.stats?.yearToDateHours ?? 0) || 0).toFixed(2)}h
+                    </div>
+                    <p className="text-xs text-muted-foreground">This year</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Hourly Rate</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {selectedEmployee.hourlyRate 
+                        ? formatCurrency(selectedEmployee.hourlyRate)
+                        : 'N/A'}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedEmployee.paymentType || 'Not set'}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Current Month</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {formatCurrency(Math.abs(employeeStats.stats?.currentMonthEarnings || 0))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">This month&apos;s earnings</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Year to Date</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {formatCurrency(Math.abs(employeeStats.stats?.yearToDateTotal || 0))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Total earnings this year</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Calendar and Edit Panel */}
+            <div className="grid gap-6 md:grid-cols-2">
+              <PayrollCalendar
+                payrollRecords={payroll
+                  .filter((p) => p.user.id === selectedEmployeeId)
+                  .map((p) => ({
+                    id: p.id,
+                    month: p.month,
+                    year: p.year,
+                    netSalary: Math.abs(p.netSalary),
+                    status: p.status,
+                  }))}
+                dailyEarnings={dailyEarnings}
+                onDateClick={(payrollRecord, date) => {
+                  if (payrollRecord) {
+                    const found = payroll.find((p: Payroll) => p.id === payrollRecord.id);
+                    if (found) setSelectedPayroll(found);
+                  }
+                }}
+                onMonthChange={(month, year) => {
+                  setCalendarMonth(month);
+                  setCalendarYear(year);
+                }}
+                isEditable={true}
+                employeeId={selectedEmployeeId}
+                onDayEdit={(date, data) => {
+                  setEditDialogDate(date);
+                  setEditDialogData(data);
+                }}
+              />
+              
+              {/* Edit Panel */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Edit Daily Payroll</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {editDialogDate 
+                      ? `Editing: ${editDialogDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+                      : 'Click on a date in the calendar to edit'}
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {editDialogDate && editDialogData ? (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-muted/50 rounded-lg">
+                        <h4 className="font-semibold mb-2">Current Data</h4>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Hours:</span>{' '}
+                            <span className="font-medium">{editDialogData.hours.toFixed(2)}h</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Regular:</span>{' '}
+                            <span className="font-medium">{editDialogData.regularHours.toFixed(2)}h</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Overtime:</span>{' '}
+                            <span className="font-medium">{editDialogData.overtimeHours.toFixed(2)}h</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Rate:</span>{' '}
+                            <span className="font-medium">
+                              {editDialogData.hourlyRate ? `$${editDialogData.hourlyRate.toFixed(2)}/hr` : 'N/A'}
+                            </span>
+                          </div>
+                          <div className="col-span-2">
+                            <span className="text-muted-foreground">Earnings:</span>{' '}
+                            <span className="font-medium text-green-600 dark:text-green-400">
+                              ${editDialogData.earnings.toFixed(2)}
+                            </span>
+                          </div>
+                          {editDialogData.isOverride && (
+                            <div className="col-span-2">
+                              <span className="px-2 py-1 text-xs bg-yellow-500/20 dark:bg-yellow-500/30 text-yellow-700 dark:text-yellow-400 rounded">
+                                Manual Override Active
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <Button 
+                        onClick={() => handleDayEdit(editDialogDate, editDialogData)}
+                        className="w-full"
+                      >
+                        Edit This Day
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                      <p>Select a date from the calendar to view and edit details</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
 

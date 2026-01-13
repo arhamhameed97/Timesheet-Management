@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthContext, unauthorizedResponse } from '@/lib/middleware-helpers';
+import { getAuthContext, unauthorizedResponse, forbiddenResponse } from '@/lib/middleware-helpers';
 import { prisma } from '@/lib/db';
 import { calculateHoursWorked } from '@/lib/payroll-helpers';
 import { startOfYear, endOfYear, startOfMonth, endOfMonth } from 'date-fns';
-import { PayrollStatus } from '@prisma/client';
+import { PayrollStatus, UserRole } from '@prisma/client';
+import { canViewUser } from '@/lib/permissions';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +13,26 @@ export async function GET(request: NextRequest) {
       return unauthorizedResponse();
     }
 
-    const userId = context.userId;
+    const { searchParams } = new URL(request.url);
+    const requestedUserId = searchParams.get('userId');
+    const userId = requestedUserId || context.userId;
+
+    // Permission check: employees can only view their own stats
+    // Admins/managers can view subordinates' stats
+    if (userId !== context.userId) {
+      if (context.role === UserRole.EMPLOYEE) {
+        return NextResponse.json(
+          { error: 'You can only view your own payroll stats' },
+          { status: 403 }
+        );
+      }
+      
+      // Check if admin/manager can view this user
+      const canView = await canViewUser(context, userId);
+      if (!canView) {
+        return forbiddenResponse('You do not have permission to view this employee\'s payroll stats');
+      }
+    }
 
     // Get all payroll records for the user
     const payrollRecords = await prisma.payroll.findMany({
