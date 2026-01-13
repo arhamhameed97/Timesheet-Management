@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Check, X, DollarSign, Trash2, Eye, ChevronDown, ChevronRight, Clock, Users, Calendar, Table } from 'lucide-react';
+import { Plus, Check, X, DollarSign, Trash2, Eye, ChevronDown, ChevronRight, Clock, Users, Calendar, Table as TableIcon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -1055,7 +1055,7 @@ export default function PayrollPage() {
                   size="sm"
                   onClick={() => setViewMode('table')}
                 >
-                  <Table className="h-4 w-4 mr-1" />
+                  <TableIcon className="h-4 w-4 mr-1" />
                   Table
                 </Button>
                 <Button
