@@ -1022,9 +1022,9 @@ export default function PayrollPage() {
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-muted-foreground" />
                 <Select
-                  value={selectedEmployeeId || ''}
+                  value={selectedEmployeeId || 'all'}
                   onValueChange={(value) => {
-                    if (value) {
+                    if (value && value !== 'all') {
                       handleEmployeeSelect(value);
                     } else {
                       setSelectedEmployeeId(null);
@@ -1037,7 +1037,7 @@ export default function PayrollPage() {
                     <SelectValue placeholder="Select employee" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">View All Payroll</SelectItem>
+                    <SelectItem value="all">View All Payroll</SelectItem>
                     {employees.map((emp) => (
                       <SelectItem key={emp.id} value={emp.id}>
                         {emp.name}
