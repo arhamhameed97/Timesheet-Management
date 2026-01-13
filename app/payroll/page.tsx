@@ -121,9 +121,9 @@ export default function PayrollPage() {
   });
   const [filteredPayroll, setFilteredPayroll] = useState<Payroll[]>([]);
 
-  // Initialize filteredPayroll when payroll changes
+  // Initialize filteredPayroll when payroll changes (only if no filters are active)
   useEffect(() => {
-    if (payroll.length > 0 && filteredPayroll.length === 0 && Object.values(payrollFilters).every(v => v === null)) {
+    if (payroll.length > 0 && filteredPayroll.length === 0 && Object.values(payrollFilters).every(v => v === null) && !selectedEmployeeId) {
       setFilteredPayroll(payroll);
     }
   }, [payroll]);
@@ -335,6 +335,13 @@ export default function PayrollPage() {
   useEffect(() => {
     let filtered = [...payroll];
 
+    // Filter by selected employee if one is selected
+    if (selectedEmployeeId) {
+      filtered = filtered.filter(
+        (p) => p.user.id === selectedEmployeeId
+      );
+    }
+
     if (payrollFilters.paymentType) {
       filtered = filtered.filter(
         (p) => p.paymentType === payrollFilters.paymentType
@@ -358,7 +365,7 @@ export default function PayrollPage() {
     }
 
     setFilteredPayroll(filtered);
-  }, [payrollFilters, payroll]);
+  }, [payrollFilters, payroll, selectedEmployeeId]);
 
   const handleFilterChange = (filters: {
     paymentType: string | null;
