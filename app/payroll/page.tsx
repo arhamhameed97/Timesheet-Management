@@ -1161,25 +1161,25 @@ export default function PayrollPage() {
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Step 1: Employee Selection */}
-                <div className="space-y-2">
-                  <Label htmlFor="employee">Employee *</Label>
+                  {/* Step 1: Employee Selection */}
+                  <div className="space-y-2">
+                    <Label htmlFor="employee">Employee *</Label>
                     <Select
-                    value={formData.userId}
-                    onValueChange={handleEmployeeSelectForPayroll}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select employee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {employees.map((emp) => (
-                        <SelectItem key={emp.id} value={emp.id}>
-                          {emp.name} ({emp.email})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      value={formData.userId}
+                      onValueChange={handleEmployeeSelectForPayroll}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select employee" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.map((emp) => (
+                          <SelectItem key={emp.id} value={emp.id}>
+                            {emp.name} ({emp.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   {selectedEmployee && (
                     <div className="p-2 bg-blue-500/20 dark:bg-blue-500/30 rounded border-2 border-blue-300/50 dark:border-blue-500/30 text-sm">
                       <p>
@@ -1463,17 +1463,18 @@ export default function PayrollPage() {
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     placeholder="Optional notes"
                   />
-                </div>
+                  </div>
 
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => { setOpen(false); resetForm(); }}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">Create Payroll</Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => { setOpen(false); resetForm(); }}>
+                      Cancel
+                    </Button>
+                    <Button type="submit">Create Payroll</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {/* Calendar View for Selected Employee */}
