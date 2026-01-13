@@ -79,7 +79,8 @@ export async function POST(request: NextRequest) {
     let hourlyRate = validatedData.hourlyRate;
     if (!hourlyRate) {
       const { getHourlyRateForDate } = await import('@/lib/payroll-helpers');
-      hourlyRate = await getHourlyRateForDate(validatedData.userId, date);
+      const fetchedRate = await getHourlyRateForDate(validatedData.userId, date);
+      hourlyRate = fetchedRate ?? undefined;
     }
 
     // Calculate earnings if not provided
