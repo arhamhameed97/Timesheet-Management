@@ -34,6 +34,7 @@ import { UserRole, PayrollStatus } from '@prisma/client';
 
 type PaymentType = 'HOURLY' | 'SALARY';
 import { PayrollCalendar } from '@/components/payroll/PayrollCalendar';
+import { EmployeeSearchSelector } from '@/components/payroll/EmployeeSearchSelector';
 import { EarningsChart } from '@/components/payroll/EarningsChart';
 import { DailyPayrollEditDialog } from '@/components/payroll/DailyPayrollEditDialog';
 
@@ -1064,36 +1065,24 @@ export default function PayrollPage() {
             <h1 className="text-3xl font-bold text-foreground">Payroll</h1>
             <p className="text-muted-foreground mt-1">Manage employee payroll</p>
           </div>
-          <div className="flex items-center gap-2">
-            {/* Employee Selector for Calendar View */}
+          <div className="flex items-center gap-3">
+            {/* Modern Employee Search Selector */}
             {employees.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <Select
-                  value={selectedEmployeeId || 'all'}
-                  onValueChange={(value) => {
-                    if (value && value !== 'all') {
-                      handleEmployeeSelect(value);
-                    } else {
-                      setSelectedEmployeeId(null);
-                      setSelectedEmployee(null);
-                      setViewMode('table');
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Select employee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">View All Payroll</SelectItem>
-                    {employees.map((emp) => (
-                      <SelectItem key={emp.id} value={emp.id}>
-                        {emp.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <EmployeeSearchSelector
+                employees={employees}
+                selectedEmployeeId={selectedEmployeeId}
+                onSelect={(employeeId) => {
+                  if (employeeId) {
+                    handleEmployeeSelect(employeeId);
+                  } else {
+                    setSelectedEmployeeId(null);
+                    setSelectedEmployee(null);
+                    setViewMode('table');
+                  }
+                }}
+                placeholder="Search employees..."
+                className="min-w-[280px]"
+              />
             )}
             {/* View Mode Toggle */}
             {selectedEmployeeId && (
