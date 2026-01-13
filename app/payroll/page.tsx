@@ -1154,13 +1154,13 @@ export default function PayrollPage() {
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Create Payroll</DialogTitle>
-                <DialogDescription>
-                  Generate payroll for an employee
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
+                <DialogHeader>
+                  <DialogTitle>Create Payroll</DialogTitle>
+                  <DialogDescription>
+                    Generate payroll for an employee
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Step 1: Employee Selection */}
                 <div className="space-y-2">
                   <Label htmlFor="employee">Employee *</Label>
