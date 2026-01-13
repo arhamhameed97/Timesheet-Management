@@ -1477,6 +1477,24 @@ export default function PayrollPage() {
           </div>
         </div>
 
+        {/* Full-Width Search Bar with Filters */}
+        {employees.length > 0 && (
+          <PayrollSearchBar
+            employees={employees}
+            selectedEmployeeId={selectedEmployeeId}
+            onSelect={(employeeId) => {
+              if (employeeId) {
+                handleEmployeeSelect(employeeId);
+              } else {
+                setSelectedEmployeeId(null);
+                setSelectedEmployee(null);
+                setViewMode('table');
+              }
+            }}
+            onFilterChange={handleFilterChange}
+          />
+        )}
+
         {/* Calendar View for Selected Employee */}
         {selectedEmployeeId && viewMode === 'calendar' && (
           <div className="space-y-6">
