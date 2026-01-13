@@ -340,18 +340,18 @@ export default function PayrollPage() {
       const token = localStorage.getItem('token');
       if (!token) return;
 
+      // Format date as YYYY-MM-DD in UTC
+      const year = editDialogDate.getUTCFullYear();
+      const month = String(editDialogDate.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(editDialogDate.getUTCDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+
       const response = await fetch('/api/payroll/daily-override', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        // Format date as YYYY-MM-DD in UTC
-        const year = editDialogDate.getUTCFullYear();
-        const month = String(editDialogDate.getUTCMonth() + 1).padStart(2, '0');
-        const day = String(editDialogDate.getUTCDate()).padStart(2, '0');
-        const dateStr = `${year}-${month}-${day}`;
-
         body: JSON.stringify({
           userId: selectedEmployeeId,
           date: dateStr,

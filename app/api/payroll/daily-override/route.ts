@@ -55,10 +55,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const year = parseInt(dateParts[0]);
-    const month = parseInt(dateParts[1]) - 1; // JavaScript months are 0-indexed
-    const day = parseInt(dateParts[2]);
-    const date = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+    const dateYear = parseInt(dateParts[0]);
+    const dateMonth = parseInt(dateParts[1]) - 1; // JavaScript months are 0-indexed
+    const dateDay = parseInt(dateParts[2]);
+    const date = new Date(Date.UTC(dateYear, dateMonth, dateDay, 0, 0, 0, 0));
 
     // Validate date is not in the future (optional, but good practice)
     if (date > new Date()) {
@@ -133,14 +133,14 @@ export async function POST(request: NextRequest) {
     });
 
     // Check if payroll exists for this month and recalculate
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
+    const payrollMonth = date.getMonth() + 1;
+    const payrollYear = date.getFullYear();
     const payroll = await prisma.payroll.findUnique({
       where: {
         userId_month_year: {
           userId: validatedData.userId,
-          month,
-          year,
+          month: payrollMonth,
+          year: payrollYear,
         },
       },
     });
@@ -215,10 +215,10 @@ export async function DELETE(request: NextRequest) {
         { status: 400 }
       );
     }
-    const year = parseInt(dateParts[0]);
-    const month = parseInt(dateParts[1]) - 1; // JavaScript months are 0-indexed
-    const day = parseInt(dateParts[2]);
-    const date = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+    const deleteYear = parseInt(dateParts[0]);
+    const deleteMonth = parseInt(dateParts[1]) - 1; // JavaScript months are 0-indexed
+    const deleteDay = parseInt(dateParts[2]);
+    const date = new Date(Date.UTC(deleteYear, deleteMonth, deleteDay, 0, 0, 0, 0));
 
     // Check if override exists first
     const existingOverride = await prisma.dailyPayrollOverride.findUnique({
@@ -248,14 +248,14 @@ export async function DELETE(request: NextRequest) {
     });
 
     // Check if payroll exists for this month and recalculate
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
+    const deletePayrollMonth = date.getMonth() + 1;
+    const deletePayrollYear = date.getFullYear();
     const payroll = await prisma.payroll.findUnique({
       where: {
         userId_month_year: {
           userId,
-          month,
-          year,
+          month: deletePayrollMonth,
+          year: deletePayrollYear,
         },
       },
     });
