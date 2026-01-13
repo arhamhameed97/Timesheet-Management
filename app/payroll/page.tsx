@@ -1153,35 +1153,7 @@ export default function PayrollPage() {
                   New Payroll
                 </Button>
               </DialogTrigger>
-            </Dialog>
-          </div>
-        </div>
-
-        {/* Full-Width Search Bar with Filters */}
-        {employees.length > 0 && (
-          <PayrollSearchBar
-            employees={employees}
-            selectedEmployeeId={selectedEmployeeId}
-            onSelect={(employeeId) => {
-              if (employeeId) {
-                handleEmployeeSelect(employeeId);
-              } else {
-                setSelectedEmployeeId(null);
-                setSelectedEmployee(null);
-                setViewMode('table');
-              }
-            }}
-            onFilterChange={handleFilterChange}
-          />
-        )}
-            <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90" onClick={resetForm}>
-                <Plus className="mr-2 h-4 w-4" />
-                New Payroll
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create Payroll</DialogTitle>
                 <DialogDescription>
