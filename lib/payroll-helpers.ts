@@ -146,14 +146,57 @@ export async function calculateHoursWorked(
 }
 
 /**
+ * Get daily payroll override for a specific date
+ */
+export async function getDailyPayrollOverride(
+  userId: string,
+  date: Date
+): Promise<{
+  id: string;
+  hourlyRate: number | null;
+  regularHours: number | null;
+  overtimeHours: number | null;
+  totalHours: number | null;
+  earnings: number | null;
+  notes: string | null;
+} | null> {
+  const dateOnly = new Date(date);
+  dateOnly.setHours(0, 0, 0, 0);
+
+  const override = await prisma.dailyPayrollOverride.findUnique({
+    where: {
+      userId_date: {
+        userId,
+        date: dateOnly,
+      },
+    },
+  });
+
+  if (!override) {
+    return null;
+  }
+
+  return {
+    id: override.id,
+    hourlyRate: override.hourlyRate,
+    regularHours: override.regularHours,
+    overtimeHours: override.overtimeHours,
+    totalHours: override.totalHours,
+    earnings: override.earnings,
+    notes: override.notes,
+  };
+}
+
+/**
  * Calculate hours and earnings for a specific date
  * This is used for the daily earnings calendar
  * Now includes overtime calculations and time-period based rates
+ * Checks for daily payroll overrides first
  */
 export async function calculateDailyHoursAndEarnings(
   userId: string,
   date: Date
-): Promise<{ hours: number; earnings: number; hourlyRate: number | null; overtimeHours: number; regularHours: number }> {
+): Promise<{ hours: number; earnings: number; hourlyRate: number | null; overtimeHours: number; regularHours: number; isOverride: boolean }> {
   // Get the date at start of day
   const dayStart = new Date(date);
   dayStart.setHours(0, 0, 0, 0);
@@ -161,7 +204,37 @@ export async function calculateDailyHoursAndEarnings(
   const dayEnd = new Date(date);
   dayEnd.setHours(23, 59, 59, 999);
 
-  // Get attendance record for this date
+  // Check for override first
+  const override = await getDailyPayrollOverride(userId, date);
+  
+  if (override) {
+    // Use override data
+    const totalHours = override.totalHours ?? 
+      ((override.regularHours ?? 0) + (override.overtimeHours ?? 0));
+    
+    let earnings = override.earnings ?? 0;
+    
+    // Calculate earnings if not set and we have rate and hours
+    if (!override.earnings && override.hourlyRate && totalHours > 0) {
+      const config = await getOvertimeConfig(userId);
+      const regularHours = override.regularHours ?? 0;
+      const overtimeHours = override.overtimeHours ?? 0;
+      const regularPay = regularHours * override.hourlyRate;
+      const overtimePay = calculateOvertimePay(overtimeHours, override.hourlyRate, config?.overtimeMultiplier || 1.5);
+      earnings = regularPay + overtimePay;
+    }
+
+    return {
+      hours: totalHours,
+      earnings,
+      hourlyRate: override.hourlyRate,
+      overtimeHours: override.overtimeHours ?? 0,
+      regularHours: override.regularHours ?? 0,
+      isOverride: true,
+    };
+  }
+
+  // No override, use attendance data
   const attendance = await prisma.attendance.findUnique({
     where: {
       userId_date: {
@@ -211,7 +284,7 @@ export async function calculateDailyHoursAndEarnings(
     }
   }
 
-  return { hours, earnings, hourlyRate, overtimeHours, regularHours };
+  return { hours, earnings, hourlyRate, overtimeHours, regularHours, isOverride: false };
 }
 
 /**
@@ -442,6 +515,105 @@ export async function calculateDailyOvertime(
   const overtimeHours = Math.max(0, hoursWorked - remainingRegularCapacity);
 
   return { regularHours, overtimeHours };
+}
+
+/**
+ * Recalculate monthly payroll based on daily data (attendance + overrides)
+ */
+export async function recalculateMonthlyPayroll(payrollId: string): Promise<{
+  id: string;
+  hoursWorked: number;
+  regularHours: number;
+  overtimeHours: number;
+  baseSalary: number;
+  netSalary: number;
+  dailyHours: Array<{ date: string; hours: number; overtimeHours: number }>;
+}> {
+  const payroll = await prisma.payroll.findUnique({
+    where: { id: payrollId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          paymentType: true,
+        },
+      },
+    },
+  });
+
+  if (!payroll) {
+    throw new Error('Payroll not found');
+  }
+
+  const monthStart = new Date(Date.UTC(payroll.year, payroll.month - 1, 1, 0, 0, 0, 0));
+  const monthEnd = new Date(Date.UTC(payroll.year, payroll.month, 0, 23, 59, 59, 999));
+  const daysInMonth = new Date(payroll.year, payroll.month, 0).getDate();
+
+  let totalHours = 0;
+  let totalRegularHours = 0;
+  let totalOvertimeHours = 0;
+  let totalEarnings = 0;
+  const dailyHours: Array<{ date: string; hours: number; overtimeHours: number }> = [];
+
+  // Calculate for each day of the month
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(Date.UTC(payroll.year, payroll.month - 1, day));
+    const dailyData = await calculateDailyHoursAndEarnings(payroll.userId, date);
+    
+    if (dailyData.hours > 0) {
+      totalHours += dailyData.hours;
+      totalRegularHours += dailyData.regularHours;
+      totalOvertimeHours += dailyData.overtimeHours;
+      totalEarnings += dailyData.earnings;
+      
+      dailyHours.push({
+        date: date.toISOString().split('T')[0],
+        hours: dailyData.hours,
+        overtimeHours: dailyData.overtimeHours,
+      });
+    }
+  }
+
+  // Get bonuses and deductions (preserve existing)
+  const bonuses = payroll.bonuses ? (typeof payroll.bonuses === 'string' ? JSON.parse(payroll.bonuses as string) : payroll.bonuses) : [];
+  const deductions = payroll.deductions ? (typeof payroll.deductions === 'string' ? JSON.parse(payroll.deductions as string) : payroll.deductions) : [];
+  
+  const totalBonuses = calculateTotalBonuses(bonuses);
+  const totalDeductions = calculateTotalDeductions(deductions);
+
+  // Calculate base salary based on payment type
+  let baseSalary = payroll.baseSalary;
+  if (payroll.paymentType === PaymentType.HOURLY) {
+    baseSalary = totalEarnings;
+  }
+
+  const netSalary = baseSalary + totalBonuses - totalDeductions;
+
+  // Update payroll record
+  const updatedPayroll = await prisma.payroll.update({
+    where: { id: payrollId },
+    data: {
+      hoursWorked: totalHours,
+      regularHours: totalRegularHours,
+      overtimeHours: totalOvertimeHours,
+      overtimePay: totalEarnings - (totalRegularHours * (payroll.hourlyRate || 0)),
+      baseSalary,
+      netSalary,
+      dailyHours: dailyHours.length > 0 ? dailyHours : null,
+      // If payroll was approved, mark as pending for review after recalculation
+      status: payroll.status === 'APPROVED' || payroll.status === 'PAID' ? 'PENDING' : payroll.status,
+    },
+  });
+
+  return {
+    id: updatedPayroll.id,
+    hoursWorked: totalHours,
+    regularHours: totalRegularHours,
+    overtimeHours: totalOvertimeHours,
+    baseSalary,
+    netSalary,
+    dailyHours,
+  };
 }
 
 

@@ -142,6 +142,8 @@ model User {
   payrollEditRequestsApproved PayrollEditRequest[] @relation("PayrollEditRequestApprover")
   createdHourlyRatePeriods HourlyRatePeriod[] @relation("HourlyRatePeriodCreator")
   createdOvertimeConfigs   OvertimeConfig[] @relation("OvertimeConfigCreator")
+  dailyPayrollOverrides DailyPayrollOverride[]
+  createdDailyPayrollOverrides DailyPayrollOverride[] @relation("DailyPayrollOverrideCreator")
 }
 
 model Designation {
@@ -416,4 +418,26 @@ model PayrollEditRequest {
   @@index([requestedBy])
   @@index([assignedTo])
   @@index([status])
+}
+
+model DailyPayrollOverride {
+  id            String   @id @default(cuid())
+  userId        String
+  date          DateTime @db.Date
+  hourlyRate    Float?   // Override hourly rate for this day
+  regularHours  Float?   // Override regular hours
+  overtimeHours Float?   // Override overtime hours
+  totalHours    Float?   // Calculated: regularHours + overtimeHours
+  earnings      Float?   // Calculated earnings (can be manually set)
+  notes         String?
+  createdBy     String   // Admin/manager who made the edit
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user    User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creator User @relation("DailyPayrollOverrideCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@index([date])
 }

@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Check, X, DollarSign, Trash2, Eye, ChevronDown, ChevronRight, Clock } from 'lucide-react';
+import { Plus, Check, X, DollarSign, Trash2, Eye, ChevronDown, ChevronRight, Clock, Users, Calendar, Table } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -35,6 +35,7 @@ import { UserRole, PayrollStatus } from '@prisma/client';
 type PaymentType = 'HOURLY' | 'SALARY';
 import { PayrollCalendar } from '@/components/payroll/PayrollCalendar';
 import { EarningsChart } from '@/components/payroll/EarningsChart';
+import { DailyPayrollEditDialog } from '@/components/payroll/DailyPayrollEditDialog';
 
 interface Bonus {
   name: string;
@@ -90,11 +91,16 @@ export default function PayrollPage() {
   const [selectedPayroll, setSelectedPayroll] = useState<Payroll | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table');
   const [stats, setStats] = useState<any>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [dailyEarnings, setDailyEarnings] = useState<Record<string, { hours: number; earnings: number }>>({});
+  const [dailyEarnings, setDailyEarnings] = useState<Record<string, { hours: number; earnings: number; hourlyRate: number | null; overtimeHours: number; regularHours: number; isOverride: boolean; originalData?: { hours: number; earnings: number; hourlyRate: number | null; overtimeHours: number; regularHours: number } | null }>>({});
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth() + 1);
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editDialogDate, setEditDialogDate] = useState<Date | null>(null);
+  const [editDialogData, setEditDialogData] = useState<any>(null);
   const [formData, setFormData] = useState({
     userId: '',
     month: new Date().getMonth() + 1,
@@ -123,6 +129,13 @@ export default function PayrollPage() {
       }
     }
   }, [user, calendarMonth, calendarYear]);
+
+  useEffect(() => {
+    // Fetch daily earnings when employee is selected in admin/manager view
+    if (user && user.role !== UserRole.EMPLOYEE && selectedEmployeeId && viewMode === 'calendar') {
+      fetchDailyEarnings(calendarMonth, calendarYear, selectedEmployeeId);
+    }
+  }, [user, selectedEmployeeId, calendarMonth, calendarYear, viewMode]);
 
   const fetchUser = async () => {
     try {
@@ -214,12 +227,16 @@ export default function PayrollPage() {
     }
   };
 
-  const fetchDailyEarnings = async (month: number, year: number) => {
+  const fetchDailyEarnings = async (month: number, year: number, userId?: string) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
       
-      const response = await fetch(`/api/payroll/daily-earnings?month=${month}&year=${year}`, {
+      const url = userId 
+        ? `/api/payroll/daily-earnings?userId=${userId}&month=${month}&year=${year}`
+        : `/api/payroll/daily-earnings?month=${month}&year=${year}`;
+      
+      const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -250,7 +267,111 @@ export default function PayrollPage() {
     }
   };
 
-  const handleEmployeeSelect = async (employeeId: string) => {
+  const handleEmployeeSelect = (employeeId: string) => {
+    setSelectedEmployeeId(employeeId);
+    const employee = employees.find((e) => e.id === employeeId);
+    setSelectedEmployee(employee || null);
+    setViewMode('calendar');
+    // Reset calendar to current month
+    setCalendarMonth(new Date().getMonth() + 1);
+    setCalendarYear(new Date().getFullYear());
+  };
+
+  const handleDayEdit = async (date: Date, data: any) => {
+    setEditDialogDate(date);
+    setEditDialogData(data);
+    
+    // Fetch original attendance data if override exists
+    let originalData = null;
+    if (data.isOverride && selectedEmployeeId) {
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          // Fetch original data by temporarily removing override (we'll get it from API)
+          // For now, we'll pass null and let the dialog handle it
+          // The API should return both override and original data
+        }
+      } catch (error) {
+        console.error('Error fetching original data:', error);
+      }
+    }
+    
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveDailyOverride = async (overrideData: {
+    hourlyRate?: number;
+    regularHours?: number;
+    overtimeHours?: number;
+    totalHours?: number;
+    earnings?: number;
+    notes?: string;
+  }) => {
+    if (!selectedEmployeeId || !editDialogDate) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch('/api/payroll/daily-override', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: selectedEmployeeId,
+          date: editDialogDate.toISOString().split('T')[0],
+          ...overrideData,
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh daily earnings
+        await fetchDailyEarnings(calendarMonth, calendarYear, selectedEmployeeId);
+        // Refresh payroll list
+        await fetchPayroll();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save override');
+      }
+    } catch (error: any) {
+      console.error('Error saving daily override:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteDailyOverride = async () => {
+    if (!selectedEmployeeId || !editDialogDate) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const dateStr = editDialogDate.toISOString().split('T')[0];
+      const response = await fetch(`/api/payroll/daily-override?userId=${selectedEmployeeId}&date=${dateStr}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        // Refresh daily earnings
+        await fetchDailyEarnings(calendarMonth, calendarYear, selectedEmployeeId);
+        // Refresh payroll list
+        await fetchPayroll();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete override');
+      }
+    } catch (error: any) {
+      console.error('Error deleting daily override:', error);
+      throw error;
+    }
+  };
+
+  const handleEmployeeSelectForPayroll = async (employeeId: string) => {
     const employee = employees.find((e) => e.id === employeeId);
     if (employee) {
       setSelectedEmployee(employee);
@@ -895,7 +1016,59 @@ export default function PayrollPage() {
             <h1 className="text-3xl font-bold text-foreground">Payroll</h1>
             <p className="text-muted-foreground mt-1">Manage employee payroll</p>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
+          <div className="flex items-center gap-2">
+            {/* Employee Selector for Calendar View */}
+            {employees.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <Select
+                  value={selectedEmployeeId || ''}
+                  onValueChange={(value) => {
+                    if (value) {
+                      handleEmployeeSelect(value);
+                    } else {
+                      setSelectedEmployeeId(null);
+                      setSelectedEmployee(null);
+                      setViewMode('table');
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Select employee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">View All Payroll</SelectItem>
+                    {employees.map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        {emp.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {/* View Mode Toggle */}
+            {selectedEmployeeId && (
+              <div className="flex items-center gap-1 border rounded-md p-1">
+                <Button
+                  variant={viewMode === 'table' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('table')}
+                >
+                  <Table className="h-4 w-4 mr-1" />
+                  Table
+                </Button>
+                <Button
+                  variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('calendar')}
+                >
+                  <Calendar className="h-4 w-4 mr-1" />
+                  Calendar
+                </Button>
+              </div>
+            )}
+            <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90" onClick={resetForm}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -913,9 +1086,9 @@ export default function PayrollPage() {
                 {/* Step 1: Employee Selection */}
                 <div className="space-y-2">
                   <Label htmlFor="employee">Employee *</Label>
-                  <Select
+                    <Select
                     value={formData.userId}
-                    onValueChange={handleEmployeeSelect}
+                    onValueChange={handleEmployeeSelectForPayroll}
                     required
                   >
                     <SelectTrigger>
@@ -1225,6 +1398,46 @@ export default function PayrollPage() {
           </Dialog>
         </div>
 
+        {/* Calendar View for Selected Employee */}
+        {selectedEmployeeId && viewMode === 'calendar' && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {selectedEmployee ? `${selectedEmployee.name}'s Payroll Calendar` : 'Payroll Calendar'}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PayrollCalendar
+                  payrollRecords={payroll
+                    .filter((p) => p.user.id === selectedEmployeeId)
+                    .map((p) => ({
+                      id: p.id,
+                      month: p.month,
+                      year: p.year,
+                      netSalary: Math.abs(p.netSalary),
+                      status: p.status,
+                    }))}
+                  dailyEarnings={dailyEarnings}
+                  onDateClick={(payrollRecord, date) => {
+                    if (payrollRecord) {
+                      const found = payroll.find((p: Payroll) => p.id === payrollRecord.id);
+                      if (found) setSelectedPayroll(found);
+                    }
+                  }}
+                  onMonthChange={(month, year) => {
+                    setCalendarMonth(month);
+                    setCalendarYear(year);
+                  }}
+                  isEditable={true}
+                  employeeId={selectedEmployeeId}
+                  onDayEdit={handleDayEdit}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* Payroll Records Table */}
         <Card>
           <CardHeader>
@@ -1410,6 +1623,20 @@ export default function PayrollPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Daily Payroll Edit Dialog */}
+        {selectedEmployeeId && editDialogDate && (
+          <DailyPayrollEditDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            date={editDialogDate}
+            userId={selectedEmployeeId}
+            currentData={editDialogData}
+            originalData={editDialogData?.originalData || (editDialogData && !editDialogData.isOverride ? editDialogData : null)}
+            onSave={handleSaveDailyOverride}
+            onDelete={editDialogData?.isOverride ? handleDeleteDailyOverride : undefined}
+          />
+        )}
       </div>
     </MainLayout>
   );

@@ -21,6 +21,7 @@ interface DailyEarnings {
   hourlyRate?: number | null;
   overtimeHours?: number;
   regularHours?: number;
+  isOverride?: boolean;
 }
 
 interface PayrollCalendarProps {
@@ -28,9 +29,12 @@ interface PayrollCalendarProps {
   dailyEarnings?: Record<string, DailyEarnings>; // day -> { hours, earnings }
   onDateClick?: (payroll: PayrollRecord | null, date: Date) => void;
   onMonthChange?: (month: number, year: number) => void;
+  isEditable?: boolean; // Enable edit mode for admins/managers
+  employeeId?: string; // Employee ID when viewing as admin/manager
+  onDayEdit?: (date: Date, data: DailyEarnings) => void; // Callback for day edit
 }
 
-export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, onMonthChange }: PayrollCalendarProps) {
+export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, onMonthChange, isEditable = false, employeeId, onDayEdit }: PayrollCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   // Notify parent of initial month on mount
@@ -123,6 +127,27 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
 
   const handleDateClick = (date: Date) => {
     const payroll = getPayrollForDate(date);
+    
+    // In edit mode, trigger edit callback instead of regular date click
+    if (isEditable && onDayEdit) {
+      const dayNumber = date.getDate();
+      const dayEarnings = dailyEarnings?.[dayNumber.toString()] || dailyEarnings?.[dayNumber];
+      if (dayEarnings) {
+        onDayEdit(date, dayEarnings);
+      } else {
+        // No data for this day, still allow editing
+        onDayEdit(date, {
+          hours: 0,
+          earnings: 0,
+          hourlyRate: null,
+          overtimeHours: 0,
+          regularHours: 0,
+          isOverride: false,
+        });
+      }
+      return;
+    }
+    
     if (onDateClick) {
       onDateClick(payroll, date);
     }
@@ -219,6 +244,7 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
             const hourlyRate = hasDailyData ? (dayEarnings?.hourlyRate ?? null) : null;
             const overtimeHours = hasDailyData ? (dayEarnings?.overtimeHours ?? 0) : 0;
             const regularHours = hasDailyData ? (dayEarnings?.regularHours ?? dailyHoursValue) : 0;
+            const isOverride = hasDailyData ? (dayEarnings?.isOverride ?? false) : false;
             
             // Show hours and earnings if they exist (even if earnings is 0, show hours)
             const displayEarnings = dailyEarningsValue;
@@ -330,6 +356,16 @@ export function PayrollCalendar({ payrollRecords, dailyEarnings, onDateClick, on
                     {hasOvertime && (
                       <div className="w-1.5 h-1.5 rounded-full bg-orange-500 opacity-70 group-hover:opacity-0 transition-opacity duration-300 shadow-sm" />
                     )}
+                    {isOverride && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 opacity-90 group-hover:opacity-0 transition-opacity duration-300 shadow-sm" title="Manual Override" />
+                    )}
+                  </div>
+                )}
+                
+                {/* Edit mode indicator */}
+                {isEditable && (
+                  <div className="absolute bottom-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="text-[8px] text-muted-foreground font-semibold">EDIT</div>
                   </div>
                 )}
               </button>
