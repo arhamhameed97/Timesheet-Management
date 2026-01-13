@@ -47,9 +47,18 @@ export async function POST(request: NextRequest) {
       return forbiddenResponse('You do not have permission to edit this employee\'s payroll');
     }
 
-    // Parse date
-    const date = new Date(validatedData.date);
-    date.setHours(0, 0, 0, 0);
+    // Parse date - ensure it's in UTC to match database storage
+    const dateParts = validatedData.date.split('-');
+    if (dateParts.length !== 3) {
+      return NextResponse.json(
+        { error: 'Invalid date format. Expected YYYY-MM-DD' },
+        { status: 400 }
+      );
+    }
+    const year = parseInt(dateParts[0]);
+    const month = parseInt(dateParts[1]) - 1; // JavaScript months are 0-indexed
+    const day = parseInt(dateParts[2]);
+    const date = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
 
     // Validate date is not in the future (optional, but good practice)
     if (date > new Date()) {
@@ -197,9 +206,36 @@ export async function DELETE(request: NextRequest) {
       return forbiddenResponse('You do not have permission to delete this employee\'s payroll override');
     }
 
-    // Parse date
-    const date = new Date(dateStr);
-    date.setHours(0, 0, 0, 0);
+    // Parse date - ensure it's in UTC to match database storage
+    // Date strings like "2026-01-07" should be parsed as UTC dates
+    const dateParts = dateStr.split('-');
+    if (dateParts.length !== 3) {
+      return NextResponse.json(
+        { error: 'Invalid date format. Expected YYYY-MM-DD' },
+        { status: 400 }
+      );
+    }
+    const year = parseInt(dateParts[0]);
+    const month = parseInt(dateParts[1]) - 1; // JavaScript months are 0-indexed
+    const day = parseInt(dateParts[2]);
+    const date = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+
+    // Check if override exists first
+    const existingOverride = await prisma.dailyPayrollOverride.findUnique({
+      where: {
+        userId_date: {
+          userId,
+          date,
+        },
+      },
+    });
+
+    if (!existingOverride) {
+      return NextResponse.json(
+        { error: 'Override not found' },
+        { status: 404 }
+      );
+    }
 
     // Delete override
     await prisma.dailyPayrollOverride.delete({

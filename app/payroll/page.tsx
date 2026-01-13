@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Check, X, DollarSign, Trash2, Eye, ChevronDown, ChevronRight, Clock, Users, Calendar, Table as TableIcon } from 'lucide-react';
+import { Plus, Check, X, DollarSign, Trash2, Eye, ChevronDown, ChevronRight, Clock, Users, Calendar, Table as TableIcon, Save } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -102,6 +102,11 @@ export default function PayrollPage() {
   const [editDialogDate, setEditDialogDate] = useState<Date | null>(null);
   const [editDialogData, setEditDialogData] = useState<any>(null);
   const [employeeStats, setEmployeeStats] = useState<any>(null);
+  const [editPanelHours, setEditPanelHours] = useState<string>('');
+  const [editPanelRate, setEditPanelRate] = useState<string>('');
+  const [editPanelRegularHours, setEditPanelRegularHours] = useState<string>('');
+  const [editPanelOvertimeHours, setEditPanelOvertimeHours] = useState<string>('');
+  const [editPanelEarnings, setEditPanelEarnings] = useState<string>('');
   const [formData, setFormData] = useState({
     userId: '',
     month: new Date().getMonth() + 1,
@@ -138,6 +143,22 @@ export default function PayrollPage() {
       fetchEmployeeStats(selectedEmployeeId);
     }
   }, [user, selectedEmployeeId, calendarMonth, calendarYear, viewMode]);
+
+  // Calculate earnings dynamically when rate or hours change in edit panel
+  useEffect(() => {
+    const rate = parseFloat(editPanelRate) || 0;
+    const regHours = parseFloat(editPanelRegularHours) || 0;
+    const otHours = parseFloat(editPanelOvertimeHours) || 0;
+    
+    if (rate > 0 && (regHours > 0 || otHours > 0)) {
+      const calculatedEarnings = (regHours * rate) + (otHours * rate * 1.5);
+      // Only update if user hasn't manually edited earnings significantly
+      const currentEarnings = parseFloat(editPanelEarnings) || 0;
+      if (Math.abs(currentEarnings - calculatedEarnings) < 0.01 || currentEarnings === 0) {
+        setEditPanelEarnings(calculatedEarnings.toFixed(2));
+      }
+    }
+  }, [editPanelRate, editPanelRegularHours, editPanelOvertimeHours]);
 
   const fetchEmployeeStats = async (userId: string) => {
     try {
@@ -325,9 +346,15 @@ export default function PayrollPage() {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
+        // Format date as YYYY-MM-DD in UTC
+        const year = editDialogDate.getUTCFullYear();
+        const month = String(editDialogDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(editDialogDate.getUTCDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+
         body: JSON.stringify({
           userId: selectedEmployeeId,
-          date: editDialogDate.toISOString().split('T')[0],
+          date: dateStr,
           ...overrideData,
         }),
       });
@@ -350,11 +377,20 @@ export default function PayrollPage() {
   const handleDeleteDailyOverride = async () => {
     if (!selectedEmployeeId || !editDialogDate) return;
 
+    if (!confirm('Are you sure you want to remove this override? It will revert to the original attendance data.')) {
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const dateStr = editDialogDate.toISOString().split('T')[0];
+      // Format date as YYYY-MM-DD in UTC
+      const year = editDialogDate.getUTCFullYear();
+      const month = String(editDialogDate.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(editDialogDate.getUTCDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
       const response = await fetch(`/api/payroll/daily-override?userId=${selectedEmployeeId}&date=${dateStr}`, {
         method: 'DELETE',
         headers: {
@@ -363,17 +399,23 @@ export default function PayrollPage() {
       });
 
       if (response.ok) {
+        // Clear edit panel
+        setEditDialogDate(null);
+        setEditDialogData(null);
         // Refresh daily earnings
         await fetchDailyEarnings(calendarMonth, calendarYear, selectedEmployeeId);
         // Refresh payroll list
         await fetchPayroll();
+        // Refresh employee stats
+        await fetchEmployeeStats(selectedEmployeeId);
       } else {
         const errorData = await response.json();
+        alert(errorData.error || 'Failed to delete override');
         throw new Error(errorData.error || 'Failed to delete override');
       }
     } catch (error: any) {
       console.error('Error deleting daily override:', error);
-      throw error;
+      alert(error.message || 'Failed to delete override');
     }
   };
 
@@ -1502,8 +1544,21 @@ export default function PayrollPage() {
                 isEditable={true}
                 employeeId={selectedEmployeeId}
                 onDayEdit={(date, data) => {
-                  setEditDialogDate(date);
+                  // Ensure date is normalized to UTC midnight
+                  const normalizedDate = new Date(Date.UTC(
+                    date.getFullYear(),
+                    date.getMonth(),
+                    date.getDate(),
+                    0, 0, 0, 0
+                  ));
+                  setEditDialogDate(normalizedDate);
                   setEditDialogData(data);
+                  // Initialize edit panel fields
+                  setEditPanelHours(data.hours?.toFixed(2) || '0');
+                  setEditPanelRate(data.hourlyRate?.toFixed(2) || '');
+                  setEditPanelRegularHours(data.regularHours?.toFixed(2) || '0');
+                  setEditPanelOvertimeHours(data.overtimeHours?.toFixed(2) || '0');
+                  setEditPanelEarnings(data.earnings?.toFixed(2) || '0');
                 }}
               />
               
@@ -1520,48 +1575,215 @@ export default function PayrollPage() {
                 <CardContent>
                   {editDialogDate && editDialogData ? (
                     <div className="space-y-4">
-                      <div className="p-4 bg-muted/50 rounded-lg">
-                        <h4 className="font-semibold mb-2">Current Data</h4>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <span className="text-muted-foreground">Hours:</span>{' '}
-                            <span className="font-medium">{editDialogData.hours.toFixed(2)}h</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Regular:</span>{' '}
-                            <span className="font-medium">{editDialogData.regularHours.toFixed(2)}h</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Overtime:</span>{' '}
-                            <span className="font-medium">{editDialogData.overtimeHours.toFixed(2)}h</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Rate:</span>{' '}
-                            <span className="font-medium">
-                              {editDialogData.hourlyRate ? `$${editDialogData.hourlyRate.toFixed(2)}/hr` : 'N/A'}
-                            </span>
-                          </div>
-                          <div className="col-span-2">
-                            <span className="text-muted-foreground">Earnings:</span>{' '}
-                            <span className="font-medium text-green-600 dark:text-green-400">
-                              ${editDialogData.earnings.toFixed(2)}
-                            </span>
-                          </div>
-                          {editDialogData.isOverride && (
-                            <div className="col-span-2">
-                              <span className="px-2 py-1 text-xs bg-yellow-500/20 dark:bg-yellow-500/30 text-yellow-700 dark:text-yellow-400 rounded">
-                                Manual Override Active
+                      {/* Original Data Display */}
+                      {editDialogData.originalData && (
+                        <div className="p-4 bg-muted/50 rounded-lg border-2 border-border">
+                          <h4 className="font-semibold mb-2 text-sm">Original Attendance Data</h4>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Hours:</span>{' '}
+                              <span className="font-medium">{editDialogData.originalData.hours.toFixed(2)}h</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Regular:</span>{' '}
+                              <span className="font-medium">{editDialogData.originalData.regularHours.toFixed(2)}h</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Overtime:</span>{' '}
+                              <span className="font-medium">{editDialogData.originalData.overtimeHours.toFixed(2)}h</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Rate:</span>{' '}
+                              <span className="font-medium">
+                                {editDialogData.originalData.hourlyRate ? `$${editDialogData.originalData.hourlyRate.toFixed(2)}/hr` : 'N/A'}
                               </span>
                             </div>
-                          )}
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">Earnings:</span>{' '}
+                              <span className="font-medium">${editDialogData.originalData.earnings.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Override Indicator */}
+                      {editDialogData.isOverride && (
+                        <div className="p-3 bg-yellow-500/20 dark:bg-yellow-500/30 border-2 border-yellow-300/50 dark:border-yellow-500/30 rounded-md">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-yellow-700 dark:text-yellow-400">
+                            <span>⚠️</span>
+                            <span>Manual Override Active</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Editable Fields */}
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label htmlFor="edit-hourly-rate" className="text-xs">Hourly Rate ($)</Label>
+                            <Input
+                              id="edit-hourly-rate"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editPanelRate}
+                              onChange={(e) => {
+                                setEditPanelRate(e.target.value);
+                                // Recalculate earnings
+                                const rate = parseFloat(e.target.value) || 0;
+                                const regHours = parseFloat(editPanelRegularHours) || 0;
+                                const otHours = parseFloat(editPanelOvertimeHours) || 0;
+                                const calculatedEarnings = (regHours * rate) + (otHours * rate * 1.5);
+                                setEditPanelEarnings(calculatedEarnings.toFixed(2));
+                              }}
+                              placeholder="Rate"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="edit-total-hours" className="text-xs">Total Hours</Label>
+                            <Input
+                              id="edit-total-hours"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max="24"
+                              value={editPanelHours}
+                              onChange={(e) => {
+                                setEditPanelHours(e.target.value);
+                                // Update total if regular + overtime don't match
+                                const total = parseFloat(e.target.value) || 0;
+                                const regHours = parseFloat(editPanelRegularHours) || 0;
+                                const otHours = parseFloat(editPanelOvertimeHours) || 0;
+                                if (Math.abs(total - (regHours + otHours)) > 0.01) {
+                                  // Adjust regular hours to match total
+                                  setEditPanelRegularHours(Math.max(0, total - otHours).toFixed(2));
+                                }
+                                // Recalculate earnings
+                                const rate = parseFloat(editPanelRate) || 0;
+                                const newRegHours = Math.max(0, total - otHours);
+                                const calculatedEarnings = (newRegHours * rate) + (otHours * rate * 1.5);
+                                setEditPanelEarnings(calculatedEarnings.toFixed(2));
+                              }}
+                              placeholder="Hours"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="edit-regular-hours" className="text-xs">Regular Hours</Label>
+                            <Input
+                              id="edit-regular-hours"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editPanelRegularHours}
+                              onChange={(e) => {
+                                setEditPanelRegularHours(e.target.value);
+                                // Update total hours
+                                const regHours = parseFloat(e.target.value) || 0;
+                                const otHours = parseFloat(editPanelOvertimeHours) || 0;
+                                setEditPanelHours((regHours + otHours).toFixed(2));
+                                // Recalculate earnings
+                                const rate = parseFloat(editPanelRate) || 0;
+                                const calculatedEarnings = (regHours * rate) + (otHours * rate * 1.5);
+                                setEditPanelEarnings(calculatedEarnings.toFixed(2));
+                              }}
+                              placeholder="Regular"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="edit-overtime-hours" className="text-xs">Overtime Hours</Label>
+                            <Input
+                              id="edit-overtime-hours"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editPanelOvertimeHours}
+                              onChange={(e) => {
+                                setEditPanelOvertimeHours(e.target.value);
+                                // Update total hours
+                                const otHours = parseFloat(e.target.value) || 0;
+                                const regHours = parseFloat(editPanelRegularHours) || 0;
+                                setEditPanelHours((regHours + otHours).toFixed(2));
+                                // Recalculate earnings
+                                const rate = parseFloat(editPanelRate) || 0;
+                                const calculatedEarnings = (regHours * rate) + (otHours * rate * 1.5);
+                                setEditPanelEarnings(calculatedEarnings.toFixed(2));
+                              }}
+                              placeholder="Overtime"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="edit-earnings" className="text-xs">Earnings ($)</Label>
+                          <Input
+                            id="edit-earnings"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={editPanelEarnings}
+                            onChange={(e) => setEditPanelEarnings(e.target.value)}
+                            placeholder="Calculated automatically"
+                            className="font-semibold text-green-600 dark:text-green-400"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Earnings are calculated automatically based on rate and hours
+                          </p>
                         </div>
                       </div>
-                      <Button 
-                        onClick={() => handleDayEdit(editDialogDate, editDialogData)}
-                        className="w-full"
-                      >
-                        Edit This Day
-                      </Button>
+
+                      <div className="flex flex-col gap-2 pt-2">
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={async () => {
+                              try {
+                                await handleSaveDailyOverride({
+                                  hourlyRate: parseFloat(editPanelRate) || undefined,
+                                  regularHours: parseFloat(editPanelRegularHours) || undefined,
+                                  overtimeHours: parseFloat(editPanelOvertimeHours) || undefined,
+                                  totalHours: parseFloat(editPanelHours) || undefined,
+                                  earnings: parseFloat(editPanelEarnings) || undefined,
+                                });
+                                // Refresh the edit panel data
+                                await fetchDailyEarnings(calendarMonth, calendarYear, selectedEmployeeId);
+                              } catch (error) {
+                                console.error('Error saving:', error);
+                              }
+                            }}
+                            className="flex-1"
+                          >
+                            <Save className="h-4 w-4 mr-2" />
+                            Quick Save
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              // Prepare data for edit dialog
+                              const updatedData = {
+                                ...editDialogData,
+                                hours: parseFloat(editPanelHours) || 0,
+                                hourlyRate: parseFloat(editPanelRate) || null,
+                                regularHours: parseFloat(editPanelRegularHours) || 0,
+                                overtimeHours: parseFloat(editPanelOvertimeHours) || 0,
+                                earnings: parseFloat(editPanelEarnings) || 0,
+                              };
+                              handleDayEdit(editDialogDate, updatedData);
+                            }}
+                            className="flex-1"
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            Full Editor
+                          </Button>
+                        </div>
+                        {editDialogData.isOverride && (
+                          <Button
+                            variant="destructive"
+                            onClick={handleDeleteDailyOverride}
+                            className="w-full"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Remove Override
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
