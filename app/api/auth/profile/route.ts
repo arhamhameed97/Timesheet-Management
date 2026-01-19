@@ -63,8 +63,18 @@ export async function PATCH(request: NextRequest) {
     });
   } catch (error: any) {
     if (error.name === 'ZodError') {
+      // Format validation errors into a readable message
+      const errorMessages = error.errors.map((err: any) => {
+        const field = err.path.join('.');
+        return `${field}: ${err.message}`;
+      }).join(', ');
+      
       return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
+        { 
+          error: 'Validation error',
+          message: errorMessages || 'Please check your input',
+          details: error.errors 
+        },
         { status: 400 }
       );
     }
@@ -135,8 +145,18 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     if (error.name === 'ZodError') {
+      // Format validation errors into a readable message
+      const errorMessages = error.errors.map((err: any) => {
+        const field = err.path.join('.');
+        return `${field}: ${err.message}`;
+      }).join(', ');
+      
       return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
+        { 
+          error: 'Validation error',
+          message: errorMessages || 'Please check your input',
+          details: error.errors 
+        },
         { status: 400 }
       );
     }

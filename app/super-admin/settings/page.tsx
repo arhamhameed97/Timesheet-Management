@@ -115,6 +115,35 @@ export default function SuperAdminSettingsPage() {
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Client-side validation
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all password fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast({
+        title: 'Error',
+        description: 'New password must be at least 6 characters long',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({
+        title: 'Error',
+        description: 'New passwords do not match',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setChangingPassword(true);
 
     try {
@@ -141,9 +170,11 @@ export default function SuperAdminSettingsPage() {
           confirmPassword: '',
         });
       } else {
+        // Show detailed validation errors if available
+        const errorMessage = data.message || data.error || 'Failed to change password';
         toast({
           title: 'Error',
-          description: data.error || 'Failed to change password',
+          description: errorMessage,
           variant: 'destructive',
         });
       }
