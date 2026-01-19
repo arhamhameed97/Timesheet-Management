@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       checkOutTime: null, // Only show users who haven't checked out
     };
 
-    // Filter by company for non-super admins
+    // Filter by company context (for super admin) or company (for others)
     if (context.role !== UserRole.SUPER_ADMIN) {
       if (!context.companyId) {
         return NextResponse.json(
@@ -49,6 +49,17 @@ export async function GET(request: NextRequest) {
       });
       const employeeIds = companyEmployees.map(e => e.id);
 
+      where.userId = { in: employeeIds };
+    } else if (context.companyId) {
+      // Super admin with company context - filter by company
+      const companyEmployees = await prisma.user.findMany({
+        where: {
+          companyId: context.companyId,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      const employeeIds = companyEmployees.map(e => e.id);
       where.userId = { in: employeeIds };
     }
 
@@ -85,6 +96,12 @@ export async function GET(request: NextRequest) {
                 name: true,
               },
             },
+            company: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
@@ -106,6 +123,7 @@ export async function GET(request: NextRequest) {
         email: record.user.email,
         role: record.user.role,
         designation: record.user.designation,
+        company: record.user.company,
         checkInTime: checkInTime.toISOString(),
         timeSinceCheckIn: `${hoursSinceCheckIn}h ${minutesSinceCheckIn}m`,
         hoursSinceCheckIn,

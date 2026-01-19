@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2, Users, TrendingUp, DollarSign } from 'lucide-react';
+import { SystemOverview } from '@/components/super-admin/SystemOverview';
 
 interface DashboardStats {
   totalCompanies: number;
@@ -27,33 +28,17 @@ export default function SuperAdminDashboardPage() {
     fetchCompanyContext();
   }, []);
 
-  // Refresh stats when page becomes visible (handles company context changes)
+  // Listen for company context changes
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        fetchStats();
-        fetchCompanyContext();
-      }
-    };
-
-    const handleFocus = () => {
+    const handleCompanyContextChange = () => {
       fetchStats();
       fetchCompanyContext();
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    // Also poll periodically to catch changes
-    const interval = setInterval(() => {
-      fetchStats();
-      fetchCompanyContext();
-    }, 10000); // Refresh every 10 seconds
+    window.addEventListener('companyContextChanged', handleCompanyContextChange);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-      clearInterval(interval);
+      window.removeEventListener('companyContextChanged', handleCompanyContextChange);
     };
   }, []);
 
@@ -188,18 +173,7 @@ export default function SuperAdminDashboardPage() {
           </div>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>System Overview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {companyContext 
-                ? `Viewing analytics for ${companyContext.name}. Select "No company selected" in the header to view global statistics.`
-                : 'System-wide analytics and management tools. Select a company from the dropdown to view company-specific data.'}
-            </p>
-          </CardContent>
-        </Card>
+        <SystemOverview companyContext={companyContext} />
       </div>
     </MainLayout>
   );
