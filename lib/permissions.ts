@@ -178,11 +178,12 @@ export function canAssignRole(creatorRole: UserRole, targetRole: UserRole): bool
 
   // COMPANY_ADMIN can create MANAGER, TEAM_LEAD, EMPLOYEE
   if (creatorRole === UserRole.COMPANY_ADMIN) {
-    return [
+    const allowedRoles: UserRole[] = [
       UserRole.MANAGER,
       UserRole.TEAM_LEAD,
       UserRole.EMPLOYEE,
-    ].includes(targetRole);
+    ];
+    return allowedRoles.includes(targetRole);
   }
 
   // MANAGER can create EMPLOYEE only
