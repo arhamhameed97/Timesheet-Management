@@ -3,7 +3,7 @@ import { getAuthContext, unauthorizedResponse, forbiddenResponse } from '@/lib/m
 import { prisma } from '@/lib/db';
 import { updateEmployeeSchema } from '@/lib/validations';
 import { UserRole } from '@prisma/client';
-import { canManageUser } from '@/lib/permissions';
+import { canManageUser, canUpdateRole } from '@/lib/permissions';
 
 export async function GET(
   request: NextRequest,
@@ -90,6 +90,26 @@ export async function PATCH(
 
     const body = await request.json();
     const validatedData = updateEmployeeSchema.parse(body);
+
+    // Get current user data to check role changes
+    const currentUser = await prisma.user.findUnique({
+      where: { id: params.id },
+      select: { role: true },
+    });
+
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: 'Employee not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check role assignment permissions if role is being changed
+    if (validatedData.role !== undefined && validatedData.role !== currentUser.role) {
+      if (!canUpdateRole(context.role, currentUser.role, validatedData.role)) {
+        return forbiddenResponse(`You do not have permission to assign role: ${validatedData.role}`);
+      }
+    }
 
     // Employees can only update their own basic info (not role, manager, etc.)
     if (context.role === UserRole.EMPLOYEE && params.id !== context.userId) {

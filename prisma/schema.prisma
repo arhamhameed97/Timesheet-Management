@@ -10,6 +10,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Seed script configuration
+// Run with: npx tsx prisma/seed.ts
+
 enum UserRole {
   SUPER_ADMIN
   COMPANY_ADMIN
@@ -87,6 +90,12 @@ enum TaskType {
   PAYROLL_EDIT
 }
 
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Company {
   id        String   @id @default(cuid())
   name      String
@@ -144,6 +153,7 @@ model User {
   createdOvertimeConfigs   OvertimeConfig[] @relation("OvertimeConfigCreator")
   dailyPayrollOverrides DailyPayrollOverride[]
   createdDailyPayrollOverrides DailyPayrollOverride[] @relation("DailyPayrollOverrideCreator")
+  reviewedCompanyRegistrations CompanyRegistrationRequest[] @relation("CompanyRegistrationReviewer")
 }
 
 model Designation {
@@ -440,4 +450,28 @@ model DailyPayrollOverride {
   @@unique([userId, date])
   @@index([userId, date])
   @@index([date])
+}
+
+model CompanyRegistrationRequest {
+  id            String             @id @default(cuid())
+  companyName   String
+  companyEmail  String
+  companyAddress String?
+  adminName     String
+  adminEmail    String
+  adminPassword String // Will be hashed before creating user
+  status        RegistrationStatus @default(PENDING)
+  submittedAt   DateTime           @default(now())
+  reviewedBy    String?
+  reviewedAt    DateTime?
+  notes         String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  reviewer User? @relation("CompanyRegistrationReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([submittedAt])
+  @@index([companyEmail])
+  @@index([adminEmail])
 }

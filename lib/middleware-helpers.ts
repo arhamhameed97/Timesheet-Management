@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, getTokenFromRequest, JWTPayload } from './auth';
 import { UserContext } from './permissions';
+import { UserRole } from '@prisma/client';
 
 export async function getAuthContext(request: NextRequest): Promise<UserContext | null> {
   // Try Authorization header first
@@ -20,10 +21,20 @@ export async function getAuthContext(request: NextRequest): Promise<UserContext 
     return null;
   }
 
+  let companyId = payload.companyId;
+
+  // For SUPER_ADMIN, check if there's a company context override
+  if (payload.role === UserRole.SUPER_ADMIN) {
+    const companyContextId = request.cookies.get('superAdminCompanyContext')?.value || null;
+    if (companyContextId) {
+      companyId = companyContextId;
+    }
+  }
+
   return {
     userId: payload.userId,
     role: payload.role,
-    companyId: payload.companyId,
+    companyId: companyId,
   };
 }
 

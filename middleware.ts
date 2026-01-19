@@ -7,7 +7,13 @@ import { UserRole } from '@prisma/client';
 export async function middleware(request: NextRequest) {
   // Public routes that don't require authentication
   const pathname = request.nextUrl.pathname;
-  const publicRoutes = ['/login', '/register', '/api/auth/login', '/api/auth/register'];
+  const publicRoutes = [
+    '/login', 
+    '/register', 
+    '/api/auth/login', 
+    '/api/auth/register',
+    '/api/company-registrations', // POST is public, GET/PATCH require auth (handled in route)
+  ];
   const isPublicRoute = pathname === '/' || publicRoutes.some(route => 
     pathname.startsWith(route)
   );

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { UserRole } from '@prisma/client';
+import { UserRole, RegistrationStatus } from '@prisma/client';
 
 export const registerSchema = z.object({
   companyName: z.string().min(1, 'Company name is required'),
@@ -8,6 +8,20 @@ export const registerSchema = z.object({
   adminName: z.string().min(1, 'Admin name is required'),
   adminEmail: z.string().email('Invalid email address'),
   adminPassword: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+export const companyRegistrationRequestSchema = z.object({
+  companyName: z.string().min(1, 'Company name is required'),
+  companyEmail: z.string().email('Invalid email address'),
+  companyAddress: z.string().optional(),
+  adminName: z.string().min(1, 'Admin name is required'),
+  adminEmail: z.string().email('Invalid email address'),
+  adminPassword: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+export const reviewCompanyRegistrationSchema = z.object({
+  status: z.nativeEnum(RegistrationStatus),
+  notes: z.string().optional(),
 });
 
 export const loginSchema = z.object({
@@ -257,6 +271,20 @@ export const createPayrollEditRequestSchema = z.object({
 export const updatePayrollEditRequestSchema = z.object({
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED']).optional(),
   notes: z.string().optional(),
+});
+
+export const updateProfileSchema = z.object({
+  name: z.string().min(1, 'Name is required').optional(),
+  email: z.string().email('Invalid email address').optional(),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters'),
+  confirmPassword: z.string().min(1, 'Please confirm your new password'),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: 'New passwords do not match',
+  path: ['confirmPassword'],
 });
 
 

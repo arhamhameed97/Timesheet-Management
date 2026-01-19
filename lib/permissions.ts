@@ -165,6 +165,55 @@ export function getUserAllowedFeatures(role: UserRole): Feature[] {
   return getAllowedFeatures(role);
 }
 
+/**
+ * Check if a creator role can assign a target role to a user
+ * This enforces hierarchical role assignment rules
+ */
+export function canAssignRole(creatorRole: UserRole, targetRole: UserRole): boolean {
+  // SUPER_ADMIN can create COMPANY_ADMIN, MANAGER, TEAM_LEAD, EMPLOYEE
+  // But not SUPER_ADMIN (must be created manually/seeded)
+  if (creatorRole === UserRole.SUPER_ADMIN) {
+    return targetRole !== UserRole.SUPER_ADMIN;
+  }
+
+  // COMPANY_ADMIN can create MANAGER, TEAM_LEAD, EMPLOYEE
+  if (creatorRole === UserRole.COMPANY_ADMIN) {
+    return [
+      UserRole.MANAGER,
+      UserRole.TEAM_LEAD,
+      UserRole.EMPLOYEE,
+    ].includes(targetRole);
+  }
+
+  // MANAGER can create EMPLOYEE only
+  if (creatorRole === UserRole.MANAGER) {
+    return targetRole === UserRole.EMPLOYEE;
+  }
+
+  // TEAM_LEAD and EMPLOYEE cannot create users
+  return false;
+}
+
+/**
+ * Check if a creator role can update a user's role to a target role
+ * Same rules as canAssignRole, but also prevents role elevation beyond creator's authority
+ */
+export function canUpdateRole(creatorRole: UserRole, currentRole: UserRole, targetRole: UserRole): boolean {
+  // If role isn't changing, allow it (other validations will apply)
+  if (currentRole === targetRole) {
+    return true;
+  }
+
+  // Can only assign roles they're allowed to create
+  if (!canAssignRole(creatorRole, targetRole)) {
+    return false;
+  }
+
+  // Prevent elevating users to roles higher than what creator can assign
+  // This ensures a MANAGER can't elevate someone to COMPANY_ADMIN, etc.
+  return canAssignRole(creatorRole, targetRole);
+}
+
 
 
 

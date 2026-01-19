@@ -28,13 +28,16 @@ export default function RegisterPage() {
     });
   };
 
+  const [success, setSuccess] = useState(false);
+  const [requestId, setRequestId] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('/api/company-registrations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -43,32 +46,15 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Registration failed');
+        setError(data.error || 'Registration request failed');
         setLoading(false);
         return;
       }
 
-      // Store token in localStorage (cookie is set by server)
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        
-        // Store user data including designation
-        if (data.user) {
-          localStorage.setItem('userRole', data.user.role);
-          if (data.user.designation) {
-            localStorage.setItem('userDesignation', JSON.stringify(data.user.designation));
-          }
-        }
-        
-        // Use dashboard route from server response, fallback to default
-        const redirectPath = data.dashboardRoute || '/dashboard';
-        
-        // Redirect to dashboard - use window.location for full page reload
-        window.location.href = redirectPath;
-      } else {
-        setError('Registration failed: No token received');
-        setLoading(false);
-      }
+      // Show success message
+      setSuccess(true);
+      setRequestId(data.requestId);
+      setLoading(false);
     } catch (err) {
       setError('An error occurred. Please try again.');
       setLoading(false);
@@ -79,18 +65,41 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
       <Card className="w-full max-w-2xl">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Register Company</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">Request Company Access</CardTitle>
           <CardDescription className="text-center">
-            Create a new company account and admin user
+            Submit a request to create a new company account. Your request will be reviewed by an administrator.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
-                {error}
+          {success ? (
+            <div className="space-y-4">
+              <div className="p-4 text-sm text-green-600 bg-green-50 rounded-lg border border-green-200">
+                <h3 className="font-semibold mb-2">Registration Request Submitted Successfully!</h3>
+                <p className="mb-2">
+                  Your request has been received and is pending review by an administrator.
+                </p>
+                {requestId && (
+                  <p className="text-xs text-muted-foreground">
+                    Request ID: {requestId}
+                  </p>
+                )}
+                <p className="mt-2">
+                  You will be notified once your request has been reviewed. Please check back later or contact support if you have questions.
+                </p>
               </div>
-            )}
+              <div className="text-center">
+                <Link href="/login" className="text-primary hover:underline">
+                  Go to Login
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+                  {error}
+                </div>
+              )}
             
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">Company Information</h3>
@@ -163,16 +172,17 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Registering...' : 'Register Company'}
-            </Button>
-            <div className="text-center text-sm text-muted-foreground">
-              Already have an account?{' '}
-              <Link href="/login" className="text-primary hover:underline">
-                Login
-              </Link>
-            </div>
-          </form>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Submitting Request...' : 'Submit Request'}
+              </Button>
+              <div className="text-center text-sm text-muted-foreground">
+                Already have an account?{' '}
+                <Link href="/login" className="text-primary hover:underline">
+                  Login
+                </Link>
+              </div>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>

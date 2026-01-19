@@ -13,7 +13,8 @@
     "clean": "rm -rf .next && rm -rf node_modules/.cache",
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "db:seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",

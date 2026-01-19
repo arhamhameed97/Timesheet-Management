@@ -17,6 +17,7 @@ import {
   Briefcase,
   Sparkles,
   CheckSquare,
+  ClipboardList,
 } from 'lucide-react';
 import { UserRole } from '@prisma/client';
 import { hasPermission } from '@/lib/permission-matrix';
@@ -84,6 +85,7 @@ const allNavItems: NavItem[] = [
 
 const superAdminNavItems: NavItem[] = [
   { title: 'Dashboard', href: '/super-admin/dashboard', icon: LayoutDashboard },
+  { title: 'Registration Requests', href: '/super-admin/registrations', icon: ClipboardList },
   { title: 'Companies', href: '/super-admin/companies', icon: Building2 },
   { title: 'All Users', href: '/super-admin/users', icon: Users },
   { title: 'Analytics', href: '/super-admin/analytics', icon: BarChart3 },

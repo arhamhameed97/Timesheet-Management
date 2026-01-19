@@ -16,6 +16,7 @@ import { LogOut, User, Settings } from 'lucide-react';
 import { DesignationBadge } from '@/components/common/DesignationBadge';
 import { RoleBadge } from '@/components/common/RoleBadge';
 import { UserRole } from '@prisma/client';
+import { CompanySelector } from '@/components/super-admin/CompanySelector';
 
 interface User {
   id: string;
@@ -88,10 +89,11 @@ export function Header() {
   return (
     <header className="sticky top-0 z-10 border-b bg-background">
       <div className="flex h-16 items-center justify-between px-6">
-        <div>
+        <div className="flex items-center gap-4">
           <h1 className="text-xl font-semibold text-foreground">
             {user.company?.name || 'PunchIn'}
           </h1>
+          {user.role === UserRole.SUPER_ADMIN && <CompanySelector />}
         </div>
         <div className="flex items-center gap-4">
           <DropdownMenu>

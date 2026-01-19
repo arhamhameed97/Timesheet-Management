@@ -3,7 +3,7 @@ import { getAuthContext, unauthorizedResponse, forbiddenResponse } from '@/lib/m
 import { prisma } from '@/lib/db';
 import { createEmployeeSchema } from '@/lib/validations';
 import { UserRole, TimesheetStatus } from '@prisma/client';
-import { canManageUser } from '@/lib/permissions';
+import { canManageUser, canAssignRole } from '@/lib/permissions';
 import { startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns';
 import bcrypt from 'bcryptjs';
 import { parsePSTDate, getPSTStartOfDay, getPSTEndOfDay } from '@/lib/pst-timezone';
@@ -219,9 +219,24 @@ export async function POST(request: NextRequest) {
 
     const validatedData = validationResult.data;
 
+    // Determine target role (default to EMPLOYEE if not specified)
+    const targetRole = validatedData.role || UserRole.EMPLOYEE;
+
+    // Check if creator can assign this role
+    if (!canAssignRole(context.role, targetRole)) {
+      return forbiddenResponse(`You do not have permission to create users with role: ${targetRole}`);
+    }
+
     // Check permissions based on role
     if (context.role === UserRole.SUPER_ADMIN) {
       // Super admin can create employees for any company
+      // But must provide companyId for non-super-admin roles
+      if (targetRole !== UserRole.SUPER_ADMIN && !validatedData.companyId) {
+        return NextResponse.json(
+          { error: 'Company ID is required when creating company users' },
+          { status: 400 }
+        );
+      }
     } else {
       // Company admin and managers can only create employees in their company
       if (!context.companyId) {
