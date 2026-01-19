@@ -18,19 +18,59 @@ export async function POST(request: NextRequest) {
       UserRole.COMPANY_ADMIN,
       UserRole.MANAGER,
     ];
-    if (!allowedRoles.includes(context.role)) {
+    
+    // Debug logging
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Task Assignment] Context:', {
+        userId: context.userId,
+        role: context.role,
+        companyId: context.companyId,
+        allowedRoles,
+        isAllowed: allowedRoles.includes(context.role),
+      });
+    }
+    
+    // Verify user role from database matches token
+    const user = await prisma.user.findUnique({
+      where: { id: context.userId },
+      select: { role: true, companyId: true, isActive: true },
+    });
+
+    if (!user) {
+      return unauthorizedResponse('User not found');
+    }
+
+    if (!user.isActive) {
+      return forbiddenResponse('Your account is deactivated');
+    }
+
+    // Use role from database instead of token to ensure accuracy
+    const userRole = user.role;
+    
+    if (!allowedRoles.includes(userRole)) {
+      console.error('[Task Assignment] Permission denied:', {
+        tokenRole: context.role,
+        dbRole: userRole,
+        allowedRoles,
+        userId: context.userId,
+        companyId: context.companyId,
+        dbCompanyId: user.companyId,
+      });
       return forbiddenResponse('You do not have permission to assign tasks');
     }
 
     const body = await request.json();
     const validatedData = createTaskSchema.parse(body);
+    
+    // Use companyId from database if token doesn't have it
+    const effectiveCompanyId = context.companyId || user.companyId;
 
     // Verify all assignees belong to the same company (if user has company)
-    if (context.companyId) {
+    if (effectiveCompanyId) {
       const assignees = await prisma.user.findMany({
         where: {
           id: { in: validatedData.assigneeIds },
-          companyId: context.companyId,
+          companyId: effectiveCompanyId,
         },
       });
 
