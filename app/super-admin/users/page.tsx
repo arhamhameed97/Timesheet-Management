@@ -72,6 +72,50 @@ export default function SuperAdminUsersPage() {
     fetchCompanyContext();
   }, []);
 
+  // Listen for company context changes from the header selector
+  useEffect(() => {
+    const handleCompanyContextChange = () => {
+      // Small delay to ensure cookie is set
+      setTimeout(() => {
+        fetchCompanyContext();
+        fetchUsers();
+      }, 100);
+    };
+
+    window.addEventListener('companyContextChanged', handleCompanyContextChange);
+
+    // Also listen for visibility/focus changes
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchCompanyContext();
+        fetchUsers();
+      }
+    };
+
+    const handleFocus = () => {
+      fetchCompanyContext();
+      fetchUsers();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('companyContextChanged', handleCompanyContextChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
+  // Update filter when company context changes
+  useEffect(() => {
+    if (companyContext) {
+      setFilterCompany(companyContext.id);
+    } else {
+      setFilterCompany('all');
+    }
+  }, [companyContext]);
+
   useEffect(() => {
     applyFilters();
   }, [users, searchTerm, filterRole, filterCompany, filterStatus]);
@@ -83,14 +127,22 @@ export default function SuperAdminUsersPage() {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        credentials: 'include', // Include cookies
       });
 
       if (response.ok) {
         const data = await response.json();
-        setCompanyContext(data.company || null);
-        // Auto-filter by company context if set
-        if (data.companyId) {
-          setFilterCompany(data.companyId);
+        const newCompanyContext = data.company || null;
+        
+        // Only update if company context actually changed
+        if (newCompanyContext?.id !== companyContext?.id) {
+          setCompanyContext(newCompanyContext);
+          // Auto-filter by company context if set
+          if (data.companyId) {
+            setFilterCompany(data.companyId);
+          } else {
+            setFilterCompany('all');
+          }
         }
       }
     } catch (error) {
@@ -129,8 +181,9 @@ export default function SuperAdminUsersPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setUsers(data.users || []);
-        setFilteredUsers(data.users || []);
+        const fetchedUsers = data.users || [];
+        setUsers(fetchedUsers);
+        // applyFilters will be called automatically via useEffect
       } else {
         console.error('Failed to fetch users');
       }

@@ -81,6 +81,10 @@ export function CompanySelector() {
 
       if (response.ok) {
         setSelectedCompanyId(companyId);
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('companyContextChanged', { 
+          detail: { companyId } 
+        }));
         // Reload the page to apply context
         router.refresh();
       }
@@ -103,6 +107,10 @@ export function CompanySelector() {
 
       if (response.ok) {
         setSelectedCompanyId(null);
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('companyContextChanged', { 
+          detail: { companyId: null } 
+        }));
         router.refresh();
       }
     } catch (error) {
