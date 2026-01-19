@@ -136,11 +136,11 @@ export function CompanySelector() {
       >
         <SelectTrigger className="w-[250px]">
           <SelectValue placeholder="Select company context">
-            {selectedCompany ? selectedCompany.name : 'No company selected'}
+            {selectedCompany ? selectedCompany.name : 'Global View'}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="none">No company selected (Global view)</SelectItem>
+          <SelectItem value="none">Global View</SelectItem>
           {companies.map((company) => (
             <SelectItem key={company.id} value={company.id}>
               {company.name}

@@ -137,10 +137,11 @@ export default function SuperAdminUsersPage() {
         // Only update if company context actually changed
         if (newCompanyContext?.id !== companyContext?.id) {
           setCompanyContext(newCompanyContext);
-          // Auto-filter by company context if set
+          // Auto-filter by company context if set, otherwise show all
           if (data.companyId) {
             setFilterCompany(data.companyId);
           } else {
+            // Global view - show all companies
             setFilterCompany('all');
           }
         }
@@ -269,7 +270,7 @@ export default function SuperAdminUsersPage() {
           <p className="text-muted-foreground mt-1">
             {companyContext
               ? `Viewing users for: ${companyContext.name}`
-              : 'Manage and view all users across the system'}
+              : 'Global View - Manage and view all users across all companies'}
           </p>
         </div>
 

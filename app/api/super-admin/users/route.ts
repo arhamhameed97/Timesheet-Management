@@ -14,16 +14,18 @@ export async function GET(request: NextRequest) {
       return forbiddenResponse('Only super admins can access all users');
     }
 
-    // Check if there's a company context override
-    // For SUPER_ADMIN, context.companyId will be set if a company context is selected
-    const companyContextId = context.companyId || null;
-
+    // Check if there's a company context override from cookie
+    // For SUPER_ADMIN, we check the cookie directly to see if a company context is selected
+    const companyContextCookie = request.cookies.get('superAdminCompanyContext')?.value || null;
+    
     let where: any = {};
 
-    // If company context is set, filter by that company
-    if (companyContextId) {
-      where.companyId = companyContextId;
+    // If company context cookie is set, filter by that company
+    // If null/undefined, show all users (global view)
+    if (companyContextCookie) {
+      where.companyId = companyContextCookie;
     }
+    // If no company context cookie, where remains empty {} which returns all users
 
     // Fetch all users (including super admins if no company context)
     // If company context is set, super admins won't be included since they don't have companyId
