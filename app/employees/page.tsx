@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Plus, Edit, Trash2, Clock, FileText, CheckCircle, XCircle, Filter, Search, Calendar, Eye, CheckSquare } from 'lucide-react';
+import { Plus, Edit, Trash2, Clock, FileText, CheckCircle, XCircle, Filter, Search, Calendar, Eye, CheckSquare, UserCog } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -87,6 +88,7 @@ interface User {
 }
 
 export default function EmployeesPage() {
+  const router = useRouter();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -409,6 +411,73 @@ export default function EmployeesPage() {
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const canImpersonate = (employee: Employee) => {
+    if (!user) return false;
+    
+    if (user.role === UserRole.SUPER_ADMIN) {
+      return true; // Can impersonate anyone
+    }
+    
+    if (user.role === UserRole.COMPANY_ADMIN) {
+      // Can impersonate anyone except super admins in their company
+      return employee.role !== UserRole.SUPER_ADMIN && employee.company?.id === user.companyId;
+    }
+    
+    if (user.role === UserRole.MANAGER) {
+      // Can only impersonate EMPLOYEEs in their company
+      return employee.role === 'EMPLOYEE' && employee.company?.id === user.companyId;
+    }
+    
+    return false;
+  };
+
+  const handleImpersonate = async (employee: Employee) => {
+    if (!canImpersonate(employee)) {
+      alert('You do not have permission to impersonate this user');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Save original token for restoration
+      const originalToken = token;
+      localStorage.setItem('originalToken', originalToken || '');
+      
+      // Call impersonation API
+      const response = await fetch('/api/auth/impersonate', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: employee.id }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Set new token
+        localStorage.setItem('token', data.token);
+        document.cookie = `token=${data.token}; path=/; max-age=${60 * 60 * 24 * 7}`;
+        
+        // Set impersonation flag
+        localStorage.setItem('isImpersonating', 'true');
+        localStorage.setItem('impersonatedUserId', employee.id);
+        localStorage.setItem('impersonatedUserName', employee.name);
+        
+        // Reload to update user context
+        window.location.href = '/dashboard';
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || 'Failed to impersonate user');
+      }
+    } catch (error) {
+      console.error('Failed to impersonate user:', error);
+      alert('Failed to impersonate user');
+    }
   };
 
   return (
@@ -843,8 +912,12 @@ export default function EmployeesPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredEmployees.map((employee) => (
-                    <TableRow key={employee.id}>
-                      <TableCell>
+                    <TableRow 
+                      key={employee.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => router.push(`/employees/${employee.id}`)}
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-3">
                           <Avatar>
                             <AvatarFallback className="bg-primary text-primary-foreground">
@@ -958,23 +1031,26 @@ export default function EmployeesPage() {
                           {employee.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-2">
+                          {canImpersonate(employee) && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleImpersonate(employee);
+                              }}
+                              title="Impersonate this user"
+                            >
+                              <UserCog className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button 
                             variant="ghost" 
                             size="sm"
-                            onClick={() => {
-                              setSelectedEmployee(employee);
-                              setViewAttendanceOpen(true);
-                            }}
-                            title="View detailed attendance"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={async () => {
+                            onClick={async (e) => {
+                              e.stopPropagation();
                               try {
                                 const token = localStorage.getItem('token');
                                 const response = await fetch(`/api/employees/${employee.id}`, {
@@ -1002,9 +1078,6 @@ export default function EmployeesPage() {
                             title="Edit employee profile"
                           >
                             <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
                         </div>
                       </TableCell>

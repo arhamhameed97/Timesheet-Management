@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { LogOut, User, Settings } from 'lucide-react';
+import { LogOut, User, Settings, X } from 'lucide-react';
 import { DesignationBadge } from '@/components/common/DesignationBadge';
 import { RoleBadge } from '@/components/common/RoleBadge';
 import { UserRole } from '@prisma/client';
@@ -35,8 +35,19 @@ interface User {
 export function Header() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [isImpersonating, setIsImpersonating] = useState(false);
+  const [impersonatedUserName, setImpersonatedUserName] = useState<string | null>(null);
 
   useEffect(() => {
+    const checkImpersonation = () => {
+      const impersonating = localStorage.getItem('isImpersonating') === 'true';
+      const name = localStorage.getItem('impersonatedUserName');
+      setIsImpersonating(impersonating);
+      setImpersonatedUserName(name);
+    };
+
+    checkImpersonation();
+    
     const fetchUser = async () => {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -67,12 +78,35 @@ export function Header() {
     };
 
     fetchUser();
+    
+    // Check for impersonation changes periodically
+    const interval = setInterval(checkImpersonation, 1000);
+    return () => clearInterval(interval);
   }, [router]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     document.cookie = 'token=; path=/; max-age=0';
     router.push('/login');
+  };
+
+  const handleStopImpersonation = () => {
+    const originalToken = localStorage.getItem('originalToken');
+    
+    if (originalToken) {
+      // Restore original token
+      localStorage.setItem('token', originalToken);
+      document.cookie = `token=${originalToken}; path=/; max-age=${60 * 60 * 24 * 7}`;
+    }
+    
+    // Clear impersonation flags
+    localStorage.removeItem('isImpersonating');
+    localStorage.removeItem('impersonatedUserId');
+    localStorage.removeItem('impersonatedUserName');
+    localStorage.removeItem('originalToken');
+    
+    // Reload to update user context
+    window.location.href = '/dashboard';
   };
 
   if (!user) {
@@ -87,8 +121,28 @@ export function Header() {
     .slice(0, 2);
 
   return (
-    <header className="sticky top-0 z-10 border-b bg-background">
-      <div className="flex h-16 items-center justify-between px-6">
+    <>
+      {isImpersonating && (
+        <div className="sticky top-0 z-20 bg-yellow-500 text-yellow-900 border-b border-yellow-600">
+          <div className="flex items-center justify-between px-6 py-2">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Impersonating:</span>
+              <span>{impersonatedUserName || 'Unknown User'}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleStopImpersonation}
+              className="text-yellow-900 hover:bg-yellow-600 hover:text-yellow-950"
+            >
+              <X className="mr-2 h-4 w-4" />
+              Stop Impersonation
+            </Button>
+          </div>
+        </div>
+      )}
+      <header className={`sticky z-10 border-b bg-background ${isImpersonating ? 'top-[40px]' : 'top-0'}`}>
+        <div className="flex h-16 items-center justify-between px-6">
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-semibold text-foreground">
             {user.company?.name || 'PunchIn'}
@@ -140,6 +194,7 @@ export function Header() {
         </div>
       </div>
     </header>
+    </>
   );
 }
 

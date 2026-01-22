@@ -26,8 +26,19 @@ export async function canManageUser(
     return targetUser?.companyId === context.companyId;
   }
 
-  // Managers can manage subordinates
+  // Managers can manage subordinates OR any EMPLOYEE in their company
   if (context.role === UserRole.MANAGER) {
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { companyId: true, role: true },
+    });
+    
+    // Can manage if target is an EMPLOYEE in the same company
+    if (targetUser?.role === UserRole.EMPLOYEE && targetUser.companyId === context.companyId) {
+      return true;
+    }
+    
+    // Also check if they're a subordinate (for backward compatibility)
     return await isSubordinate(context.userId, targetUserId);
   }
 
@@ -71,8 +82,19 @@ export async function canViewUser(
     return targetUser?.companyId === context.companyId;
   }
 
-  // Managers can view subordinates
+  // Managers can view subordinates OR any EMPLOYEE in their company
   if (context.role === UserRole.MANAGER) {
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { companyId: true, role: true },
+    });
+    
+    // Can view if target is an EMPLOYEE in the same company
+    if (targetUser?.role === UserRole.EMPLOYEE && targetUser.companyId === context.companyId) {
+      return true;
+    }
+    
+    // Also check if they're a subordinate (for backward compatibility)
     return await isSubordinate(context.userId, targetUserId);
   }
 
