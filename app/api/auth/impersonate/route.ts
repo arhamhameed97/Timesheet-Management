@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext, unauthorizedResponse, forbiddenResponse } from '@/lib/middleware-helpers';
 import { prisma } from '@/lib/db';
 import { generateToken } from '@/lib/auth';
+import { getUserDashboardRoute } from '@/lib/permissions';
 import { UserRole } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
@@ -90,9 +91,13 @@ export async function POST(request: NextRequest) {
       companyId: targetUser.companyId,
     });
 
-    // Return token and user info
+    // Get dashboard route for impersonated user
+    const dashboardRoute = getUserDashboardRoute(targetUser.role);
+
+    // Return token, user info, and dashboard route
     return NextResponse.json({
       token: impersonationToken,
+      dashboardRoute,
       user: {
         id: targetUser.id,
         name: targetUser.name,

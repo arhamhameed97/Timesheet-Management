@@ -459,6 +459,10 @@ export default function EmployeesPage() {
       if (response.ok) {
         const data = await response.json();
         
+        // Clear all cached user data to ensure fresh fetch
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userDesignation');
+        
         // Set new token
         localStorage.setItem('token', data.token);
         document.cookie = `token=${data.token}; path=/; max-age=${60 * 60 * 24 * 7}`;
@@ -468,8 +472,9 @@ export default function EmployeesPage() {
         localStorage.setItem('impersonatedUserId', employee.id);
         localStorage.setItem('impersonatedUserName', employee.name);
         
-        // Reload to update user context
-        window.location.href = '/dashboard';
+        // Reload to impersonated user's dashboard route
+        const dashboardRoute = data.dashboardRoute || '/dashboard';
+        window.location.href = dashboardRoute;
       } else {
         const errorData = await response.json();
         alert(errorData.error || 'Failed to impersonate user');

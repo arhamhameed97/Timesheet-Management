@@ -39,6 +39,13 @@ export function MainLayout({ children }: MainLayoutProps) {
         return;
       }
 
+      // If impersonating, clear cached user data to ensure fresh fetch
+      const isImpersonating = localStorage.getItem('isImpersonating') === 'true';
+      if (isImpersonating) {
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userDesignation');
+      }
+
       try {
         const response = await fetch('/api/auth/me', {
           headers: {
@@ -82,6 +89,21 @@ export function MainLayout({ children }: MainLayoutProps) {
     };
 
     fetchUser();
+    
+    // Listen for storage changes to sync impersonation state across tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'isImpersonating' || e.key === 'token') {
+        // If impersonation state or token changed, refresh user data
+        setLoading(true);
+        fetchUser();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, [router]);
 
   if (loading) {

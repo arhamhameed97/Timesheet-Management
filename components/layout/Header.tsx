@@ -16,6 +16,7 @@ import { LogOut, User, Settings, X } from 'lucide-react';
 import { DesignationBadge } from '@/components/common/DesignationBadge';
 import { RoleBadge } from '@/components/common/RoleBadge';
 import { UserRole } from '@prisma/client';
+import { getUserDashboardRoute } from '@/lib/permissions';
 import { CompanySelector } from '@/components/super-admin/CompanySelector';
 
 interface User {
@@ -79,9 +80,26 @@ export function Header() {
 
     fetchUser();
     
-    // Check for impersonation changes periodically
+    // Listen for storage changes to sync impersonation state across tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'isImpersonating' || e.key === 'impersonatedUserName') {
+        checkImpersonation();
+        // If impersonation state changed, refresh user data
+        if (e.key === 'isImpersonating') {
+          fetchUser();
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Check for impersonation changes periodically (fallback for same-tab changes)
     const interval = setInterval(checkImpersonation, 1000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
   }, [router]);
 
   const handleLogout = () => {
@@ -90,14 +108,26 @@ export function Header() {
     router.push('/login');
   };
 
-  const handleStopImpersonation = () => {
+  const handleStopImpersonation = async () => {
     const originalToken = localStorage.getItem('originalToken');
     
-    if (originalToken) {
-      // Restore original token
-      localStorage.setItem('token', originalToken);
-      document.cookie = `token=${originalToken}; path=/; max-age=${60 * 60 * 24 * 7}`;
+    if (!originalToken) {
+      // If no original token, just clear impersonation flags
+      localStorage.removeItem('isImpersonating');
+      localStorage.removeItem('impersonatedUserId');
+      localStorage.removeItem('impersonatedUserName');
+      localStorage.removeItem('originalToken');
+      window.location.href = '/dashboard';
+      return;
     }
+    
+    // Clear all cached user data
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userDesignation');
+    
+    // Restore original token
+    localStorage.setItem('token', originalToken);
+    document.cookie = `token=${originalToken}; path=/; max-age=${60 * 60 * 24 * 7}`;
     
     // Clear impersonation flags
     localStorage.removeItem('isImpersonating');
@@ -105,8 +135,32 @@ export function Header() {
     localStorage.removeItem('impersonatedUserName');
     localStorage.removeItem('originalToken');
     
-    // Reload to update user context
-    window.location.href = '/dashboard';
+    // Fetch original user's dashboard route
+    try {
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          Authorization: `Bearer ${originalToken}`,
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const originalUserRole = data.user?.role;
+        
+        // Get dashboard route based on original user's role
+        const dashboardRoute = getUserDashboardRoute(originalUserRole);
+        
+        // Reload to original user's dashboard
+        window.location.href = dashboardRoute;
+      } else {
+        // Fallback to default dashboard
+        window.location.href = '/dashboard';
+      }
+    } catch (error) {
+      console.error('Failed to fetch original user:', error);
+      // Fallback to default dashboard
+      window.location.href = '/dashboard';
+    }
   };
 
   if (!user) {
