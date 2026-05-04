@@ -5,6 +5,32 @@ import { createTaskSchema } from '@/lib/validations';
 import { UserRole, TaskStatus } from '@prisma/client';
 import { canManageUser } from '@/lib/permissions';
 
+const LEAVE_TASK_MARKER_REGEX = /\[LEAVE_REQUEST:([^\]]+)\]/;
+
+function dedupeLeaveReviewTasks<T extends { id: string; description: string | null }>(tasks: T[]): T[] {
+  const seenLeaveIds = new Set<string>();
+  const deduped: T[] = [];
+
+  for (const task of tasks) {
+    const markerMatch = task.description?.match(LEAVE_TASK_MARKER_REGEX);
+    const leaveId = markerMatch?.[1];
+
+    if (!leaveId) {
+      deduped.push(task);
+      continue;
+    }
+
+    if (seenLeaveIds.has(leaveId)) {
+      continue;
+    }
+
+    seenLeaveIds.add(leaveId);
+    deduped.push(task);
+  }
+
+  return deduped;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const context = await getAuthContext(request);
@@ -218,7 +244,9 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ tasks });
+    const dedupedTasks = dedupeLeaveReviewTasks(tasks);
+
+    return NextResponse.json({ tasks: dedupedTasks });
   } catch (error) {
     console.error('Get tasks error:', error);
     return NextResponse.json(

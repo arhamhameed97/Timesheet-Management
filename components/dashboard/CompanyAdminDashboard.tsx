@@ -724,6 +724,11 @@ export function CompanyAdminDashboard({ stats, user }: CompanyAdminDashboardProp
                                 <span>{format(parseISO(task.createdAt), 'MMM dd, yyyy')}</span>
                               </div>
                             </div>
+                            <Link href="/tasks">
+                              <Button size="sm" variant="outline" className="flex-shrink-0">
+                                Open
+                              </Button>
+                            </Link>
                             {task.status === TaskStatus.COMPLETED && (() => {
                               const allAssigneesCompleted = task.assignees.length > 0 && task.assignees.every(a => a.completedAt !== null);
                               return allAssigneesCompleted ? (

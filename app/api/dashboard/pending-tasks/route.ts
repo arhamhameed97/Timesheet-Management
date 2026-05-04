@@ -3,6 +3,32 @@ import { getAuthContext, unauthorizedResponse, forbiddenResponse } from '@/lib/m
 import { prisma } from '@/lib/db';
 import { UserRole, TaskStatus, TaskType } from '@prisma/client';
 
+const LEAVE_TASK_MARKER_REGEX = /\[LEAVE_REQUEST:([^\]]+)\]/;
+
+function dedupeLeaveReviewTasks<T extends { id: string; description: string | null }>(tasks: T[]): T[] {
+  const seenLeaveIds = new Set<string>();
+  const deduped: T[] = [];
+
+  for (const task of tasks) {
+    const markerMatch = task.description?.match(LEAVE_TASK_MARKER_REGEX);
+    const leaveId = markerMatch?.[1];
+
+    if (!leaveId) {
+      deduped.push(task);
+      continue;
+    }
+
+    if (seenLeaveIds.has(leaveId)) {
+      continue;
+    }
+
+    seenLeaveIds.add(leaveId);
+    deduped.push(task);
+  }
+
+  return deduped;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const context = await getAuthContext(request);
@@ -122,26 +148,15 @@ export async function GET(request: NextRequest) {
       orderBy: {
         createdAt: 'desc',
       },
-      take: limit,
     });
 
-    // Count total pending tasks
-    const pendingCount = await prisma.task.count({
-      where: {
-        ...where,
-        status: TaskStatus.PENDING,
-      },
-    });
-
-    const completedPendingApprovalCount = await prisma.task.count({
-      where: {
-        ...where,
-        status: TaskStatus.COMPLETED,
-      },
-    });
+    const dedupedTasks = dedupeLeaveReviewTasks(tasks);
+    const limitedTasks = dedupedTasks.slice(0, limit);
+    const pendingCount = dedupedTasks.filter((task) => task.status === TaskStatus.PENDING).length;
+    const completedPendingApprovalCount = dedupedTasks.filter((task) => task.status === TaskStatus.COMPLETED).length;
 
     return NextResponse.json({
-      tasks,
+      tasks: limitedTasks,
       counts: {
         pending: pendingCount,
         completedPendingApproval: completedPendingApprovalCount,

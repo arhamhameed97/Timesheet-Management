@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { CheckSquare, Plus, Filter, Pencil, Trash2, CheckCircle } from 'lucide-react';
+import { CheckSquare, Plus, Filter, Pencil, Trash2, CheckCircle, Eye } from 'lucide-react';
 import { UserRole, TaskStatus, TaskPriority } from '@prisma/client';
 import { format, parseISO } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
@@ -99,6 +99,8 @@ export default function TasksPage() {
   const [updatingTask, setUpdatingTask] = useState(false);
   const [employeesList, setEmployeesList] = useState<Employee[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [taskDetailsOpen, setTaskDetailsOpen] = useState(false);
 
   useEffect(() => {
     fetchUserData();
@@ -446,6 +448,37 @@ export default function TasksPage() {
     }
   };
 
+  const openTaskDetails = async (taskId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/tasks/assignments/${taskId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedTask(data.task);
+        setTaskDetailsOpen(true);
+      } else {
+        const data = await response.json();
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to open task details',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to open task details:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to open task details',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getTaskStatusBadgeClass = (status: TaskStatus) => {
     switch (status) {
       case TaskStatus.PENDING:
@@ -672,6 +705,11 @@ export default function TasksPage() {
                       const completedCount = task.assignees.filter(a => a.completedAt).length;
                       const totalAssignees = task.assignees.length;
                       const progressPercentage = totalAssignees > 0 ? Math.round((completedCount / totalAssignees) * 100) : 0;
+                      const currentUserAssignee = task.assignees.find((a) =>
+                        a.userId === currentUserId || a.user.id === currentUserId
+                      );
+                      const isCurrentUserAssignee = Boolean(currentUserAssignee);
+                      const hasCurrentUserCompleted = Boolean(currentUserAssignee?.completedAt);
                       
                       return (
                         <TableRow key={task.id}>
@@ -746,6 +784,15 @@ export default function TasksPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex gap-1 justify-end">
+                              {isManagerOrAdmin() && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openTaskDetails(task.id)}
+                                >
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                              )}
                               {isManagerOrAdmin() && task.status !== TaskStatus.APPROVED && (
                                 <>
                                   <Button
@@ -797,27 +844,31 @@ export default function TasksPage() {
                                   </div>
                                 );
                               })()}
-                              {!isManagerOrAdmin() && task.status === 'PENDING' && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleTaskStatusUpdate(task.id, 'IN_PROGRESS')}
-                                >
-                                  Start Task
-                                </Button>
+                              {isCurrentUserAssignee && task.status === TaskStatus.PENDING && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openTaskDetails(task.id)}
+                                  >
+                                    Open
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleTaskStatusUpdate(task.id, TaskStatus.IN_PROGRESS)}
+                                  >
+                                    Start Task
+                                  </Button>
+                                </>
                               )}
-                              {!isManagerOrAdmin() && task.status !== 'PENDING' && task.status !== 'APPROVED' && (() => {
-                                const currentUserAssignee = task.assignees?.find((a: any) => 
-                                  a.userId === currentUserId || a.user?.id === currentUserId
-                                );
-                                const hasCompleted = currentUserAssignee?.completedAt !== null && currentUserAssignee?.completedAt !== undefined;
-                                
-                                if (!hasCompleted) {
+                              {isCurrentUserAssignee && task.status !== TaskStatus.PENDING && task.status !== TaskStatus.APPROVED && (() => {
+                                if (!hasCurrentUserCompleted) {
                                   return (
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      onClick={() => handleTaskStatusUpdate(task.id, 'COMPLETED')}
+                                      onClick={() => handleTaskStatusUpdate(task.id, TaskStatus.COMPLETED)}
                                     >
                                       Mark Complete
                                     </Button>
@@ -825,13 +876,20 @@ export default function TasksPage() {
                                 } else {
                                   return (
                                     <>
-                                      {task.status === 'COMPLETED' && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => openTaskDetails(task.id)}
+                                      >
+                                        Open
+                                      </Button>
+                                      {task.status === TaskStatus.COMPLETED && (
                                         <span className="text-xs text-yellow-600 self-center mr-2">Awaiting Approval</span>
                                       )}
                                       <Button
                                         size="sm"
                                         variant="outline"
-                                        onClick={() => handleTaskStatusUpdate(task.id, 'IN_PROGRESS')}
+                                        onClick={() => handleTaskStatusUpdate(task.id, TaskStatus.IN_PROGRESS)}
                                       >
                                         Mark Incomplete
                                       </Button>
@@ -969,6 +1027,130 @@ export default function TasksPage() {
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Task Details Dialog */}
+        <Dialog open={taskDetailsOpen} onOpenChange={setTaskDetailsOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{selectedTask?.title || 'Task Details'}</DialogTitle>
+              <DialogDescription>
+                Review task information and perform allowed actions.
+              </DialogDescription>
+            </DialogHeader>
+            {selectedTask && (
+              <div className="space-y-4">
+                <div>
+                  <Label>Description</Label>
+                  <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">
+                    {selectedTask.description || 'No description provided.'}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Status</Label>
+                    <div className="mt-1">
+                      <span className={`px-2 py-1 text-xs rounded-full ${getTaskStatusBadgeClass(selectedTask.status)}`}>
+                        {selectedTask.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Priority</Label>
+                    <p className={`text-sm mt-1 ${getTaskPriorityClass(selectedTask.priority)}`}>
+                      {selectedTask.priority}
+                    </p>
+                  </div>
+                  <div>
+                    <Label>Due Date</Label>
+                    <p className="text-sm mt-1">{format(parseISO(selectedTask.dueDate), 'MMM dd, yyyy')}</p>
+                  </div>
+                  <div>
+                    <Label>Created By</Label>
+                    <p className="text-sm mt-1">{selectedTask.creator.name}</p>
+                  </div>
+                </div>
+                <div>
+                  <Label>Assignees</Label>
+                  <div className="mt-2 space-y-1">
+                    {selectedTask.assignees.map((assignee) => (
+                      <div key={assignee.id} className="text-sm flex items-center gap-2">
+                        <span>{assignee.user.name}</span>
+                        {assignee.completedAt && <CheckCircle className="h-3 w-3 text-green-600" />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            <DialogFooter className="gap-2">
+              {selectedTask && isManagerOrAdmin() && selectedTask.status === TaskStatus.COMPLETED && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      await handleRejectTask(selectedTask.id);
+                      await openTaskDetails(selectedTask.id);
+                    }}
+                  >
+                    Reject
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      await handleApproveTask(selectedTask.id);
+                      await openTaskDetails(selectedTask.id);
+                    }}
+                  >
+                    Approve
+                  </Button>
+                </>
+              )}
+              {selectedTask && selectedTask.assignees.some((a) => a.userId === currentUserId || a.user.id === currentUserId) && selectedTask.status === TaskStatus.PENDING && (
+                <Button
+                  onClick={async () => {
+                    await handleTaskStatusUpdate(selectedTask.id, TaskStatus.IN_PROGRESS);
+                    await openTaskDetails(selectedTask.id);
+                  }}
+                >
+                  Start Task
+                </Button>
+              )}
+              {selectedTask && selectedTask.assignees.some((a) => a.userId === currentUserId || a.user.id === currentUserId) && selectedTask.status !== TaskStatus.PENDING && selectedTask.status !== TaskStatus.APPROVED && (() => {
+                const currentUserAssignee = selectedTask.assignees.find((a) =>
+                  a.userId === currentUserId || a.user.id === currentUserId
+                );
+                const hasCompleted = !!currentUserAssignee?.completedAt;
+
+                if (!hasCompleted) {
+                  return (
+                    <Button
+                      onClick={async () => {
+                        await handleTaskStatusUpdate(selectedTask.id, TaskStatus.COMPLETED);
+                        await openTaskDetails(selectedTask.id);
+                      }}
+                    >
+                      Mark Complete
+                    </Button>
+                  );
+                }
+
+                return (
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      await handleTaskStatusUpdate(selectedTask.id, TaskStatus.IN_PROGRESS);
+                      await openTaskDetails(selectedTask.id);
+                    }}
+                  >
+                    Mark Incomplete
+                  </Button>
+                );
+              })()}
+              <Button variant="outline" onClick={() => setTaskDetailsOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
