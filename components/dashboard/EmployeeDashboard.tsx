@@ -84,6 +84,7 @@ interface EmployeeOnLeave {
   startDate: string;
   endDate: string;
   type: string;
+  leaveDuration?: string;
 }
 
 export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
@@ -99,6 +100,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
   const [submittingLeave, setSubmittingLeave] = useState(false);
   const [pendingTimesheets, setPendingTimesheets] = useState<Timesheet[]>([]);
   const [employeesOnLeave, setEmployeesOnLeave] = useState<EmployeeOnLeave[]>([]);
+  const [offDate, setOffDate] = useState<Date>(new Date());
   const [attendanceViewDate, setAttendanceViewDate] = useState(new Date());
   const [companyName, setCompanyName] = useState<string>('Your Company');
   const [tasks, setTasks] = useState<any[]>([]);
@@ -129,9 +131,13 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
     fetchAttendanceData();
     fetchLeaveData();
     fetchPendingTimesheets();
-    fetchEmployeesOnLeave();
+    fetchEmployeesOnLeave(new Date());
     fetchTasks();
   }, []);
+
+  useEffect(() => {
+    fetchEmployeesOnLeave(offDate);
+  }, [offDate, currentUserId]);
 
   const fetchTasks = async () => {
     try {
@@ -269,7 +275,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
   const fetchLeaveData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('/api/leaves?status=APPROVED', {
+      const response = await fetch('/api/leaves', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -302,14 +308,12 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
     }
   };
 
-  const fetchEmployeesOnLeave = async () => {
+  const fetchEmployeesOnLeave = async (targetDate: Date) => {
     try {
       const token = localStorage.getItem('token');
-      const today = new Date();
-      
-      // Try to fetch all employees first, then get their leaves
-      // For now, we'll show the user's own approved leaves that are active
-      const response = await fetch('/api/leaves?status=APPROVED', {
+      const dateParam = format(targetDate, 'yyyy-MM-dd');
+
+      const response = await fetch(`/api/leaves?companyWide=true&status=APPROVED&onDate=${dateParam}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -317,18 +321,16 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
 
       if (response.ok) {
         const data = await response.json();
-        // Filter leaves that include today
-        const todayLeaves = (data.leaves || []).filter((leave: Leave & { user?: { id: string; name: string } }) => {
-          const startDate = parseISO(leave.startDate);
-          const endDate = parseISO(leave.endDate);
-          return isWithinInterval(today, { start: startDate, end: endDate });
-        });
-        
-        // Get unique employees on leave
+
+        // Get unique employees on leave for selected date.
         const employeesMap = new Map<string, EmployeeOnLeave>();
-        todayLeaves.forEach((leave: Leave & { user?: { id: string; name: string } }) => {
-          const userId = (leave as any).user?.id || 'unknown';
-          const userName = (leave as any).user?.name || 'Unknown';
+        (data.leaves || []).forEach((leave: Leave & { user?: { id: string; name: string } }) => {
+          const userId = leave.user?.id || '';
+          const userName = leave.user?.name || 'Unknown';
+          if (!userId || (currentUserId && userId === currentUserId)) {
+            return;
+          }
+
           if (!employeesMap.has(userId)) {
             employeesMap.set(userId, {
               id: userId,
@@ -336,6 +338,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
               startDate: leave.startDate,
               endDate: leave.endDate,
               type: leave.type,
+              leaveDuration: leave.leaveDuration,
             });
           }
         });
@@ -488,7 +491,7 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
         });
         await fetchLeaveData();
         await fetchAttendanceData();
-        await fetchEmployeesOnLeave();
+        await fetchEmployeesOnLeave(offDate);
       } else {
         const data = await response.json();
         toast({
@@ -771,6 +774,13 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
 
   const formatDate = (dateString: string) => {
     return format(parseISO(dateString), 'MMM dd, yyyy');
+  };
+
+  const getLeaveStatusBadgeClass = (status: LeaveStatus) => {
+    if (status === LeaveStatus.APPROVED) return 'bg-green-500/20 text-green-700 dark:bg-green-500/30 dark:text-green-400';
+    if (status === LeaveStatus.REJECTED) return 'bg-red-500/20 text-red-700 dark:bg-red-500/30 dark:text-red-400';
+    if (status === LeaveStatus.CANCELLED) return 'bg-muted text-muted-foreground';
+    return 'bg-yellow-500/20 text-yellow-700 dark:bg-yellow-500/30 dark:text-yellow-400';
   };
 
   // Get attendance records for the view date range (last 7 days)
@@ -1212,6 +1222,39 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
             </CardContent>
           </Card>
 
+          {/* Leave Request Updates */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                Leave Request Updates
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {leaves.length === 0 ? (
+                <div className="text-sm text-muted-foreground">You have not submitted any leave requests yet.</div>
+              ) : (
+                <div className="space-y-3">
+                  {leaves.slice(0, 5).map((leave) => (
+                    <div key={leave.id} className="p-3 border rounded-lg">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="font-medium text-sm">{leave.type}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatDate(leave.startDate)} - {formatDate(leave.endDate)}
+                          </div>
+                        </div>
+                        <span className={`px-2 py-1 text-xs rounded-full ${getLeaveStatusBadgeClass(leave.status)}`}>
+                          {leave.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* My Attendance Card */}
           <Card>
             <CardHeader>
@@ -1455,14 +1498,24 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
           {/* Who is OFF Card */}
           <Card>
             <CardHeader>
-              <CardTitle>Who is OFF</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">Employee ({employeesOnLeave.length})</p>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle>Who is OFF</CardTitle>
+                <Input
+                  type="date"
+                  value={format(offDate, 'yyyy-MM-dd')}
+                  onChange={(e) => setOffDate(parseISO(e.target.value))}
+                  className="w-[150px] h-8"
+                />
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Employee ({employeesOnLeave.length}) on {format(offDate, 'MMM dd, yyyy')}
+              </p>
             </CardHeader>
             <CardContent>
               {employeesOnLeave.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                   <User className="h-12 w-12 mb-4 opacity-50" />
-                  <p className="text-sm">No Employee Leave Data</p>
+                  <p className="text-sm">No one is on approved leave</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1475,7 +1528,11 @@ export function EmployeeDashboard({ stats, user }: EmployeeDashboardProps) {
                         </div>
                       </div>
                       <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-700 dark:bg-blue-500/30 dark:text-blue-400 rounded">
-                        {employee.type}
+                        {employee.leaveDuration === 'HALF_DAY_MORNING'
+                          ? `${employee.type} (Half AM)`
+                          : employee.leaveDuration === 'HALF_DAY_AFTERNOON'
+                          ? `${employee.type} (Half PM)`
+                          : employee.type}
                       </span>
                     </div>
                   ))}

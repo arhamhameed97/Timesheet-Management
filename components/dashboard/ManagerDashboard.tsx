@@ -219,6 +219,33 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
     }
   };
 
+  const handleRejectLeaveTask = async (taskId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/tasks/assignments/${taskId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: TaskStatus.CANCELLED }),
+      });
+
+      if (response.ok) {
+        await fetchPendingTasks();
+        await fetchAllTasks();
+        await fetchPendingTasksData();
+        alert('Leave request rejected successfully');
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to reject leave request');
+      }
+    } catch (error) {
+      console.error('Failed to reject leave task:', error);
+      alert('Failed to reject leave request');
+    }
+  };
+
   const handleDeleteTask = async (taskId: string) => {
     try {
       const token = localStorage.getItem('token');
@@ -666,6 +693,7 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
                   const progressPercentage = totalAssignees > 0 ? Math.round((completedCount / totalAssignees) * 100) : 0;
                   const dueDate = new Date(task.dueDate);
                   const isOverdue = dueDate < new Date() && task.status !== TaskStatus.APPROVED;
+                  const isLeaveTask = Boolean(task.description?.includes('[LEAVE_REQUEST:'));
                   const getPriorityColor = (priority: TaskPriority) => {
                     switch (priority) {
                       case TaskPriority.HIGH: return 'text-red-600';
@@ -692,7 +720,25 @@ export function ManagerDashboard({ stats, user }: ManagerDashboardProps) {
                             Open
                           </Button>
                         </Link>
-                        {task.status === TaskStatus.COMPLETED && (() => {
+                        {isLeaveTask && task.status === TaskStatus.PENDING ? (
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRejectLeaveTask(task.id)}
+                              className="flex-shrink-0"
+                            >
+                              Reject
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => handleApproveTask(task.id)}
+                              className="flex-shrink-0"
+                            >
+                              Approve
+                            </Button>
+                          </div>
+                        ) : task.status === TaskStatus.COMPLETED && (() => {
                           const allAssigneesCompleted = task.assignees.length > 0 && task.assignees.every(a => a.completedAt !== null);
                           return allAssigneesCompleted ? (
                             <Button

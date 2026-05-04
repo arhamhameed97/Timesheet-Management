@@ -412,6 +412,42 @@ export default function TasksPage() {
     }
   };
 
+  const handleRejectLeaveTask = async (taskId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/tasks/assignments/${taskId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: TaskStatus.CANCELLED }),
+      });
+
+      if (response.ok) {
+        await fetchTasks();
+        toast({
+          title: 'Success',
+          description: 'Leave request rejected successfully',
+        });
+      } else {
+        const data = await response.json();
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to reject leave request',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to reject leave task:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reject leave request',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleTaskStatusUpdate = async (taskId: string, newStatus: string) => {
     try {
       const token = localStorage.getItem('token');
@@ -710,6 +746,7 @@ export default function TasksPage() {
                       );
                       const isCurrentUserAssignee = Boolean(currentUserAssignee);
                       const hasCurrentUserCompleted = Boolean(currentUserAssignee?.completedAt);
+                      const isLeaveTask = Boolean(task.description?.includes('[LEAVE_REQUEST:'));
                       
                       return (
                         <TableRow key={task.id}>
@@ -821,7 +858,25 @@ export default function TasksPage() {
                                   </Button>
                                 </>
                               )}
-                              {isManagerOrAdmin() && task.status === TaskStatus.COMPLETED && (() => {
+                              {isManagerOrAdmin() && isLeaveTask && task.status === TaskStatus.PENDING && (
+                                <div className="flex gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleRejectLeaveTask(task.id)}
+                                  >
+                                    Reject
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700"
+                                    onClick={() => handleApproveTask(task.id)}
+                                  >
+                                    Approve
+                                  </Button>
+                                </div>
+                              )}
+                              {isManagerOrAdmin() && !isLeaveTask && task.status === TaskStatus.COMPLETED && (() => {
                                 const allAssigneesCompleted = task.assignees.length > 0 && task.assignees.every(a => a.completedAt !== null);
                                 return (
                                   <div className="flex gap-1">
@@ -1083,7 +1138,28 @@ export default function TasksPage() {
               </div>
             )}
             <DialogFooter className="gap-2">
-              {selectedTask && isManagerOrAdmin() && selectedTask.status === TaskStatus.COMPLETED && (
+              {selectedTask && isManagerOrAdmin() && selectedTask.description?.includes('[LEAVE_REQUEST:') && selectedTask.status === TaskStatus.PENDING && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      await handleRejectLeaveTask(selectedTask.id);
+                      await openTaskDetails(selectedTask.id);
+                    }}
+                  >
+                    Reject
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      await handleApproveTask(selectedTask.id);
+                      await openTaskDetails(selectedTask.id);
+                    }}
+                  >
+                    Approve
+                  </Button>
+                </>
+              )}
+              {selectedTask && isManagerOrAdmin() && !selectedTask.description?.includes('[LEAVE_REQUEST:') && selectedTask.status === TaskStatus.COMPLETED && (
                 <>
                   <Button
                     variant="outline"

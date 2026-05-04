@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthContext, unauthorizedResponse, forbiddenResponse } from '@/lib/middleware-helpers';
 import { prisma } from '@/lib/db';
 import { updateTaskSchema } from '@/lib/validations';
-import { UserRole, TaskStatus } from '@prisma/client';
+import { UserRole, TaskStatus, LeaveStatus } from '@prisma/client';
 import { canManageUser } from '@/lib/permissions';
+
+const LEAVE_TASK_MARKER_REGEX = /\[LEAVE_REQUEST:([^\]]+)\]/;
 
 export async function GET(
   request: NextRequest,
@@ -100,6 +102,9 @@ export async function PATCH(
 
     const isAssignee = task.assignees.some((ta) => ta.userId === context.userId);
     const isManager = (context.role === UserRole.SUPER_ADMIN || context.role === UserRole.COMPANY_ADMIN || context.role === UserRole.MANAGER);
+    const leaveMarkerMatch = task.description?.match(LEAVE_TASK_MARKER_REGEX);
+    const linkedLeaveId = leaveMarkerMatch?.[1] || null;
+    const isLeaveReviewTask = Boolean(linkedLeaveId);
 
     // Permission checks
     if (!isAssignee && !isManager) {
@@ -124,7 +129,7 @@ export async function PATCH(
       } else {
         // Managers/admins can approve completed tasks
         if (validatedData.status === TaskStatus.APPROVED) {
-          if (task.status !== TaskStatus.COMPLETED) {
+          if (!isLeaveReviewTask && task.status !== TaskStatus.COMPLETED) {
             return NextResponse.json(
               { error: 'Can only approve completed tasks' },
               { status: 400 }
@@ -136,7 +141,7 @@ export async function PATCH(
             assignee => assignee.completedAt !== null
           );
           
-          if (!allAssigneesCompleted) {
+          if (!isLeaveReviewTask && !allAssigneesCompleted) {
             return NextResponse.json(
               { error: 'All assignees must complete the task before approval' },
               { status: 400 }
@@ -152,7 +157,7 @@ export async function PATCH(
       if (!isManager) {
         return forbiddenResponse('Only managers and admins can approve tasks');
       }
-      if (task.status !== TaskStatus.COMPLETED) {
+      if (!isLeaveReviewTask && task.status !== TaskStatus.COMPLETED) {
         return NextResponse.json(
           { error: 'Can only approve completed tasks' },
           { status: 400 }
@@ -164,7 +169,7 @@ export async function PATCH(
         assignee => assignee.completedAt !== null
       );
       
-      if (!allAssigneesCompleted) {
+      if (!isLeaveReviewTask && !allAssigneesCompleted) {
         return NextResponse.json(
           { error: 'All assignees must complete the task before approval' },
           { status: 400 }
@@ -332,6 +337,29 @@ export async function PATCH(
         },
       },
     });
+
+    // Keep leave request status synchronized for leave-review tasks.
+    if (isManager && linkedLeaveId && validatedData.status) {
+      if (validatedData.status === TaskStatus.APPROVED) {
+        await prisma.leave.updateMany({
+          where: { id: linkedLeaveId },
+          data: {
+            status: LeaveStatus.APPROVED,
+            approvedBy: context.userId,
+            approvedAt: new Date(),
+          },
+        });
+      } else if (validatedData.status === TaskStatus.CANCELLED) {
+        await prisma.leave.updateMany({
+          where: { id: linkedLeaveId },
+          data: {
+            status: LeaveStatus.REJECTED,
+            approvedBy: context.userId,
+            approvedAt: new Date(),
+          },
+        });
+      }
+    }
 
     return NextResponse.json({ task: updated });
   } catch (error: any) {
